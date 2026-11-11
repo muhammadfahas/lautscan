@@ -44,20 +44,55 @@ fn formatFreshnessSource(sources: DataSourceStatusRecord[], inspection: option<M
         case some(src) => `${src.display_name} (${src.status})`
         case none => "NOAA CoastWatch & OBIS"
 
+fn wibMonthName(m: number): string =
+  m == 1 ? "Jan" : (m == 2 ? "Feb" : (m == 3 ? "Mar" : (m == 4 ? "Apr" : (m == 5 ? "Mei" : (m == 6 ? "Jun" : (m == 7 ? "Jul" : (m == 8 ? "Agu" : (m == 9 ? "Sep" : (m == 10 ? "Okt" : (m == 11 ? "Nov" : "Des"))))))))))
+
+fn pad2Num(n: number): string =
+  n < 10 ? `0${n}` : `${n}`
+
+fn formatDayMonthWib(baseY: number, doy: number, mp: number, hh: number, mm: number): string =
+  `${pad2Num(doy - Math.floor((153 * mp + 2) / 5) + 1)} ${wibMonthName(mp + (mp < 10 ? 3 : -9))} ${baseY + ((mp + (mp < 10 ? 3 : -9)) <= 2 ? 1 : 0)}, ${pad2Num(hh)}:${pad2Num(mm)} WIB`
+
+fn formatMpDoyWib(baseY: number, doy: number, hh: number, mm: number): string =
+  formatDayMonthWib(baseY, doy, Math.floor((5 * doy + 2) / 153), hh, mm)
+
+fn formatYoeDoyWib(era: number, doe: number, yoe: number, hh: number, mm: number): string =
+  formatMpDoyWib(yoe + era * 400, doe - (365 * yoe + Math.floor(yoe / 4) - Math.floor(yoe / 100)), hh, mm)
+
+fn formatEraDoeWib(era: number, doe: number, hh: number, mm: number): string =
+  formatYoeDoyWib(era, doe, Math.floor((doe - Math.floor(doe / 1460) + Math.floor(doe / 36524) - Math.floor(doe / 146096)) / 365), hh, mm)
+
+fn formatDaysClockWib(z: number, hh: number, mm: number): string =
+  formatEraDoeWib(Math.floor(z / 146097), z - Math.floor(z / 146097) * 146097, hh, mm)
+
+fn formatWibFromMs(wibMs: number): string =
+  formatDaysClockWib(Math.floor(wibMs / 86400000) + 719468, Math.floor((wibMs - Math.floor(wibMs / 86400000) * 86400000) / 3600000), Math.floor(((wibMs - Math.floor(wibMs / 86400000) * 86400000) % 3600000) / 60000))
+
+fn parseUtcMs(raw: string): number =
+  Date.parse((raw.indexOf("Z") >= 0 or raw.indexOf("+") >= 0 or (raw.length > 10 and raw.slice(10).indexOf("-") >= 0)) ? raw.replace(" ", "T") : `${raw.replace(" ", "T")}Z`)
+
+fn formatWibTimestamp(raw: string): string =
+  raw == "latest" ? "Terbaru (Hari Ini · WIB)" : ((raw.length == 10 and raw.indexOf("-") == 4) ? `${pad2Num(Number(raw.slice(8, 10)))} ${wibMonthName(Number(raw.slice(5, 7)))} ${raw.slice(0, 4)} (WIB)` : (Number.isFinite(parseUtcMs(raw)) ? formatWibFromMs(parseUtcMs(raw) + 25200000) : raw))
+
+fn formatWibOpt(val: option<string>, fallback: string): string =
+  match val
+    case some(s) => formatWibTimestamp(s)
+    case none => fallback
+
 fn formatFreshnessTimestamp(sources: DataSourceStatusRecord[], inspection: option<MapPointInspection>): string =
   match inspection
     case some(pt) =>
       match pt.acquired_at_utc
-        case some(ts) => ts
+        case some(ts) => formatWibTimestamp(ts)
         case none => "Basis data lokal"
     case none =>
       match sources.find(s => s.source_key == "noaa_erddap")
         case some(src) =>
           match src.latest_data_timestamp_utc
-            case some(ts) => ts
+            case some(ts) => formatWibTimestamp(ts)
             case none =>
               match src.last_sync_utc
-                case some(syncTs) => syncTs
+                case some(syncTs) => formatWibTimestamp(syncTs)
                 case none => "Basis data lokal"
         case none => "Basis data lokal"
 
@@ -361,12 +396,12 @@ component OceanMapView
                 button press=setOpacityPreset(0.9) flex=1 min-height=44 min-width=44 padding="6px 8px" border-radius=8 border=(Math.abs(activeOpacity - 0.9) <= 0.02 ? "1px solid var(--accent-primary)" : "1px solid var(--border-subtle)") background-color="var(--surface-canvas)" color=(Math.abs(activeOpacity - 0.9) <= 0.02 ? "var(--accent-primary)" : "var(--ink-primary)") cursor="pointer" aria-label="Atur transparansi jelas 90 persen"
                   text "Jelas (90%)" font-size=12 font-weight=600
               row width="100%" align-items="center" justify-content="space-between" gap=8
-                label "Tanggal Data" font-size=12 font-weight=600 color="var(--ink-muted)"
+                label "Tanggal Data (WIB)" font-size=12 font-weight=600 color="var(--ink-muted)"
                 select value=selectedDate change=selectDate min-height=44 min-width=160 padding="8px 10px" border-radius=8 border="1px solid var(--border-subtle)" background-color="var(--surface-canvas)" color="var(--ink-primary)" font-size=13 cursor="pointer" aria-label="Pilih tanggal pengamatan" testId="date-selector"
-                  option value="latest" "Terbaru (Hari Ini)"
-                  option value="2026-11-10" "2026-11-10 (UTC)"
-                  option value="2026-11-01" "2026-11-01 (UTC)"
-                  option value="2026-10-15" "2026-10-15 (UTC)"
+                  option value="latest" "Terbaru (Hari Ini · WIB)"
+                  option value="2026-11-10" "10 Nov 2026 (WIB)"
+                  option value="2026-11-01" "01 Nov 2026 (WIB)"
+                  option value="2026-10-15" "15 Okt 2026 (WIB)"
 
           column width="100%" padding="8px 10px" gap=8 border-radius=16 background-color="var(--surface-elevated)" border="1px solid var(--border-subtle)"
             row width="100%" align-items="center" justify-content="space-between" gap=6 flex-wrap="wrap"
@@ -537,7 +572,7 @@ component OceanMapView
                         case some(wh) => text `Tinggi Gelombang: ${wh.toFixed(2)} m` class="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--ink-muted)" testId="inspector-wave"
                         case none => div display="none"
                       text `Interpolasi: ${pt.interpolation_method} | Res: ${formatOptNumber(pt.spatial_resolution_km, 1, "km")}` class="tabular-nums" font-family="var(--font-mono)" font-size=11 color="var(--ink-muted)"
-                      text `Waktu Data UTC: ${formatOptText(pt.acquired_at_utc, "Basis data lokal")}` class="tabular-nums" font-family="var(--font-mono)" font-size=11 color="var(--ink-muted)"
+                      text `Waktu Data (WIB): ${formatWibOpt(pt.acquired_at_utc, "Basis data lokal")}` class="tabular-nums" font-family="var(--font-mono)" font-size=11 color="var(--ink-muted)"
                       text `Sumber: ${pt.attribution}` font-size=11 color="var(--ink-primary)"
 
               case none =>

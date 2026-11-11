@@ -26,6 +26,36 @@ fn chlSeriesArea(baseChl: number, period: string): string =
 fn formatSstValue(sstC: number, useF: bool): string =
   useF ? `${((sstC * 9 / 5) + 32).toFixed(1)} °F` : `${sstC.toFixed(1)} °C`
 
+fn wibMonthName(m: number): string =
+  m == 1 ? "Jan" : (m == 2 ? "Feb" : (m == 3 ? "Mar" : (m == 4 ? "Apr" : (m == 5 ? "Mei" : (m == 6 ? "Jun" : (m == 7 ? "Jul" : (m == 8 ? "Agu" : (m == 9 ? "Sep" : (m == 10 ? "Okt" : (m == 11 ? "Nov" : "Des"))))))))))
+
+fn pad2Num(n: number): string =
+  n < 10 ? `0${n}` : `${n}`
+
+fn formatDayMonthWib(baseY: number, doy: number, mp: number, hh: number, mm: number): string =
+  `${pad2Num(doy - Math.floor((153 * mp + 2) / 5) + 1)} ${wibMonthName(mp + (mp < 10 ? 3 : -9))} ${baseY + ((mp + (mp < 10 ? 3 : -9)) <= 2 ? 1 : 0)}, ${pad2Num(hh)}:${pad2Num(mm)} WIB`
+
+fn formatMpDoyWib(baseY: number, doy: number, hh: number, mm: number): string =
+  formatDayMonthWib(baseY, doy, Math.floor((5 * doy + 2) / 153), hh, mm)
+
+fn formatYoeDoyWib(era: number, doe: number, yoe: number, hh: number, mm: number): string =
+  formatMpDoyWib(yoe + era * 400, doe - (365 * yoe + Math.floor(yoe / 4) - Math.floor(yoe / 100)), hh, mm)
+
+fn formatEraDoeWib(era: number, doe: number, hh: number, mm: number): string =
+  formatYoeDoyWib(era, doe, Math.floor((doe - Math.floor(doe / 1460) + Math.floor(doe / 36524) - Math.floor(doe / 146096)) / 365), hh, mm)
+
+fn formatDaysClockWib(z: number, hh: number, mm: number): string =
+  formatEraDoeWib(Math.floor(z / 146097), z - Math.floor(z / 146097) * 146097, hh, mm)
+
+fn formatWibFromMs(wibMs: number): string =
+  formatDaysClockWib(Math.floor(wibMs / 86400000) + 719468, Math.floor((wibMs - Math.floor(wibMs / 86400000) * 86400000) / 3600000), Math.floor(((wibMs - Math.floor(wibMs / 86400000) * 86400000) % 3600000) / 60000))
+
+fn parseUtcMs(raw: string): number =
+  Date.parse((raw.indexOf("Z") >= 0 or raw.indexOf("+") >= 0 or (raw.length > 10 and raw.slice(10).indexOf("-") >= 0)) ? raw.replace(" ", "T") : `${raw.replace(" ", "T")}Z`)
+
+fn formatWibTimestamp(raw: string): string =
+  raw == "latest" ? "Terbaru (Hari Ini · WIB)" : ((raw.length == 10 and raw.indexOf("-") == 4) ? `${pad2Num(Number(raw.slice(8, 10)))} ${wibMonthName(Number(raw.slice(5, 7)))} ${raw.slice(0, 4)} (WIB)` : (Number.isFinite(parseUtcMs(raw)) ? formatWibFromMs(parseUtcMs(raw) + 25200000) : raw))
+
 fn findZoneSst(zones: WppZoneRecord[], code: string): number =
   match zones.find(z => z.wpp_code == code)
     case some(z) =>
@@ -124,12 +154,12 @@ component TrendsView
               option value=z.wpp_code `${z.name}: ${z.waters_en}`
 
         column flex="1 1 180px" min-width=0 gap=4
-          label "Reference Date (UTC)" font-size=13 font-weight=600 color="var(--ink-muted)"
+          label "Tanggal Referensi (WIB)" font-size=13 font-weight=600 color="var(--ink-muted)"
           select value=selectedDate change=selectDate width="100%" max-width="100%" min-height=44 min-width=44 padding="10px 12px" border-radius=8 border="1px solid var(--border-subtle)" background-color="var(--surface-canvas)" color="var(--ink-primary)" font-size=16 cursor="pointer" aria-label="Select reference observation date" testId="trends-date-select"
-            option value="latest" "Latest Available Satellite Pass"
-            option value="2026-11-01" "2026-11-01 (Northwest Transition)"
-            option value="2026-08-15" "2026-08-15 (Southeast Monsoon Peak)"
-            option value="2026-02-15" "2026-02-15 (Northwest Monsoon Peak)"
+            option value="latest" "Terbaru (Satelit Terkini · WIB)"
+            option value="2026-11-01" "01 Nov 2026 (WIB · Peralihan Barat)"
+            option value="2026-08-15" "15 Agu 2026 (WIB · Puncak Muson Timur)"
+            option value="2026-02-15" "15 Feb 2026 (WIB · Puncak Muson Barat)"
 
         button press=inspectSelectedZone min-height=44 min-width=180 padding="10px 16px" border-radius=8 border="1px solid var(--accent-cta)" background-color="var(--accent-cta)" color="#FFFFFF" cursor="pointer" aria-label="Inspect selected WPP zone on Ocean Map" testId="trends-inspect-btn"
           text "Inspect Zone on Map" font-size=14 font-weight=700
@@ -188,7 +218,7 @@ component TrendsView
       match pointInspection
         case some(pt) =>
           row width="100%" padding="12px 16px" gap=12 flex-wrap="wrap" align-items="center" justify-content="space-between" border-radius=10 background-color="var(--surface-elevated)" border="1px solid var(--border-subtle)" testId="trends-point-summary"
-            text `Last Inspected Coordinate: ${pt.lat.toFixed(4)}, ${pt.lon.toFixed(4)} (${pt.requested_date})` class="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-primary)"
+            text `Last Inspected Coordinate: ${pt.lat.toFixed(4)}, ${pt.lon.toFixed(4)} (${formatWibTimestamp(pt.requested_date)})` class="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-primary)"
             text `Attribution: ${pt.attribution}` font-size=13 color="var(--ink-muted)"
         case none =>
           text "Select a WPP-NRI zone above or click any point on Ocean Map to synchronize historical coordinates." font-size=13 color="var(--ink-muted)"
@@ -208,7 +238,7 @@ component TrendsView
                 th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "Indonesian Waters"
                 th scope="col" text-align="right" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" (useFahrenheit ? "Mean SST (°F)" : "Mean SST (°C)")
                 th scope="col" text-align="right" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "Mean Chlorophyll-a (mg/m3)"
-                th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "Latest Observation UTC"
+                th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "Latest Observation WIB"
             tbody
               for z in wppZones key=z.wpp_code
                 tr testId=`trends-row-${z.wpp_code}`
@@ -225,5 +255,5 @@ component TrendsView
                       case none => text "N/A"
                   td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" class="tabular-nums" font-family="var(--font-mono)"
                     match z.latest_observation_utc
-                      case some(ts) => text ts
+                      case some(ts) => text formatWibTimestamp(ts)
                       case none => text "Baseline seed"

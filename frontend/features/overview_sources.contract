@@ -8,6 +8,36 @@ fn formatSstCell(sst: number, useF: bool): string =
 fn sourceStatusColor(status: string): string =
   status == "healthy" ? "var(--status-healthy)" : (status == "degraded" ? "var(--status-degraded)" : "var(--ink-muted)")
 
+fn wibMonthName(m: number): string =
+  m == 1 ? "Jan" : (m == 2 ? "Feb" : (m == 3 ? "Mar" : (m == 4 ? "Apr" : (m == 5 ? "Mei" : (m == 6 ? "Jun" : (m == 7 ? "Jul" : (m == 8 ? "Agu" : (m == 9 ? "Sep" : (m == 10 ? "Okt" : (m == 11 ? "Nov" : "Des"))))))))))
+
+fn pad2Num(n: number): string =
+  n < 10 ? `0${n}` : `${n}`
+
+fn formatDayMonthWib(baseY: number, doy: number, mp: number, hh: number, mm: number): string =
+  `${pad2Num(doy - Math.floor((153 * mp + 2) / 5) + 1)} ${wibMonthName(mp + (mp < 10 ? 3 : -9))} ${baseY + ((mp + (mp < 10 ? 3 : -9)) <= 2 ? 1 : 0)}, ${pad2Num(hh)}:${pad2Num(mm)} WIB`
+
+fn formatMpDoyWib(baseY: number, doy: number, hh: number, mm: number): string =
+  formatDayMonthWib(baseY, doy, Math.floor((5 * doy + 2) / 153), hh, mm)
+
+fn formatYoeDoyWib(era: number, doe: number, yoe: number, hh: number, mm: number): string =
+  formatMpDoyWib(yoe + era * 400, doe - (365 * yoe + Math.floor(yoe / 4) - Math.floor(yoe / 100)), hh, mm)
+
+fn formatEraDoeWib(era: number, doe: number, hh: number, mm: number): string =
+  formatYoeDoyWib(era, doe, Math.floor((doe - Math.floor(doe / 1460) + Math.floor(doe / 36524) - Math.floor(doe / 146096)) / 365), hh, mm)
+
+fn formatDaysClockWib(z: number, hh: number, mm: number): string =
+  formatEraDoeWib(Math.floor(z / 146097), z - Math.floor(z / 146097) * 146097, hh, mm)
+
+fn formatWibFromMs(wibMs: number): string =
+  formatDaysClockWib(Math.floor(wibMs / 86400000) + 719468, Math.floor((wibMs - Math.floor(wibMs / 86400000) * 86400000) / 3600000), Math.floor(((wibMs - Math.floor(wibMs / 86400000) * 86400000) % 3600000) / 60000))
+
+fn parseUtcMs(raw: string): number =
+  Date.parse((raw.indexOf("Z") >= 0 or raw.indexOf("+") >= 0 or (raw.length > 10 and raw.slice(10).indexOf("-") >= 0)) ? raw.replace(" ", "T") : `${raw.replace(" ", "T")}Z`)
+
+fn formatWibTimestamp(raw: string): string =
+  raw == "latest" ? "Terbaru (Hari Ini · WIB)" : ((raw.length == 10 and raw.indexOf("-") == 4) ? `${pad2Num(Number(raw.slice(8, 10)))} ${wibMonthName(Number(raw.slice(5, 7)))} ${raw.slice(0, 4)} (WIB)` : (Number.isFinite(parseUtcMs(raw)) ? formatWibFromMs(parseUtcMs(raw) + 25200000) : raw))
+
 component OverviewSourcesView
   props
     health: HealthStatus
@@ -34,7 +64,7 @@ component OverviewSourcesView
             text "WPP-NRI 571 to 718 oceanographic summary, satellite/biodiversity provider health, licensing attribution, and ETL ingestion telemetry." font-size=15 color="var(--ink-muted)"
 
         row align-items="center" gap=12 flex-wrap="wrap"
-          text `Checked: ${checkedAtUtc}` class="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-muted)" testId="sources-checked-at"
+          text `Dicek: ${formatWibTimestamp(checkedAtUtc)}` class="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-muted)" testId="sources-checked-at"
           button press=onRefresh min-height=44 min-width=120 padding="10px 16px" border-radius=8 border="1px solid var(--accent-primary)" background-color="var(--accent-primary)" color="#FFFFFF" cursor="pointer" aria-label="Refresh overview and data source status" testId="sources-refresh-btn"
             row align-items="center" gap=8
               svg width=16 height=16 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width=2 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
@@ -57,7 +87,7 @@ component OverviewSourcesView
             case none => text "Engine: Offline Seed" class="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-muted)"
           text `Redis: ${health.redis_ok ? "Online" : "Bypassed"}` class="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-primary)"
           text `Tile Cache: ${health.tile_cache_ok ? "Writable" : "Unavailable"}` class="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-primary)"
-          text `Health UTC: ${health.timestamp_utc}` class="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-muted)"
+          text `Status WIB: ${formatWibTimestamp(health.timestamp_utc)}` class="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-muted)"
 
       // Data Provider Health Cards (noaa_erddap, obis, copernicus_marine, kkp_pdpi, gfw)
       column width="100%" gap=12
@@ -85,11 +115,11 @@ component OverviewSourcesView
 
               column gap=4
                 match src.last_sync_utc
-                  case some(ts) => text `Last Sync UTC: ${ts}` class="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--ink-primary)"
-                  case none => text "Last Sync UTC: Pending" class="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--ink-muted)"
+                  case some(ts) => text `Sinkron WIB: ${formatWibTimestamp(ts)}` class="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--ink-primary)"
+                  case none => text "Sinkron WIB: Menunggu" class="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--ink-muted)"
                 match src.latest_data_timestamp_utc
-                  case some(ds) => text `Dataset UTC: ${ds}` class="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--ink-muted)"
-                  case none => text "Dataset UTC: Offline seed" class="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--ink-muted)"
+                  case some(ds) => text `Dataset WIB: ${formatWibTimestamp(ds)}` class="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--ink-muted)"
+                  case none => text "Dataset WIB: Data dasar" class="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--ink-muted)"
 
               text `Attribution: ${src.attribution}` font-size=13 color="var(--ink-primary)"
               text `License: ${src.license_summary}` font-size=13 color="var(--ink-muted)"
@@ -115,7 +145,7 @@ component OverviewSourcesView
                 th scope="col" text-align="right" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "Chlorophyll-a (mg/m3)"
                 th scope="col" text-align="right" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "Area (km2)"
                 th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "Geometry Source"
-                th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "Latest Observation UTC"
+                th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "Latest Observation WIB"
             tbody
               for z in wppZones key=z.wpp_code
                 tr testId=`overview-wpp-row-${z.wpp_code}`
@@ -136,7 +166,7 @@ component OverviewSourcesView
                   td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" class="tabular-nums" font-family="var(--font-mono)" z.geometry_source
                   td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" class="tabular-nums" font-family="var(--font-mono)"
                     match z.latest_observation_utc
-                      case some(ts) => text ts
+                      case some(ts) => text formatWibTimestamp(ts)
                       case none => text "Baseline seed"
 
       // Recent SourceSyncLogRecord Table
@@ -153,7 +183,7 @@ component OverviewSourcesView
                   th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "Dataset Type"
                   th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "Status"
                   th scope="col" text-align="right" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "Records"
-                  th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "Started UTC"
+                  th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "Started WIB"
                   th scope="col" text-align="right" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "Duration (ms)"
                   th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "Message"
               tbody
@@ -163,7 +193,7 @@ component OverviewSourcesView
                     td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" log.dataset_type
                     td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" class="tabular-nums" font-family="var(--font-mono)" log.status
                     td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" text-align="right" class="tabular-nums" font-family="var(--font-mono)" `${log.records_ingested}`
-                    td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" class="tabular-nums" font-family="var(--font-mono)" log.started_at_utc
+                    td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" class="tabular-nums" font-family="var(--font-mono)" formatWibTimestamp(log.started_at_utc)
                     td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" text-align="right" class="tabular-nums" font-family="var(--font-mono)"
                       match log.duration_ms
                         case some(ms) => text `${ms}`
