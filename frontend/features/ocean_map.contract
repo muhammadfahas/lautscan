@@ -342,7 +342,7 @@ component OceanMapView
 
             if currentsVisible
               row width="100%" align-items="center" justify-content="space-between" gap=8 padding="2px 4px" testId="legend-currents"
-                text "Panah searah aliran air" font-size=11 font-weight=600 color="var(--ink-primary)"
+                text "Aliran gelombang searah arus" font-size=11 font-weight=600 color="var(--ink-primary)"
                 row align-items="center" gap=10
                   text (useMs ? "Biru: Tenang (<0.3 m/s)" : "Biru: Tenang (<0.5 kt)") font-size=11 font-weight=600 color="#0284C7"
                   text (useMs ? "Hijau: Sedang" : "Hijau: Sedang") font-size=11 font-weight=600 color="#0D9488"

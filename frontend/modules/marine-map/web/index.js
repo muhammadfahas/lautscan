@@ -769,11 +769,12 @@ export class MarineMap {
     this.tileFetchTimer = null;
     this.skipTileFetch = false;
     this.currentsVectors = [];
+    this.currentsField = null;
+    this.currentsParticles = [];
     this.currentsFetchKey = '';
     this.currentsFetchTimer = null;
     this.currentsAbort = null;
     this.currentsRaf = null;
-    this.currentsPhase = 0;
     this.currentsLastFrameTs = 0;
     this._renderedWppScreenPts = [];
 
@@ -851,6 +852,8 @@ export class MarineMap {
       this.clearOverlayTiles();
       this.currentsFetchKey = '';
       this.currentsVectors = [];
+      this.currentsField = null;
+      this.currentsParticles = [];
     }
 
     if (changed('wppGeoJsonCollection')) {
@@ -940,16 +943,16 @@ export class MarineMap {
         this.currentsRaf = null;
         return;
       }
-      if (!this.currentsLastFrameTs || ts - this.currentsLastFrameTs >= 42) {
-        const dt = this.currentsLastFrameTs ? Math.min(0.1, (ts - this.currentsLastFrameTs) / 1000) : 0.04;
-        this.currentsPhase = (this.currentsPhase + dt * 0.75) % 1;
+      if (!this.currentsLastFrameTs || ts - this.currentsLastFrameTs >= 32) {
+        const dt = this.currentsLastFrameTs ? Math.min(0.06, (ts - this.currentsLastFrameTs) / 1000) : 0.033;
         this.currentsLastFrameTs = ts;
         const { w, h } = this.size;
-        if (w && h && this.currentsVectors.length > 0) {
+        if (w && h && this.currentsField && !this.skipTileFetch) {
+          this.advanceCurrentsParticles(dt);
           const z = Math.min(this.maxZoom, Math.max(0, Math.round(this.zoom)));
           const k = 2 ** (this.zoom - z);
           const [cx, cy] = project(this.center[0], this.center[1], z);
-          this.renderCurrentsArrows(w, h, z, k, cx - w / 2 / k, cy - h / 2 / k, 2 ** z);
+          this.renderCurrentsStreamlines(w, h, z, k, cx - w / 2 / k, cy - h / 2 / k, 2 ** z);
         }
       }
       this.currentsRaf = requestAnimationFrame(stepFrame);
@@ -1341,8 +1344,227 @@ export class MarineMap {
   currentsGridUrl(minLon, minLat, maxLon, maxLat) {
     const safeDate = encodeURIComponent(this.selectedDate || 'latest');
     const bbox = `${round(minLon, 3)},${round(minLat, 3)},${round(maxLon, 3)},${round(maxLat, 3)}`;
-    const path = `/v1/currents/grid?bbox=${encodeURIComponent(bbox)}&date=${safeDate}&max_vectors=144`;
+    const path = `/v1/currents/grid?bbox=${encodeURIComponent(bbox)}&date=${safeDate}&max_vectors=289`;
     return this.tileBaseUrl ? `${this.tileBaseUrl}${path}` : path;
+  }
+
+  buildCurrentsField(vectors) {
+    if (!Array.isArray(vectors) || vectors.length === 0) return null;
+    const latSet = new Set();
+    const lonSet = new Set();
+    for (const v of vectors) {
+      if (Number.isFinite(v.lat) && Number.isFinite(v.lon)) {
+        latSet.add(v.lat);
+        lonSet.add(v.lon);
+      }
+    }
+    const lats = [...latSet].sort((a, b) => a - b);
+    const lons = [...lonSet].sort((a, b) => a - b);
+    const rows = lats.length;
+    const cols = lons.length;
+    if (rows < 2 || cols < 2) return null;
+
+    const latIdx = new Map(lats.map((val, idx) => [val, idx]));
+    const lonIdx = new Map(lons.map((val, idx) => [val, idx]));
+    const uGrid = new Float32Array(rows * cols).fill(NaN);
+    const vGrid = new Float32Array(rows * cols).fill(NaN);
+    const oceanCells = [];
+
+    for (const vec of vectors) {
+      const r = latIdx.get(vec.lat);
+      const c = lonIdx.get(vec.lon);
+      if (r === undefined || c === undefined) continue;
+      let u = Number(vec.u_ms);
+      let v = Number(vec.v_ms);
+      if (!Number.isFinite(u) || !Number.isFinite(v)) {
+        const spd = Number(vec.speed_ms) || 0;
+        const rad = ((Number(vec.direction_deg) || 0) * Math.PI) / 180;
+        u = Math.sin(rad) * spd;
+        v = Math.cos(rad) * spd;
+      }
+      const idx = r * cols + c;
+      uGrid[idx] = u;
+      vGrid[idx] = v;
+      if (Math.hypot(u, v) >= 0.01) {
+        oceanCells.push({ lat: vec.lat, lon: vec.lon, u, v });
+      }
+    }
+    if (oceanCells.length === 0) return null;
+
+    const dLat = (lats[rows - 1] - lats[0]) / Math.max(1, rows - 1);
+    const dLon = (lons[cols - 1] - lons[0]) / Math.max(1, cols - 1);
+    return {
+      lats,
+      lons,
+      rows,
+      cols,
+      uGrid,
+      vGrid,
+      oceanCells,
+      minLat: lats[0],
+      maxLat: lats[rows - 1],
+      minLon: lons[0],
+      maxLon: lons[cols - 1],
+      dLat,
+      dLon,
+    };
+  }
+
+  sampleCurrentVelocity(lat, lon) {
+    const f = this.currentsField;
+    if (!f) return null;
+    if (lat < f.minLat || lat > f.maxLat || lon < f.minLon || lon > f.maxLon) return null;
+
+    let r0 = 0;
+    while (r0 + 1 < f.rows - 1 && f.lats[r0 + 1] < lat) r0++;
+    let c0 = 0;
+    while (c0 + 1 < f.cols - 1 && f.lons[c0 + 1] < lon) c0++;
+    const r1 = Math.min(f.rows - 1, r0 + 1);
+    const c1 = Math.min(f.cols - 1, c0 + 1);
+
+    const ty = f.lats[r1] > f.lats[r0] ? clamp((lat - f.lats[r0]) / (f.lats[r1] - f.lats[r0]), 0, 1) : 0;
+    const tx = f.lons[c1] > f.lons[c0] ? clamp((lon - f.lons[c0]) / (f.lons[c1] - f.lons[c0]), 0, 1) : 0;
+
+    const corners = [
+      { idx: r0 * f.cols + c0, w: (1 - tx) * (1 - ty) },
+      { idx: r0 * f.cols + c1, w: tx * (1 - ty) },
+      { idx: r1 * f.cols + c0, w: (1 - tx) * ty },
+      { idx: r1 * f.cols + c1, w: tx * ty },
+    ];
+
+    let wSum = 0;
+    let uSum = 0;
+    let vSum = 0;
+    let validCount = 0;
+    for (const corner of corners) {
+      const cu = f.uGrid[corner.idx];
+      const cv = f.vGrid[corner.idx];
+      if (Number.isFinite(cu) && Number.isFinite(cv)) {
+        validCount++;
+        wSum += corner.w;
+        uSum += cu * corner.w;
+        vSum += cv * corner.w;
+      }
+    }
+
+    if (validCount < 3 || wSum <= 0.35) return null;
+    const u = uSum / wSum;
+    const v = vSum / wSum;
+    const speedMs = Math.hypot(u, v);
+    if (speedMs < 0.01) return null;
+    return { u, v, speedMs, speedKnots: speedMs * 1.94384 };
+  }
+
+  seedStreamParticle(particle, randomAge = false) {
+    const f = this.currentsField;
+    if (!f || f.oceanCells.length === 0) return false;
+    let lat = 0;
+    let lon = 0;
+    let found = false;
+    for (let attempt = 0; attempt < 8; attempt++) {
+      const cell = f.oceanCells[Math.floor(Math.random() * f.oceanCells.length)];
+      const candLat = cell.lat + (Math.random() - 0.5) * f.dLat * 0.95;
+      const candLon = cell.lon + (Math.random() - 0.5) * f.dLon * 0.95;
+      if (this.sampleCurrentVelocity(candLat, candLon)) {
+        lat = candLat;
+        lon = candLon;
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      const cell = f.oceanCells[Math.floor(Math.random() * f.oceanCells.length)];
+      lat = cell.lat;
+      lon = cell.lon;
+    }
+
+    const trailLen = particle.trailLat.length;
+    particle.lat = lat;
+    particle.lon = lon;
+    particle.maxAge = 2.0 + Math.random() * 1.9;
+    particle.age = randomAge ? Math.random() * particle.maxAge * 0.72 : 0;
+    particle.trailCount = 1;
+    particle.trailHead = 0;
+    for (let i = 0; i < trailLen; i++) {
+      particle.trailLat[i] = lat;
+      particle.trailLon[i] = lon;
+    }
+    const sample = this.sampleCurrentVelocity(lat, lon);
+    particle.speedKnots = sample ? sample.speedKnots : 0.4;
+    return true;
+  }
+
+  initStreamParticles(w) {
+    if (!this.currentsField) {
+      this.currentsParticles = [];
+      return;
+    }
+    const count = w < 640 ? 360 : 620;
+    const trailLen = 24;
+    const particles = [];
+    for (let i = 0; i < count; i++) {
+      const p = {
+        lat: 0,
+        lon: 0,
+        age: 0,
+        maxAge: 2.6,
+        speedKnots: 0.4,
+        trailLat: new Float64Array(trailLen),
+        trailLon: new Float64Array(trailLen),
+        trailCount: 0,
+        trailHead: 0,
+      };
+      this.seedStreamParticle(p, true);
+      const warmup = 6 + (i % 18);
+      for (let s = 0; s < warmup; s++) {
+        this.stepSingleParticle(p, 0.032, false);
+      }
+      particles.push(p);
+    }
+    this.currentsParticles = particles;
+  }
+
+  stepSingleParticle(p, dt, wrapAge = true) {
+    p.age += dt;
+    if (wrapAge && p.age >= p.maxAge) {
+      this.seedStreamParticle(p, false);
+      return;
+    }
+    const v1 = this.sampleCurrentVelocity(p.lat, p.lon);
+    if (!v1) {
+      if (wrapAge) this.seedStreamParticle(p, false);
+      return;
+    }
+    const pxPerDeg = (TILE_SIZE * 2 ** this.zoom) / 360.0;
+    const degScale = 112.0 / Math.max(8.0, pxPerDeg);
+    const cosLat1 = Math.max(0.35, Math.cos((p.lat * Math.PI) / 180));
+    const midLat = p.lat + v1.v * degScale * dt * 0.5;
+    const midLon = p.lon + (v1.u / cosLat1) * degScale * dt * 0.5;
+    const v2 = this.sampleCurrentVelocity(midLat, midLon) || v1;
+    const cosLat2 = Math.max(0.35, Math.cos((midLat * Math.PI) / 180));
+    const nextLat = p.lat + v2.v * degScale * dt;
+    const nextLon = p.lon + (v2.u / cosLat2) * degScale * dt;
+
+    if (!this.sampleCurrentVelocity(nextLat, nextLon)) {
+      if (wrapAge) this.seedStreamParticle(p, false);
+      return;
+    }
+
+    p.lat = nextLat;
+    p.lon = nextLon;
+    p.speedKnots = v2.speedKnots;
+    const maxLen = p.trailLat.length;
+    p.trailHead = (p.trailHead + 1) % maxLen;
+    p.trailLat[p.trailHead] = nextLat;
+    p.trailLon[p.trailHead] = nextLon;
+    if (p.trailCount < maxLen) p.trailCount++;
+  }
+
+  advanceCurrentsParticles(dt) {
+    if (!this.currentsField || this.currentsParticles.length === 0) return;
+    for (const p of this.currentsParticles) {
+      this.stepSingleParticle(p, dt, true);
+    }
   }
 
   drawCurrentsVectors(w, h, z, k, left, top, n) {
@@ -1364,21 +1586,36 @@ export class MarineMap {
 
     if (minLon >= maxLon || minLat >= maxLat) {
       this.currentsVectors = [];
-      this.renderCurrentsArrows(w, h, z, k, left, top, n);
+      this.currentsField = null;
+      this.currentsParticles = [];
+      this.renderCurrentsStreamlines(w, h, z, k, left, top, n);
       return;
     }
 
     if (this.plain) {
-      const synthetic = [];
-      for (let lat = Math.ceil(minLat); lat <= maxLat; lat += 2) {
-        for (let lon = Math.ceil(minLon); lon <= maxLon; lon += 2) {
-          const speed = 0.35 + 0.35 * Math.abs(Math.sin(lat * 0.4 + lon * 0.15));
-          const dir = ((lat * 19 + lon * 13) % 360 + 360) % 360;
-          synthetic.push({ lat, lon, speed_ms: speed, speed_knots: speed * 1.94384, direction_deg: dir });
+      if (!this.currentsField) {
+        const synthetic = [];
+        for (let lat = Math.ceil(minLat); lat <= maxLat; lat += 2) {
+          for (let lon = Math.ceil(minLon); lon <= maxLon; lon += 2) {
+            const speed = 0.45 + 0.35 * Math.abs(Math.sin(lat * 0.35 + lon * 0.15));
+            const dir = ((lat * 19 + lon * 13) % 360 + 360) % 360;
+            const rad = (dir * Math.PI) / 180;
+            synthetic.push({
+              lat,
+              lon,
+              u_ms: Math.sin(rad) * speed,
+              v_ms: Math.cos(rad) * speed,
+              speed_ms: speed,
+              speed_knots: speed * 1.94384,
+              direction_deg: dir,
+            });
+          }
         }
+        this.currentsVectors = synthetic;
+        this.currentsField = this.buildCurrentsField(synthetic);
+        this.initStreamParticles(w);
       }
-      this.currentsVectors = synthetic;
-      this.renderCurrentsArrows(w, h, z, k, left, top, n);
+      this.renderCurrentsStreamlines(w, h, z, k, left, top, n);
       return;
     }
 
@@ -1397,12 +1634,14 @@ export class MarineMap {
           const data = await resp.json();
           if (this.currentsFetchKey !== fetchKey || !Array.isArray(data?.vectors)) return;
           this.currentsVectors = data.vectors;
+          this.currentsField = this.buildCurrentsField(data.vectors);
           const { w: cw, h: ch } = this.size;
+          this.initStreamParticles(cw || w);
           if (cw && ch) {
             const cz = Math.min(this.maxZoom, Math.max(0, Math.round(this.zoom)));
             const ck = 2 ** (this.zoom - cz);
             const [cx, cy] = project(this.center[0], this.center[1], cz);
-            this.renderCurrentsArrows(cw, ch, cz, ck, cx - cw / 2 / ck, cy - ch / 2 / ck, 2 ** cz);
+            this.renderCurrentsStreamlines(cw, ch, cz, ck, cx - cw / 2 / ck, cy - ch / 2 / ck, 2 ** cz);
           }
         } catch {
           // Ignore aborted/transient network errors during rapid pan/zoom
@@ -1410,10 +1649,10 @@ export class MarineMap {
       }, delay);
     }
 
-    this.renderCurrentsArrows(w, h, z, k, left, top, n);
+    this.renderCurrentsStreamlines(w, h, z, k, left, top, n);
   }
 
-  renderCurrentsArrows(w, h, z, k, left, top, n) {
+  renderCurrentsStreamlines(w, h, z, k, left, top, n) {
     const canvas = this.currentsCanvas;
     const dpr = typeof window !== 'undefined' && window.devicePixelRatio ? Math.min(window.devicePixelRatio, 2) : 1;
     const pw = Math.max(1, Math.round(w * dpr));
@@ -1427,81 +1666,100 @@ export class MarineMap {
 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, w, h);
-    if (!this.layers.currents.visible || this.currentsVectors.length === 0) return;
+    if (!this.layers.currents.visible || this.currentsParticles.length === 0) return;
 
     const night = this.baseStyle === 'night';
-    const haloColor = night ? 'rgba(10, 14, 39, 0.78)' : 'rgba(255, 255, 255, 0.84)';
-    const animatePulse = !this.plain && !this.prefersReducedMotion();
+    const colors = night
+      ? ['#38BDF8', '#2DD4BF', '#FBBF24']
+      : ['#0369A1', '#0D9488', '#D97706'];
+    const crestHalo = night ? 'rgba(10, 14, 39, 0.55)' : 'rgba(255, 255, 255, 0.72)';
+    const crestCore = night ? 'rgba(255, 255, 255, 0.92)' : 'rgba(255, 255, 255, 0.95)';
 
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
+    const buckets = [
+      { tail: [], mid: [], head: [] },
+      { tail: [], mid: [], head: [] },
+      { tail: [], mid: [], head: [] },
+    ];
+    const crests = [];
 
-    for (const vec of this.currentsVectors) {
-      const [sx, sy] = this.projectPointToViewport(vec.lat, vec.lon, z, k, left, top, n);
-      if (sx < -28 || sx > w + 28 || sy < -28 || sy > h + 28) continue;
+    for (const p of this.currentsParticles) {
+      const cnt = p.trailCount;
+      if (cnt < 2) continue;
+      const life = clamp(Math.sin((p.age / p.maxAge) * Math.PI), 0.15, 1);
+      if (life < 0.18) continue;
 
-      const rad = ((Number(vec.direction_deg) || 0) * Math.PI) / 180;
-      const dx = Math.sin(rad);
-      const dy = -Math.cos(rad);
-      const speedKnots = Number(vec.speed_knots ?? (Number(vec.speed_ms) || 0) * 1.94384);
-      const len = clamp(14 + speedKnots * 12, 14, 30);
-      const half = len * 0.5;
-      const x1 = sx - dx * half;
-      const y1 = sy - dy * half;
-      const x2 = sx + dx * half;
-      const y2 = sy + dy * half;
-
-      let strokeColor = night ? '#38BDF8' : '#0284C7';
-      if (speedKnots >= 1.2) {
-        strokeColor = night ? '#FBBF24' : '#D97706';
-      } else if (speedKnots >= 0.5) {
-        strokeColor = night ? '#2DD4BF' : '#0D9488';
+      const maxLen = p.trailLat.length;
+      const startIdx = (p.trailHead - cnt + 1 + maxLen) % maxLen;
+      const pts = [];
+      let clipped = false;
+      for (let i = 0; i < cnt; i++) {
+        const idx = (startIdx + i) % maxLen;
+        const [sx, sy] = this.projectPointToViewport(p.trailLat[idx], p.trailLon[idx], z, k, left, top, n);
+        if (i > 0 && Math.hypot(sx - pts[pts.length - 1][0], sy - pts[pts.length - 1][1]) > 70) {
+          clipped = true;
+          break;
+        }
+        pts.push([sx, sy]);
       }
+      if (clipped || pts.length < 2) continue;
 
-      const headLen = 6.5;
-      const px = -dy;
-      const py = dx;
-      const bx = x2 - dx * headLen;
-      const by = y2 - dy * headLen;
-      const hx1 = bx + px * 4.2;
-      const hy1 = by + py * 4.2;
-      const hx2 = bx - px * 4.2;
-      const hy2 = by - py * 4.2;
+      const headPt = pts[pts.length - 1];
+      if (headPt[0] < -32 || headPt[0] > w + 32 || headPt[1] < -32 || headPt[1] > h + 32) continue;
 
-      ctx.strokeStyle = haloColor;
-      ctx.lineWidth = 4.2;
-      ctx.beginPath();
-      ctx.moveTo(x1, y1);
-      ctx.lineTo(x2, y2);
-      ctx.moveTo(hx1, hy1);
-      ctx.lineTo(x2, y2);
-      ctx.lineTo(hx2, hy2);
-      ctx.stroke();
+      const tier = p.speedKnots >= 1.2 ? 2 : p.speedKnots >= 0.5 ? 1 : 0;
+      const split1 = Math.max(1, Math.floor(pts.length * 0.45));
+      const split2 = Math.max(split1 + 1, Math.floor(pts.length * 0.78));
 
-      ctx.strokeStyle = strokeColor;
-      ctx.lineWidth = 2.1;
-      ctx.beginPath();
-      ctx.moveTo(x1, y1);
-      ctx.lineTo(x2, y2);
-      ctx.moveTo(hx1, hy1);
-      ctx.lineTo(x2, y2);
-      ctx.lineTo(hx2, hy2);
-      ctx.stroke();
-
-      if (animatePulse) {
-        const offset = Math.abs(Math.sin(vec.lat * 12.9898 + vec.lon * 78.233)) % 1;
-        const t = (this.currentsPhase + offset) % 1;
-        const dotX = x1 + (x2 - x1) * t;
-        const dotY = y1 + (y2 - y1) * t;
-        ctx.fillStyle = haloColor;
-        ctx.beginPath();
-        ctx.arc(dotX, dotY, 2.7, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = strokeColor;
-        ctx.beginPath();
-        ctx.arc(dotX, dotY, 1.7, 0, Math.PI * 2);
-        ctx.fill();
+      if (split1 >= 1) buckets[tier].tail.push(pts.slice(0, split1 + 1));
+      if (split2 > split1) buckets[tier].mid.push(pts.slice(split1, split2 + 1));
+      if (pts.length - 1 >= split2) {
+        const hSeg = pts.slice(split2);
+        if (hSeg.length >= 2) buckets[tier].head.push(hSeg);
       }
+      if (life > 0.35) crests.push(headPt);
+    }
+
+    const strokePaths = (paths, strokeStyle, lineWidth, alpha) => {
+      if (paths.length === 0) return;
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.strokeStyle = strokeStyle;
+      ctx.lineWidth = lineWidth;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      for (const pts of paths) {
+        ctx.moveTo(pts[0][0], pts[0][1]);
+        for (let i = 1; i < pts.length - 1; i++) {
+          const mx = (pts[i][0] + pts[i + 1][0]) * 0.5;
+          const my = (pts[i][1] + pts[i + 1][1]) * 0.5;
+          ctx.quadraticCurveTo(pts[i][0], pts[i][1], mx, my);
+        }
+        const last = pts[pts.length - 1];
+        ctx.lineTo(last[0], last[1]);
+      }
+      ctx.stroke();
+      ctx.restore();
+    };
+
+    for (let t = 0; t < 3; t++) {
+      strokePaths(buckets[t].head, crestHalo, 4.4, 0.75);
+      strokePaths(buckets[t].tail, colors[t], 1.35, 0.28);
+      strokePaths(buckets[t].mid, colors[t], 2.1, 0.62);
+      strokePaths(buckets[t].head, colors[t], 2.7, 0.94);
+    }
+
+    if (crests.length > 0) {
+      ctx.save();
+      ctx.fillStyle = crestCore;
+      ctx.globalAlpha = 0.9;
+      ctx.beginPath();
+      for (const [cx, cy] of crests) {
+        ctx.moveTo(cx + 1.6, cy);
+        ctx.arc(cx, cy, 1.6, 0, Math.PI * 2);
+      }
+      ctx.fill();
+      ctx.restore();
     }
   }
 
