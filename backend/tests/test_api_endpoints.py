@@ -923,6 +923,50 @@ class ApiFeatureEndpointsTests(unittest.TestCase):
             self.assertIsNotNone(by_key["noaa_erddap"].latest_data_timestamp_utc)
             self.assertIsNotNone(by_key["obis"].latest_data_timestamp_utc)
 
+    def test_strict_open_ocean_filter_rejects_land_and_harbor_coords(self) -> None:
+        import netCDF4 as nc
+        import numpy as np
+
+        from app.etl.fixtures import ensure_sample_netcdf
+        from app.etl.live_sync import _is_strict_open_ocean, _load_mur_landmask
+        from app.etl.tiler import _load_layer_grid
+
+        global_dir = self.tile_dir / "global_land_test"
+        global_dir.mkdir(parents=True, exist_ok=True)
+        sst_src = ensure_sample_netcdf(self.tile_dir, "sst", "2026-11-09")
+        sst_nc = global_dir / "noaa_sst.nc"
+        sst_nc.write_bytes(sst_src.read_bytes())
+        sst_grid = _load_layer_grid(sst_nc, "sst")
+
+        mask_nc = global_dir / "noaa_landmask.nc"
+        ds = nc.Dataset(mask_nc, "w", format="NETCDF3_CLASSIC")
+        try:
+            lats = np.linspace(-3.0, 1.0, 21)
+            lons = np.linspace(115.0, 119.0, 21)
+            ds.createDimension("time", 1)
+            ds.createDimension("latitude", len(lats))
+            ds.createDimension("longitude", len(lons))
+            tvar = ds.createVariable("time", "f8", ("time",))
+            latvar = ds.createVariable("latitude", "f4", ("latitude",))
+            lonvar = ds.createVariable("longitude", "f4", ("longitude",))
+            mvar = ds.createVariable("mask", "i2", ("time", "latitude", "longitude"))
+            tvar[:] = [0.0]
+            latvar[:] = lats
+            lonvar[:] = lons
+            arr = np.ones((1, len(lats), len(lons)), dtype=np.int16)
+            # Mark land pixels around Balikpapan (-1.25, 116.833) while leaving sea clear.
+            arr[0, :, :10] = 2
+            mvar[:] = arr
+        finally:
+            ds.close()
+
+        mur = _load_mur_landmask(mask_nc)
+        self.assertIsNotNone(mur)
+        # Balikpapan city harbor falls on masked land (2).
+        self.assertFalse(_is_strict_open_ocean(-1.25, 116.833, sst_nc, sst_grid, mur))
+        # Open Makassar Strait waters with >= 1 cell ocean margin pass cleanly.
+        self.assertTrue(_is_strict_open_ocean(-1.45, 117.75, sst_nc, sst_grid, mur))
+
 
 if __name__ == "__main__":
     unittest.main()

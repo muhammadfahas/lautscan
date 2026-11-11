@@ -17,6 +17,10 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+import httpx
+import netCDF4 as nc
+import numpy as np
+
 from app.core.config import get_settings
 from app.etl.base import INDONESIA_BBOX
 from app.etl.noaa_erddap import (
@@ -25,11 +29,16 @@ from app.etl.noaa_erddap import (
     NOAAErddapAdapter,
 )
 from app.etl.obis_client import ObisClient
-from app.etl.tiler import sample_point_from_netcdf
+from app.etl.tiler import _load_layer_grid, sample_point_from_netcdf
 from app.services.point_query import _find_wpp_in_seed
 from app.services.species_service import BASELINE_OBIS_FIXTURES
 
 logger = logging.getLogger(__name__)
+
+MUR_LANDMASK_URL = (
+    "https://coastwatch.pfeg.noaa.gov/erddap/griddap/jplMURSST41.nc"
+    "?mask[(last)][(-12):2:(7)][(92):2:(142)]"
+)
 
 TARGET_INDONESIAN_TAXONS: tuple[str, ...] = (
     "Thunnus albacares",
@@ -108,11 +117,68 @@ def _is_too_close(
     return any(abs(lat - elat) < min_deg and abs(lon - elon) < min_deg for elat, elon in existing)
 
 
-async def sync_global_obis_cache(global_dir: Path, per_taxon_limit: int = 35) -> dict[str, Any]:
+def _load_mur_landmask(
+    landmask_nc: Path,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray] | None:
+    if not landmask_nc.is_file():
+        return None
+    try:
+        ds = nc.Dataset(landmask_nc)
+        try:
+            lats = np.asarray(ds.variables["latitude"][:], dtype=float)
+            lons = np.asarray(ds.variables["longitude"][:], dtype=float)
+            mask = np.asarray(ds.variables["mask"][0], dtype=int)
+            return lats, lons, mask
+        finally:
+            ds.close()
+    except Exception as exc:
+        logger.warning("Failed to load MUR landmask %s: %s", landmask_nc, exc)
+        return None
+
+
+def _is_strict_open_ocean(
+    lat: float,
+    lon: float,
+    sst_nc: Path | None,
+    sst_grid: Any | None,
+    mur_mask: tuple[np.ndarray, np.ndarray, np.ndarray] | None,
+) -> bool:
+    """Reject terrestrial/harbour coordinates; require verified open sea water."""
+    if mur_mask is not None:
+        m_lats, m_lons, m_arr = mur_mask
+        r0 = int(np.searchsorted(m_lats, lat)) - 1
+        c0 = int(np.searchsorted(m_lons, lon)) - 1
+        if r0 < 1 or c0 < 1 or r0 + 2 > len(m_lats) or c0 + 2 > len(m_lons):
+            return False
+        # Require a 3x3 open-sea window (~4 km clearance) in the 2 km NASA MUR mask.
+        if not bool(np.all(m_arr[r0 - 1 : r0 + 2, c0 - 1 : c0 + 2] == 1)):
+            return False
+
+    if sst_nc is not None and sst_grid is not None:
+        try:
+            sst_pt = sample_point_from_netcdf(sst_nc, "sst", lat, lon)
+            if sst_pt.get("sst_c") is None or sst_pt.get("interpolation_method") != "bilinear":
+                return False
+            r0 = int(np.searchsorted(sst_grid.lat, lat)) - 1
+            c0 = int(np.searchsorted(sst_grid.lon, lon)) - 1
+            if r0 < 0 or c0 < 0 or r0 + 1 >= len(sst_grid.lat) or c0 + 1 >= len(sst_grid.lon):
+                return False
+            if int(np.isfinite(sst_grid.primary[r0 : r0 + 2, c0 : c0 + 2]).sum()) < 4:
+                return False
+        except Exception:
+            return False
+    return True
+
+
+async def sync_global_obis_cache(
+    global_dir: Path,
+    per_taxon_limit: int = 120,
+) -> dict[str, Any]:
     """Fetch real OBIS v3 occurrences across Indonesian waters and write JSON cache."""
     client = ObisClient(wpp_locator=_locate_wpp_code, timeout_s=25.0)
     sst_nc = global_dir / "noaa_sst.nc"
-    has_sst_mask = sst_nc.is_file()
+    sst_grid = _load_layer_grid(sst_nc, "sst") if sst_nc.is_file() else None
+    mur_mask = _load_mur_landmask(global_dir / "noaa_landmask.nc")
     per_taxon_totals: dict[str, int] = {}
     selected_records: list[dict[str, Any]] = []
     seen_coords_by_taxon: dict[str, list[tuple[float, float]]] = {}
@@ -146,13 +212,14 @@ async def sync_global_obis_cache(global_dir: Path, per_taxon_limit: int = 35) ->
                 continue
             if _is_too_close(rec.lat, rec.lon, coords_list, min_deg=0.35):
                 continue
-            if has_sst_mask:
-                try:
-                    sst_pt = sample_point_from_netcdf(sst_nc, "sst", rec.lat, rec.lon)
-                    if sst_pt.get("sst_c") is None:
-                        continue
-                except Exception:
-                    pass
+            if not _is_strict_open_ocean(
+                rec.lat,
+                rec.lon,
+                sst_nc if sst_nc.is_file() else None,
+                sst_grid,
+                mur_mask,
+            ):
+                continue
             coords_list.append((rec.lat, rec.lon))
             covered_wpps.add(rec.wpp_code)
             selected_records.append(rec.to_dict())
@@ -248,6 +315,21 @@ async def sync_global_noaa_cache(global_dir: Path) -> dict[str, Any]:
                     }
         except Exception as exc:
             logger.debug("Optional VIIRS monthly chlorophyll skipped: %s", exc)
+
+        landmask_dest = global_dir / "noaa_landmask.nc"
+        need_landmask = not landmask_dest.is_file() or (
+            datetime.now(UTC).timestamp() - landmask_dest.stat().st_mtime > 7 * 86400
+        )
+        if need_landmask:
+            try:
+                async with httpx.AsyncClient(timeout=45.0, follow_redirects=True) as hclient:
+                    m_resp = await hclient.get(MUR_LANDMASK_URL)
+                    m_resp.raise_for_status()
+                    tmp_mask = tmp_dir / "noaa_landmask.nc"
+                    tmp_mask.write_bytes(m_resp.content)
+                    _atomic_copy_file(tmp_mask, landmask_dest)
+            except Exception as exc:
+                logger.warning("MUR 2km landmask refresh skipped: %s", exc)
 
     _atomic_write_json(
         global_dir / "noaa_manifest.json",

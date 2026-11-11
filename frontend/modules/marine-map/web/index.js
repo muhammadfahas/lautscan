@@ -2650,7 +2650,7 @@ export class MarineMap {
   }
 
   drawPin(zArg, kArg, leftArg, topArg) {
-    if (!this.inspectedPoint || !this.size.w || !this.size.h) {
+    if (!this.inspectedPoint || !this.size.w || !this.size.h || (this.selectedMarkerId && this.parts?.has(this.selectedMarkerId))) {
       this.pinLayer.replaceChildren();
       return;
     }

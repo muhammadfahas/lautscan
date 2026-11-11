@@ -144,7 +144,7 @@ def _build_baseline_obis_fixtures() -> list[SpeciesOccurrenceRecord]:
             "common_name": "Bali sardinella / Ikan lemuru",
             "taxon_rank": "species",
             "family": "Dorosomatidae",
-            "lat": -8.80,
+            "lat": -8.92,
             "lon": 115.60,
             "wpp_code": "573",
             "depth_m": 22.0,
@@ -399,11 +399,45 @@ _GLOBAL_CACHE_MTIME: float | None = None
 _GLOBAL_CACHE_ITEMS: list[SpeciesOccurrenceRecord] | None = None
 
 
+def _filter_open_ocean_by_mur_mask(
+    records: list[SpeciesOccurrenceRecord],
+    landmask_nc: Path,
+) -> list[SpeciesOccurrenceRecord]:
+    """Filter out coordinates touching land pixels when NASA MUR 2 km mask exists."""
+    if not landmask_nc.is_file():
+        return records
+    try:
+        import netCDF4 as nc
+        import numpy as np
+
+        ds = nc.Dataset(landmask_nc)
+        try:
+            m_lats = np.asarray(ds.variables["latitude"][:], dtype=float)
+            m_lons = np.asarray(ds.variables["longitude"][:], dtype=float)
+            m_arr = np.asarray(ds.variables["mask"][0], dtype=int)
+        finally:
+            ds.close()
+
+        kept: list[SpeciesOccurrenceRecord] = []
+        for rec in records:
+            r0 = int(np.searchsorted(m_lats, rec.lat)) - 1
+            c0 = int(np.searchsorted(m_lons, rec.lon)) - 1
+            if r0 < 1 or c0 < 1 or r0 + 2 > len(m_lats) or c0 + 2 > len(m_lons):
+                continue
+            if bool(np.all(m_arr[r0 - 1 : r0 + 2, c0 - 1 : c0 + 2] == 1)):
+                kept.append(rec)
+        return kept or records
+    except Exception as exc:
+        logger.debug("MUR landmask runtime check skipped: %s", exc)
+        return records
+
+
 def _load_active_species_records() -> list[SpeciesOccurrenceRecord]:
     """Return synced global OBIS records if cached on disk, else deterministic fixtures."""
     global _GLOBAL_CACHE_MTIME, _GLOBAL_CACHE_ITEMS
     try:
-        cache_path = Path(get_settings().TILE_CACHE_DIR) / "global" / "obis_species.json"
+        global_dir = Path(get_settings().TILE_CACHE_DIR) / "global"
+        cache_path = global_dir / "obis_species.json"
         if cache_path.is_file():
             mtime = cache_path.stat().st_mtime
             if _GLOBAL_CACHE_ITEMS is not None and mtime == _GLOBAL_CACHE_MTIME:
@@ -413,6 +447,7 @@ def _load_active_species_records() -> list[SpeciesOccurrenceRecord]:
                 SpeciesOccurrenceRecord.model_validate(item)
                 for item in raw.get("items", [])
             ]
+            items = _filter_open_ocean_by_mur_mask(items, global_dir / "noaa_landmask.nc")
             if items:
                 _GLOBAL_CACHE_MTIME = mtime
                 _GLOBAL_CACHE_ITEMS = items
