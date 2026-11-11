@@ -56,7 +56,7 @@ fn formatWibOpt(val: option<string>, fallback: string): string = match val { cas
 
 fn formatFreshnessTimestamp(sources: DataSourceStatusRecord[], inspection: option<MapPointInspection>): string = match inspection { case some(pt) => formatWibOpt(pt.acquired_at_utc, "Basis data lokal"), case none => match first(sources.filter(s => s.source_key == "noaa_erddap")) { case some(src) => match src.latest_data_timestamp_utc { case some(ts) => formatWibTimestamp(ts), case none => formatWibOpt(src.last_sync_utc, "Basis data lokal") }, case none => "Basis data lokal" } }
 
-fn formatOptNumber(val: option<number>, decimals: number, unit: string): string = match val { case some(v) => `${v.toFixed(decimals)} ${unit}`, case none => "Tidak tersedia" }
+fn formatOptNumber(val: option<number>, decimals: number, unit: string): string = match val { case some(v) => `${decimals == 0 ? v.toFixed(0) : (decimals == 1 ? v.toFixed(1) : v.toFixed(2))} ${unit}`, case none => "Tidak tersedia" }
 
 fn formatOptText(val: option<string>, fallback: string): string = match val { case some(s) => s, case none => fallback }
 

@@ -173,7 +173,14 @@ jobs:
             CONTRACT_BIN="$PWD/exact/target/debug/contract"
           fi
 
+          if [ -f "lautscan/frontend/app.contract" ]; then
+            CONTRACT_FILES="lautscan/frontend/app.contract"
+          else
+            CONTRACT_FILES="$(find lautscan/frontend -maxdepth 4 -name "*.contract" ! -name "*.test.contract" | sort)"
+          fi
+
           while IFS= read -r contract_file; do
+            [ -n "$contract_file" ] || continue
             echo "Validating $contract_file ..."
             if [ -n "$CONTRACT_BIN" ]; then
               "$CONTRACT_BIN" build --json "$contract_file"
@@ -183,7 +190,7 @@ jobs:
               echo "Unable to locate Exact contract compiler binary or scripts/exact.mjs" >&2
               exit 1
             fi
-          done < <(find lautscan/frontend -maxdepth 4 -name "*.contract" ! -name "*.test.contract" | sort)
+          done <<< "$CONTRACT_FILES"
 
       - name: Typecheck frontend TypeScript
         if: steps.check_frontend.outputs.exists == 'true'
