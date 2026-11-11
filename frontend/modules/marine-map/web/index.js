@@ -1455,16 +1455,21 @@ export class MarineMap {
     return { u, v, speedMs, speedKnots: speedMs * 1.94384 };
   }
 
-  seedStreamParticle(particle, randomAge = false) {
+  seedStreamParticle(particle, randomAge = false, preferredIdx = -1) {
     const f = this.currentsField;
     if (!f || f.oceanCells.length === 0) return false;
     let lat = 0;
     let lon = 0;
     let found = false;
-    for (let attempt = 0; attempt < 8; attempt++) {
-      const cell = f.oceanCells[Math.floor(Math.random() * f.oceanCells.length)];
-      const candLat = cell.lat + (Math.random() - 0.5) * f.dLat * 0.95;
-      const candLon = cell.lon + (Math.random() - 0.5) * f.dLon * 0.95;
+    const nCells = f.oceanCells.length;
+    const baseCell = preferredIdx >= 0
+      ? f.oceanCells[preferredIdx % nCells]
+      : f.oceanCells[Math.floor(Math.random() * nCells)];
+
+    for (let attempt = 0; attempt < 6; attempt++) {
+      const cell = attempt === 0 ? baseCell : f.oceanCells[Math.floor(Math.random() * nCells)];
+      const candLat = cell.lat + (Math.random() - 0.5) * f.dLat * 0.82;
+      const candLon = cell.lon + (Math.random() - 0.5) * f.dLon * 0.82;
       if (this.sampleCurrentVelocity(candLat, candLon)) {
         lat = candLat;
         lon = candLon;
@@ -1473,16 +1478,15 @@ export class MarineMap {
       }
     }
     if (!found) {
-      const cell = f.oceanCells[Math.floor(Math.random() * f.oceanCells.length)];
-      lat = cell.lat;
-      lon = cell.lon;
+      lat = baseCell.lat;
+      lon = baseCell.lon;
     }
 
     const trailLen = particle.trailLat.length;
     particle.lat = lat;
     particle.lon = lon;
-    particle.maxAge = 2.0 + Math.random() * 1.9;
-    particle.age = randomAge ? Math.random() * particle.maxAge * 0.72 : 0;
+    particle.maxAge = 2.4 + Math.random() * 2.0;
+    particle.age = randomAge ? Math.random() * particle.maxAge * 0.68 : 0;
     particle.trailCount = 1;
     particle.trailHead = 0;
     for (let i = 0; i < trailLen; i++) {
@@ -1495,27 +1499,30 @@ export class MarineMap {
   }
 
   initStreamParticles(w) {
-    if (!this.currentsField) {
+    const f = this.currentsField;
+    if (!f) {
       this.currentsParticles = [];
       return;
     }
-    const count = w < 640 ? 360 : 620;
-    const trailLen = 24;
+    const nCells = f.oceanCells.length;
+    const count = clamp(Math.round(nCells * 1.15), w < 640 ? 90 : 140, w < 640 ? 135 : 210);
+    const trailLen = 30;
     const particles = [];
     for (let i = 0; i < count; i++) {
       const p = {
         lat: 0,
         lon: 0,
         age: 0,
-        maxAge: 2.6,
+        maxAge: 3.0,
         speedKnots: 0.4,
+        phaseOffset: (i * 1.6180339) % (Math.PI * 2),
         trailLat: new Float64Array(trailLen),
         trailLon: new Float64Array(trailLen),
         trailCount: 0,
         trailHead: 0,
       };
-      this.seedStreamParticle(p, true);
-      const warmup = 6 + (i % 18);
+      this.seedStreamParticle(p, true, i);
+      const warmup = 10 + (i % 18);
       for (let s = 0; s < warmup; s++) {
         this.stepSingleParticle(p, 0.032, false);
       }
@@ -1536,7 +1543,7 @@ export class MarineMap {
       return;
     }
     const pxPerDeg = (TILE_SIZE * 2 ** this.zoom) / 360.0;
-    const degScale = 112.0 / Math.max(8.0, pxPerDeg);
+    const degScale = 92.0 / Math.max(8.0, pxPerDeg);
     const cosLat1 = Math.max(0.35, Math.cos((p.lat * Math.PI) / 180));
     const midLat = p.lat + v1.v * degScale * dt * 0.5;
     const midLon = p.lon + (v1.u / cosLat1) * degScale * dt * 0.5;
@@ -1672,95 +1679,89 @@ export class MarineMap {
     const colors = night
       ? ['#38BDF8', '#2DD4BF', '#FBBF24']
       : ['#0369A1', '#0D9488', '#D97706'];
-    const crestHalo = night ? 'rgba(10, 14, 39, 0.55)' : 'rgba(255, 255, 255, 0.72)';
-    const crestCore = night ? 'rgba(255, 255, 255, 0.92)' : 'rgba(255, 255, 255, 0.95)';
+    const washColor = night ? 'rgba(10, 14, 39, 0.55)' : 'rgba(255, 255, 255, 0.65)';
+    const foamColor = night ? 'rgba(255, 255, 255, 0.62)' : 'rgba(255, 255, 255, 0.78)';
 
-    const buckets = [
-      { tail: [], mid: [], head: [] },
-      { tail: [], mid: [], head: [] },
-      { tail: [], mid: [], head: [] },
-    ];
-    const crests = [];
+    const traceSmoothCurve = (points, startIndex) => {
+      if (points.length - startIndex < 2) return;
+      ctx.beginPath();
+      ctx.moveTo(points[startIndex][0], points[startIndex][1]);
+      for (let i = startIndex + 1; i < points.length - 1; i++) {
+        const mx = (points[i][0] + points[i + 1][0]) * 0.5;
+        const my = (points[i][1] + points[i + 1][1]) * 0.5;
+        ctx.quadraticCurveTo(points[i][0], points[i][1], mx, my);
+      }
+      const last = points[points.length - 1];
+      ctx.lineTo(last[0], last[1]);
+      ctx.stroke();
+    };
+
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
 
     for (const p of this.currentsParticles) {
       const cnt = p.trailCount;
-      if (cnt < 2) continue;
-      const life = clamp(Math.sin((p.age / p.maxAge) * Math.PI), 0.15, 1);
-      if (life < 0.18) continue;
+      if (cnt < 4) continue;
+      const life = clamp(Math.sin((p.age / p.maxAge) * Math.PI), 0, 1);
+      if (life < 0.14) continue;
 
       const maxLen = p.trailLat.length;
       const startIdx = (p.trailHead - cnt + 1 + maxLen) % maxLen;
-      const pts = [];
+      const rawPts = [];
       let clipped = false;
       for (let i = 0; i < cnt; i++) {
         const idx = (startIdx + i) % maxLen;
         const [sx, sy] = this.projectPointToViewport(p.trailLat[idx], p.trailLon[idx], z, k, left, top, n);
-        if (i > 0 && Math.hypot(sx - pts[pts.length - 1][0], sy - pts[pts.length - 1][1]) > 70) {
+        if (i > 0 && Math.hypot(sx - rawPts[rawPts.length - 1][0], sy - rawPts[rawPts.length - 1][1]) > 75) {
           clipped = true;
           break;
         }
-        pts.push([sx, sy]);
+        rawPts.push([sx, sy]);
       }
-      if (clipped || pts.length < 2) continue;
+      if (clipped || rawPts.length < 4) continue;
 
-      const headPt = pts[pts.length - 1];
-      if (headPt[0] < -32 || headPt[0] > w + 32 || headPt[1] < -32 || headPt[1] > h + 32) continue;
+      const tailPt = rawPts[0];
+      const headPt = rawPts[rawPts.length - 1];
+      if (headPt[0] < -48 || headPt[0] > w + 48 || headPt[1] < -48 || headPt[1] > h + 48) continue;
+
+      const totalLen = Math.hypot(headPt[0] - tailPt[0], headPt[1] - tailPt[1]);
+      if (totalLen < 12) continue;
+
+      const wavePts = [];
+      for (let i = 0; i < rawPts.length; i++) {
+        const prev = rawPts[Math.max(0, i - 1)];
+        const next = rawPts[Math.min(rawPts.length - 1, i + 1)];
+        const vx = next[0] - prev[0];
+        const vy = next[1] - prev[1];
+        const mag = Math.hypot(vx, vy) || 1;
+        const nx = -vy / mag;
+        const ny = vx / mag;
+        const u = i / (rawPts.length - 1);
+        const envelope = Math.sin(u * Math.PI);
+        const amp = envelope * clamp(totalLen * 0.085, 2.4, 4.6);
+        const ripple = Math.sin(u * Math.PI * 3.0 - p.age * 4.6 + (p.phaseOffset || 0)) * amp;
+        wavePts.push([rawPts[i][0] + nx * ripple, rawPts[i][1] + ny * ripple]);
+      }
 
       const tier = p.speedKnots >= 1.2 ? 2 : p.speedKnots >= 0.5 ? 1 : 0;
-      const split1 = Math.max(1, Math.floor(pts.length * 0.45));
-      const split2 = Math.max(split1 + 1, Math.floor(pts.length * 0.78));
+      const crestStart = Math.max(0, Math.floor(wavePts.length * 0.45));
 
-      if (split1 >= 1) buckets[tier].tail.push(pts.slice(0, split1 + 1));
-      if (split2 > split1) buckets[tier].mid.push(pts.slice(split1, split2 + 1));
-      if (pts.length - 1 >= split2) {
-        const hSeg = pts.slice(split2);
-        if (hSeg.length >= 2) buckets[tier].head.push(hSeg);
-      }
-      if (life > 0.35) crests.push(headPt);
+      ctx.globalAlpha = life * 0.52;
+      ctx.strokeStyle = washColor;
+      ctx.lineWidth = 4.6;
+      traceSmoothCurve(wavePts, 0);
+
+      ctx.globalAlpha = life * 0.88;
+      ctx.strokeStyle = colors[tier];
+      ctx.lineWidth = 2.4;
+      traceSmoothCurve(wavePts, 0);
+
+      ctx.globalAlpha = life * 0.72;
+      ctx.strokeStyle = foamColor;
+      ctx.lineWidth = 1.15;
+      traceSmoothCurve(wavePts, crestStart);
     }
-
-    const strokePaths = (paths, strokeStyle, lineWidth, alpha) => {
-      if (paths.length === 0) return;
-      ctx.save();
-      ctx.globalAlpha = alpha;
-      ctx.strokeStyle = strokeStyle;
-      ctx.lineWidth = lineWidth;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      ctx.beginPath();
-      for (const pts of paths) {
-        ctx.moveTo(pts[0][0], pts[0][1]);
-        for (let i = 1; i < pts.length - 1; i++) {
-          const mx = (pts[i][0] + pts[i + 1][0]) * 0.5;
-          const my = (pts[i][1] + pts[i + 1][1]) * 0.5;
-          ctx.quadraticCurveTo(pts[i][0], pts[i][1], mx, my);
-        }
-        const last = pts[pts.length - 1];
-        ctx.lineTo(last[0], last[1]);
-      }
-      ctx.stroke();
-      ctx.restore();
-    };
-
-    for (let t = 0; t < 3; t++) {
-      strokePaths(buckets[t].head, crestHalo, 4.4, 0.75);
-      strokePaths(buckets[t].tail, colors[t], 1.35, 0.28);
-      strokePaths(buckets[t].mid, colors[t], 2.1, 0.62);
-      strokePaths(buckets[t].head, colors[t], 2.7, 0.94);
-    }
-
-    if (crests.length > 0) {
-      ctx.save();
-      ctx.fillStyle = crestCore;
-      ctx.globalAlpha = 0.9;
-      ctx.beginPath();
-      for (const [cx, cy] of crests) {
-        ctx.moveTo(cx + 1.6, cy);
-        ctx.arc(cx, cy, 1.6, 0, Math.PI * 2);
-      }
-      ctx.fill();
-      ctx.restore();
-    }
+    ctx.globalAlpha = 1;
   }
 
   projectPointToViewport(lat, lon, z, k, left, top, n) {
