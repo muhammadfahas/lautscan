@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import io
 import sys
 import tempfile
 import unittest
+from dataclasses import dataclass
 from pathlib import Path
 from unittest.mock import patch
 
@@ -532,6 +534,209 @@ class TestPotentialAndCurrentsGrid(unittest.TestCase):
             expected_kn = round(first["speed_ms"] * 1.94384, 3)
             self.assertAlmostEqual(first["speed_knots"], expected_kn, places=2)
             self.assertTrue(0.0 <= first["direction_deg"] <= 360.0)
+
+
+class TestProcessedRasterAndEquatorialCurrents(unittest.TestCase):
+    def test_outer_boundary_feathering_and_smooth_interpolation(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            nc_path = Path(td) / "regional_sst.nc"
+            lat = np.linspace(-12.0, 7.0, 39, dtype=np.float64)
+            lon = np.linspace(94.0, 142.0, 97, dtype=np.float64)
+            lon2d, lat2d = np.meshgrid(lon, lat)
+            sst = (28.5 + 1.2 * np.sin(0.2 * lon2d) * np.cos(0.25 * lat2d)).astype(np.float32)
+            _write_test_netcdf_3d_or_2d(
+                nc_path,
+                lat,
+                lon,
+                {"sst": (("lat", "lon"), sst, {"units": "degree_C"})},
+            )
+
+            # Tile (z=5, x=24, y=16) spans lon 90.0..101.25 and crosses lon=94.0 edge.
+            raw_bytes, is_empty = render_tile_bytes(nc_path, "sst", z=5, x=24, y=16, fmt="png")
+            self.assertFalse(is_empty)
+            arr = np.asarray(Image.open(io.BytesIO(raw_bytes)).convert("RGBA"))
+            alpha = arr[:, :, 3]
+            self.assertTrue(np.any(alpha == 0), "Outside lon<94 domain must stay transparent")
+            self.assertTrue(np.any(alpha == 255), "Deep interior ocean must be opaque")
+            feathered = alpha[(alpha > 0) & (alpha < 255)]
+            self.assertGreater(
+                feathered.size,
+                100,
+                "Expected smooth spatial feathering along outer boundary",
+            )
+
+            # High-zoom z=10 tile remains valid, non-empty, and LUT-compliant.
+            hi_bytes, hi_empty = render_tile_bytes(nc_path, "sst", z=10, x=832, y=528, fmt="png")
+            self.assertFalse(hi_empty)
+            hi_arr = np.asarray(Image.open(io.BytesIO(hi_bytes)).convert("RGBA"))
+            hi_alpha = hi_arr[:, :, 3]
+            self.assertTrue(np.all(hi_alpha == 255))
+            lut_set = {tuple(int(c) for c in row) for row in _get_colormap_lut("plasma")[:, :3]}
+            rgb_rows = hi_arr[:, :, :3].reshape(-1, 3)[:200]
+            sample_rgb = {tuple(int(c) for c in row) for row in rgb_rows}
+            self.assertTrue(sample_rgb.issubset(lut_set))
+
+    def test_cloud_hole_inpainting_preserves_land_mask(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            chl_nc = Path(td) / "cloudy_chl.nc"
+            lat = np.linspace(-10.0, 2.0, 49, dtype=np.float64)
+            lon = np.linspace(104.0, 120.0, 65, dtype=np.float64)
+            lon2d, lat2d = np.meshgrid(lon, lat)
+            chl = np.full(lon2d.shape, 0.35, dtype=np.float32)
+
+            # Large real landmass block in center-north (lon 110..115, lat -2..2).
+            land_mask = (lon2d >= 110.0) & (lon2d <= 115.0) & (lat2d >= -2.0) & (lat2d <= 2.0)
+            # Isolated small 1-cell cloud hole in open Java Sea (lon ~108, lat ~-6).
+            cloud_hole = (np.abs(lon2d - 108.0) <= 0.25) & (np.abs(lat2d + 6.0) <= 0.25)
+            chl[land_mask | cloud_hole] = np.float32(np.nan)
+
+            _write_test_netcdf_3d_or_2d(
+                chl_nc,
+                lat,
+                lon,
+                {"chlorophyll": (("lat", "lon"), chl, {"units": "mg m-3"})},
+            )
+
+            # z=6, x=51, y=33 spans lon 106.875..112.5, lat -5.616..-11.178 -> covers (-6, 108)
+            raw_bytes, is_empty = render_tile_bytes(
+                chl_nc, "chlorophyll", z=6, x=51, y=33, fmt="png"
+            )
+            self.assertFalse(is_empty)
+            arr = np.asarray(Image.open(io.BytesIO(raw_bytes)).convert("RGBA"))
+            # Cloud hole at (-6, 108) sits near top-left of tile (51, 33) and should be filled.
+            top_left_alpha = arr[:40, :40, 3]
+            self.assertTrue(np.all(top_left_alpha == 255))
+
+            # Tile (z=6, x=52, y=31) covers lon 112.5..118.125, lat 0..5.61 -> north of land.
+            # Tile (z=6, x=51, y=32) covers lon 106.875..112.5, lat -5.616..0 -> includes land!
+            land_bytes, _ = render_tile_bytes(chl_nc, "chlorophyll", z=6, x=51, y=32, fmt="png")
+            land_arr = np.asarray(Image.open(io.BytesIO(land_bytes)).convert("RGBA"))
+            # Top-right of (51, 32) is inside lon 110..112.5, lat -2..0 landmass -> alpha == 0.
+            self.assertTrue(np.all(land_arr[:20, -20:, 3] == 0))
+
+    def test_sample_currents_grid_equatorial_and_strait_gap_fill(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            gdir = Path(td)
+            sst_nc = gdir / "noaa_sst.nc"
+            cur_nc = gdir / "noaa_currents.nc"
+
+            lat_s = np.linspace(-4.0, 4.0, 81, dtype=np.float64)
+            lon_s = np.linspace(100.0, 120.0, 201, dtype=np.float64)
+            lons, lats = np.meshgrid(lon_s, lat_s)
+            sst = np.full(lats.shape, 29.5, dtype=np.float32)
+            # Island landmass at lon 108..112, lat -2..2.
+            island_s = (lons >= 108.0) & (lons <= 112.0) & (lats >= -2.0) & (lats <= 2.0)
+            sst[island_s] = np.float32(np.nan)
+            _write_test_netcdf_3d_or_2d(
+                sst_nc,
+                lat_s,
+                lon_s,
+                {"sst": (("lat", "lon"), sst, {"units": "degree_C"})},
+            )
+
+            lat_c = np.linspace(-4.0, 4.0, 33, dtype=np.float64)
+            lon_c = np.linspace(100.0, 120.0, 81, dtype=np.float64)
+            lonc, latc = np.meshgrid(lon_c, lat_c)
+            u_grid = np.full(latc.shape, 0.35, dtype=np.float32)
+            v_grid = np.full(latc.shape, -0.12, dtype=np.float32)
+
+            island_c = (lonc >= 108.0) & (lonc <= 112.0) & (latc >= -2.0) & (latc <= 2.0)
+            # Simulate geostrophic equatorial breakdown (damped near zero at |lat| <= 0.5)
+            # plus a narrow strait NaN hole at lon 114.5..115.5, lat -1.5..1.5.
+            eq_damped = np.abs(latc) <= 0.5
+            strait_gap = (lonc >= 114.5) & (lonc <= 115.5) & (np.abs(latc) <= 1.5)
+            u_grid[eq_damped] = np.float32(0.002)
+            v_grid[eq_damped] = np.float32(0.001)
+            u_grid[island_c | strait_gap] = np.float32(np.nan)
+            v_grid[island_c | strait_gap] = np.float32(np.nan)
+
+            _write_test_netcdf_3d_or_2d(
+                cur_nc,
+                lat_c,
+                lon_c,
+                {
+                    "u_ms": (("lat", "lon"), u_grid, {"units": "m s-1"}),
+                    "v_ms": (("lat", "lon"), v_grid, {"units": "m s-1"}),
+                },
+            )
+
+            # Uses automatic sibling noaa_sst.nc mask discovery as well.
+            res = sample_currents_grid(
+                cur_nc,
+                min_lon=102.0,
+                min_lat=-3.5,
+                max_lon=118.0,
+                max_lat=3.5,
+                max_vectors=320,
+            )
+            vectors = res["vectors"]
+            self.assertGreater(len(vectors), 0)
+
+            eq_open_vectors = [
+                v
+                for v in vectors
+                if abs(v["lat"]) <= 0.5 and (v["lon"] < 107.5 or v["lon"] > 112.5)
+            ]
+            self.assertGreater(
+                len(eq_open_vectors),
+                0,
+                "Equatorial open sea must receive smooth interpolated flow vectors",
+            )
+            self.assertTrue(all(v["speed_ms"] >= 0.08 for v in eq_open_vectors))
+
+            strait_vectors = [
+                v for v in vectors if 114.5 <= v["lon"] <= 115.5 and abs(v["lat"]) <= 1.0
+            ]
+            self.assertGreater(len(strait_vectors), 0, "Strait ocean gap should be filled")
+
+            land_vectors = [
+                v for v in vectors if 108.5 <= v["lon"] <= 111.5 and -1.5 <= v["lat"] <= 1.5
+            ]
+            self.assertEqual(land_vectors, [], "Land interior must remain strictly masked")
+
+    def test_tile_service_bypasses_stale_unversioned_disk_cache(self) -> None:
+        from app.services import tile_service
+
+        @dataclass
+        class _LocalSettings:
+            TILE_CACHE_DIR: Path
+
+        with tempfile.TemporaryDirectory() as td:
+            tile_dir = Path(td)
+            legacy_tile = tile_dir / "sst" / "2026-11-11" / "4" / "13" / "8.webp"
+            legacy_tile.parent.mkdir(parents=True, exist_ok=True)
+            legacy_tile.write_bytes(b"stale-unprocessed-webp")
+
+            with patch.object(
+                tile_service,
+                "get_settings",
+                return_value=_LocalSettings(TILE_CACHE_DIR=tile_dir),
+            ):
+                miss_res = asyncio.run(
+                    tile_service.get_raster_tile("sst", "2026-11-11", 4, 13, 8, fmt="webp")
+                )
+                self.assertEqual(miss_res.cache_status, "MISS")
+                self.assertNotEqual(miss_res.content, b"stale-unprocessed-webp")
+                with Image.open(io.BytesIO(miss_res.content)) as img:
+                    self.assertEqual(img.size, (TILE_SIZE, TILE_SIZE))
+                    self.assertEqual(img.mode, "RGBA")
+
+                versioned_tile = (
+                    tile_dir
+                    / tile_service.TILE_CACHE_VERSION
+                    / "sst"
+                    / "2026-11-11"
+                    / "4"
+                    / "13"
+                    / "8.webp"
+                )
+                self.assertTrue(versioned_tile.is_file())
+
+                hit_res = asyncio.run(
+                    tile_service.get_raster_tile("sst", "2026-11-11", 4, 13, 8, fmt="webp")
+                )
+                self.assertEqual(hit_res.cache_status, "HIT")
+                self.assertEqual(hit_res.content, miss_res.content)
 
 
 if __name__ == "__main__":

@@ -13,6 +13,11 @@
 const TILE_SIZE = 256;
 const MIN_ZOOM = 2;
 const DEFAULT_MAX_ZOOM = 14;
+const MIN_NATIVE_RASTER_ZOOM = 4;
+const MAX_NATIVE_RASTER_ZOOM = 9;
+const MAX_RASTER_CACHE_ENTRIES = 280;
+const MAX_CURRENTS_CACHE_ENTRIES = 12;
+const RASTER_RETRY_MS = 8000;
 const DEFAULT_CENTER_LAT = -2.5;
 const DEFAULT_CENTER_LON = 118.0;
 const DEFAULT_ZOOM = 5;
@@ -92,6 +97,13 @@ const STYLE = `
 .lautscan-marine-map .overlay-layer {
   z-index: 2;
   transition: opacity 200ms ease;
+}
+.lautscan-marine-map .overlay-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
 }
 .lautscan-marine-map .overlay-chlorophyll {
   z-index: 3;
@@ -827,15 +839,27 @@ export class MarineMap {
     this.center = [DEFAULT_CENTER_LAT, DEFAULT_CENTER_LON];
     this.zoom = DEFAULT_ZOOM;
     this.baseStyle = 'daylight';
+    const makeLayerState = (container, opacity) => {
+      const canvas = doc.createElement('canvas');
+      canvas.className = 'overlay-canvas';
+      canvas.setAttribute('aria-hidden', 'true');
+      if (!this.plain) {
+        container.append(canvas);
+      }
+      return { visible: false, opacity, container, canvas, tiles: new Map() };
+    };
     this.layers = {
-      sst: { visible: false, opacity: 0.62, container: this.sstLayer, tiles: new Map() },
-      chlorophyll: { visible: false, opacity: 0.65, container: this.chlorophyllLayer, tiles: new Map() },
-      potential: { visible: false, opacity: 0.88, container: this.potentialLayer, tiles: new Map() },
-      currents: { visible: false, opacity: 0.88, container: this.currentsLayer, tiles: new Map() },
+      sst: makeLayerState(this.sstLayer, 0.62),
+      chlorophyll: makeLayerState(this.chlorophyllLayer, 0.65),
+      potential: makeLayerState(this.potentialLayer, 0.88),
+      currents: makeLayerState(this.currentsLayer, 0.88),
     };
     this.currentsRasterVisible = false;
     this.showSpeciesPins = true;
     this.baseTiles = new Map();
+    this.activeBaseZ = DEFAULT_ZOOM;
+    this.rasterCache = new Map();
+    this.overlayRedrawRaf = null;
     this.selectedDate = 'latest';
     this.tileBaseUrl = '';
     this.wppFeatures = [];
@@ -850,6 +874,9 @@ export class MarineMap {
     this.skipTileFetch = false;
     this.currentsVectors = [];
     this.currentsField = null;
+    this.wideCurrentsField = null;
+    this.currentsCache = new Map();
+    this.currentsViewBounds = null;
     this.currentsParticles = [];
     this.currentsFetchKey = '';
     this.currentsFetchTimer = null;
@@ -900,7 +927,7 @@ export class MarineMap {
     if (zoomChanged) {
       const nextZoom = parseNum(safeProps.zoom, this.zoom);
       const clampedZoom = this.clampZoom(nextZoom);
-      if (clampedZoom !== this.zoom) {
+      if (Math.abs(clampedZoom - this.zoom) > 1e-3) {
         this.zoom = clampedZoom;
         cameraMoved = true;
       }
@@ -929,11 +956,15 @@ export class MarineMap {
     if (dateChanged) this.selectedDate = parseStr(safeProps.selectedDate, 'latest').trim() || 'latest';
     if (baseUrlChanged) this.tileBaseUrl = normalizeBaseUrl(safeProps.tileBaseUrl);
     if (!first && (dateChanged || baseUrlChanged)) {
-      this.clearOverlayTiles();
+      this.clearOverlayTiles(baseUrlChanged);
       this.currentsFetchKey = '';
-      this.currentsVectors = [];
-      this.currentsField = null;
-      this.currentsParticles = [];
+      this.currentsCache.clear();
+      if (baseUrlChanged) {
+        this.currentsVectors = [];
+        this.currentsField = null;
+        this.wideCurrentsField = null;
+        this.currentsParticles = [];
+      }
     }
 
     if (changed('wppGeoJsonCollection')) {
@@ -982,10 +1013,30 @@ export class MarineMap {
     return true;
   }
 
-  clearOverlayTiles() {
+  clearOverlayTiles(clearRasterCache = false) {
+    if (this.overlayRedrawRaf !== null && typeof cancelAnimationFrame === 'function') {
+      cancelAnimationFrame(this.overlayRedrawRaf);
+      this.overlayRedrawRaf = null;
+    }
     for (const layerState of Object.values(this.layers)) {
       for (const node of layerState.tiles.values()) node.remove();
       layerState.tiles.clear();
+      const canvas = layerState.canvas;
+      if (canvas) {
+        const ctx = canvas.getContext?.('2d');
+        if (ctx && canvas.width > 0 && canvas.height > 0) {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+      }
+    }
+    if (clearRasterCache && this.rasterCache) {
+      for (const entry of this.rasterCache.values()) {
+        if (entry?.img) {
+          entry.img.onload = null;
+          entry.img.onerror = null;
+        }
+      }
+      this.rasterCache.clear();
     }
   }
 
@@ -1027,7 +1078,7 @@ export class MarineMap {
         const dt = this.currentsLastFrameTs ? Math.min(0.06, (ts - this.currentsLastFrameTs) / 1000) : 0.033;
         this.currentsLastFrameTs = ts;
         const { w, h } = this.size;
-        if (w && h && this.currentsField && !this.skipTileFetch) {
+        if (w && h && this.currentsField) {
           this.advanceCurrentsParticles(dt);
           const z = Math.min(this.maxZoom, Math.max(0, Math.round(this.zoom)));
           const k = 2 ** (this.zoom - z);
@@ -1040,12 +1091,68 @@ export class MarineMap {
     this.currentsRaf = requestAnimationFrame(stepFrame);
   }
 
+  viewportIndonesiaBounds(w, h) {
+    const scale = TILE_SIZE * 2 ** this.zoom;
+    const [cx, cy] = project(this.center[0], this.center[1], this.zoom);
+    const halfW = w / 2;
+    const halfH = h / 2;
+    const clampedTop = clamp(cy - halfH, 0, scale);
+    const clampedBottom = clamp(cy + halfH, 0, scale);
+    const [northLat] = unproject(cx, clampedTop, this.zoom);
+    const [southLat] = unproject(cx, clampedBottom, this.zoom);
+    const minLat = Math.max(INDONESIA_BOUNDS.minLat, southLat);
+    const maxLat = Math.min(INDONESIA_BOUNDS.maxLat, northLat);
+    if (minLat >= maxLat) return null;
+
+    const lonSpan = (w / scale) * 360;
+    if (lonSpan >= 359.99) {
+      return {
+        minLon: INDONESIA_BOUNDS.minLon,
+        maxLon: INDONESIA_BOUNDS.maxLon,
+        minLat,
+        maxLat,
+      };
+    }
+
+    const rawWest = ((cx - halfW) / scale) * 360 - 180;
+    const rawEast = ((cx + halfW) / scale) * 360 - 180;
+    let minLon = Infinity;
+    let maxLon = -Infinity;
+    for (const shift of [0, -360, 360]) {
+      const a = Math.max(INDONESIA_BOUNDS.minLon, rawWest + shift);
+      const b = Math.min(INDONESIA_BOUNDS.maxLon, rawEast + shift);
+      if (a < b) {
+        if (a < minLon) minLon = a;
+        if (b > maxLon) maxLon = b;
+      }
+    }
+    if (!Number.isFinite(minLon) || minLon >= maxLon) return null;
+    return { minLon, maxLon, minLat, maxLat };
+  }
+
   cameraBbox() {
     const w = this.size.w || 800;
     const h = this.size.h || 600;
+    const scale = TILE_SIZE * 2 ** this.zoom;
     const [cx, cy] = project(this.center[0], this.center[1], this.zoom);
-    const [maxLat, minLon] = unproject(cx - w / 2, cy - h / 2, this.zoom);
-    const [minLat, maxLon] = unproject(cx + w / 2, cy + h / 2, this.zoom);
+    const [maxLat] = unproject(cx, clamp(cy - h / 2, 0, scale), this.zoom);
+    const [minLat] = unproject(cx, clamp(cy + h / 2, 0, scale), this.zoom);
+    const lonSpan = (w / scale) * 360;
+    let minLon;
+    let maxLon;
+    if (lonSpan >= 359.99) {
+      minLon = -180;
+      maxLon = 180;
+    } else {
+      const rawWest = ((cx - w / 2) / scale) * 360 - 180;
+      const rawEast = ((cx + w / 2) / scale) * 360 - 180;
+      minLon = clamp(rawWest, -180, 180);
+      maxLon = clamp(rawEast, -180, 180);
+      if (minLon >= maxLon) {
+        minLon = -180;
+        maxLon = 180;
+      }
+    }
     const centerLat = round(this.center[0], 6);
     const centerLon = round(this.center[1], 6);
     return {
@@ -1118,6 +1225,7 @@ export class MarineMap {
   }
 
   zoomBy(dz, px = 0, py = 0, deferFetch = false) {
+    clearTimeout(this.tileFetchTimer);
     const z0 = this.zoom;
     const [x, y] = project(this.center[0], this.center[1], z0);
     const under = unproject(x + px, y + py, z0);
@@ -1129,7 +1237,6 @@ export class MarineMap {
     if (deferFetch && !this.plain) {
       this.skipTileFetch = true;
       this.draw();
-      clearTimeout(this.tileFetchTimer);
       this.tileFetchTimer = setTimeout(() => {
         this.skipTileFetch = false;
         this.draw();
@@ -1224,8 +1331,9 @@ export class MarineMap {
       ctx.fillText(`${lat.toFixed(step < 1 ? 1 : 0)}°`, 8, Math.max(12, sy - 3));
     }
 
-    const lonStart = Math.floor(westLon / step) * step;
-    const lonSpan = eastLon >= westLon ? eastLon - westLon : 360 - westLon + eastLon;
+    const rawLonSpan = ((w / k) / (TILE_SIZE * 2 ** z)) * 360;
+    const lonStart = rawLonSpan >= 359 ? -180 : Math.floor(westLon / step) * step;
+    const lonSpan = rawLonSpan >= 359 ? 360 : (eastLon >= westLon ? eastLon - westLon : 360 - westLon + eastLon);
     for (let offset = 0; offset <= lonSpan + step; offset += step) {
       const lon = ((((lonStart + offset + 180) % 360) + 360) % 360) - 180;
       const [px] = project(this.center[0], lon, z);
@@ -1265,6 +1373,7 @@ export class MarineMap {
     layerName,
     urlFor,
     filterFn,
+    getActiveZ,
   }) {
     const seen = new Set();
     let currentAllLoaded = true;
@@ -1298,14 +1407,18 @@ export class MarineMap {
               if (layerName) tile.dataset.layer = layerName;
               tile.dataset.tile = `${z}/${wx}/${ty}`;
               tile.dataset.loaded = '0';
+              tile.dataset.error = '0';
               tile.addEventListener('load', () => {
                 tile.dataset.loaded = '1';
-                this.pruneStaleTiles(tileMap, z);
+                tile.dataset.error = '0';
+                tile.style.visibility = '';
+                this.pruneStaleTiles(tileMap, getActiveZ ? getActiveZ() : z);
               });
               tile.addEventListener('error', () => {
-                tile.dataset.loaded = '1';
+                tile.dataset.loaded = '0';
+                tile.dataset.error = '1';
                 tile.style.visibility = 'hidden';
-                this.pruneStaleTiles(tileMap, z);
+                this.pruneStaleTiles(tileMap, getActiveZ ? getActiveZ() : z);
               });
               tile.src = urlFor(z, wx, ty);
             }
@@ -1330,13 +1443,13 @@ export class MarineMap {
     for (const [key, tile] of tileMap) {
       if (seen.has(key)) continue;
       const tileZ = Number(tile.dataset.z);
-      const isLoaded = tile.dataset.loaded === '1';
+      const isLoaded = tile.dataset.loaded === '1' && tile.dataset.error !== '1';
       const canRetain =
         !this.plain &&
         isLoaded &&
         Number.isFinite(tileZ) &&
         (this.skipTileFetch || (!currentAllLoaded && tileZ !== z)) &&
-        retainedCount < 36;
+        retainedCount < 64;
       if (canRetain) {
         retainedCount += 1;
         tile.style.zIndex = '0';
@@ -1356,14 +1469,17 @@ export class MarineMap {
   }
 
   pruneStaleTiles(tileMap, activeZ) {
-    let anyLoading = false;
+    if (this.skipTileFetch) return;
+    let anyMissing = false;
     for (const tile of tileMap.values()) {
-      if (Number(tile.dataset.z) === activeZ && tile.dataset.loaded !== '1') {
-        anyLoading = true;
-        break;
+      if (Number(tile.dataset.z) === activeZ) {
+        if (tile.dataset.loaded !== '1' || tile.dataset.error === '1') {
+          anyMissing = true;
+          break;
+        }
       }
     }
-    if (anyLoading) return;
+    if (anyMissing) return;
     for (const [key, tile] of tileMap) {
       if (Number(tile.dataset.z) !== activeZ) {
         tile.remove();
@@ -1373,6 +1489,7 @@ export class MarineMap {
   }
 
   drawBaseTiles(w, h, z, k, left, top, n) {
+    this.activeBaseZ = z;
     this.drawTileSet({
       tileMap: this.baseTiles,
       container: this.baseLayer,
@@ -1388,7 +1505,323 @@ export class MarineMap {
       layerName: '',
       urlFor: (tz, wx, ty) => this.osmTileUrl(tz, wx, ty),
       filterFn: null,
+      getActiveZ: () => this.activeBaseZ,
     });
+  }
+
+  scheduleOverlayRedraw() {
+    if (this.overlayRedrawRaf !== null) return;
+    if (typeof requestAnimationFrame !== 'function') {
+      this.drawOverlaysOnly();
+      return;
+    }
+    this.overlayRedrawRaf = requestAnimationFrame(() => {
+      this.overlayRedrawRaf = null;
+      if (!this.map.isConnected) return;
+      this.drawOverlaysOnly();
+    });
+  }
+
+  drawOverlaysOnly() {
+    const { w, h } = this.size;
+    if (!w || !h) return;
+    const z = Math.min(this.maxZoom, Math.max(0, Math.round(this.zoom)));
+    const k = 2 ** (this.zoom - z);
+    const [cx, cy] = project(this.center[0], this.center[1], z);
+    const left = cx - w / 2 / k;
+    const top = cy - h / 2 / k;
+    const n = 2 ** z;
+    this.drawOverlayTiles(w, h, z, k, left, top, n);
+  }
+
+  rasterCacheKey(layer, dateStr, z, x, y) {
+    return `${layer}|${dateStr}|${this.tileBaseUrl}|${z}|${x}|${y}`;
+  }
+
+  peekRasterTile(layer, dateStr, z, x, y) {
+    const key = this.rasterCacheKey(layer, dateStr, z, x, y);
+    const entry = this.rasterCache.get(key);
+    if (!entry || entry.status !== 'loaded' || !entry.img?.naturalWidth) {
+      return null;
+    }
+    this.rasterCache.delete(key);
+    this.rasterCache.set(key, entry);
+    return entry;
+  }
+
+  getOrFetchRasterTile(layer, dateStr, z, x, y, allowFetch) {
+    const key = this.rasterCacheKey(layer, dateStr, z, x, y);
+    const existing = this.rasterCache.get(key);
+    if (existing) {
+      if (existing.status === 'error' && allowFetch && Date.now() >= existing.retryAt) {
+        this.rasterCache.delete(key);
+      } else {
+        this.rasterCache.delete(key);
+        this.rasterCache.set(key, existing);
+        return existing;
+      }
+    }
+    if (!allowFetch) return null;
+
+    const img = typeof Image === 'function' ? new Image() : this.doc.createElement('img');
+    img.decoding = 'async';
+    const entry = {
+      key,
+      layer,
+      date: dateStr,
+      baseUrl: this.tileBaseUrl,
+      z,
+      x,
+      y,
+      status: 'loading',
+      retryAt: 0,
+      img,
+    };
+    this.rasterCache.set(key, entry);
+    while (this.rasterCache.size > MAX_RASTER_CACHE_ENTRIES) {
+      const oldestKey = this.rasterCache.keys().next().value;
+      const oldest = this.rasterCache.get(oldestKey);
+      if (oldest?.img) {
+        oldest.img.onload = null;
+        oldest.img.onerror = null;
+      }
+      this.rasterCache.delete(oldestKey);
+    }
+
+    img.onload = () => {
+      if (this.rasterCache.get(key) !== entry) return;
+      entry.status = img.naturalWidth > 0 ? 'loaded' : 'error';
+      if (entry.status === 'error') {
+        entry.retryAt = Date.now() + RASTER_RETRY_MS;
+      }
+      this.scheduleOverlayRedraw();
+    };
+    img.onerror = () => {
+      if (this.rasterCache.get(key) !== entry) return;
+      entry.status = 'error';
+      entry.retryAt = Date.now() + RASTER_RETRY_MS;
+      this.scheduleOverlayRedraw();
+    };
+    img.src = this.overlayTileUrl(layer, z, x, y);
+    return entry;
+  }
+
+  drawTileIntoRect({ ctx, dpr, img, srcZ, srcTx, srcTy, w, h, dstX0, dstY0, dstX1, dstY1 }) {
+    const srcK = 2 ** (this.zoom - srcZ);
+    const [cxS, cyS] = project(this.center[0], this.center[1], srcZ);
+    const leftS = cxS - w / (2 * srcK);
+    const topS = cyS - h / (2 * srcK);
+    const tileScreenX0 = (srcTx * TILE_SIZE - leftS) * srcK;
+    const tileScreenY0 = (srcTy * TILE_SIZE - topS) * srcK;
+    const tileScreenSize = TILE_SIZE * srcK;
+    if (tileScreenSize <= 0) return;
+
+    const sx = clamp(((dstX0 - tileScreenX0) / tileScreenSize) * TILE_SIZE, 0, TILE_SIZE);
+    const sy = clamp(((dstY0 - tileScreenY0) / tileScreenSize) * TILE_SIZE, 0, TILE_SIZE);
+    const sx2 = clamp(((dstX1 - tileScreenX0) / tileScreenSize) * TILE_SIZE, 0, TILE_SIZE);
+    const sy2 = clamp(((dstY1 - tileScreenY0) / tileScreenSize) * TILE_SIZE, 0, TILE_SIZE);
+    const sw = sx2 - sx;
+    const sh = sy2 - sy;
+
+    const dx = Math.round(dstX0 * dpr) / dpr;
+    const dy = Math.round(dstY0 * dpr) / dpr;
+    const dx2 = Math.round(dstX1 * dpr) / dpr;
+    const dy2 = Math.round(dstY1 * dpr) / dpr;
+    const dw = dx2 - dx;
+    const dh = dy2 - dy;
+
+    if (sw > 0.001 && sh > 0.001 && dw > 0 && dh > 0) {
+      ctx.drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh);
+    }
+  }
+
+  paintClosestAncestor({ ctx, dpr, layer, dateStr, cellZ, cellTx, cellTy, w, h, dstX0, dstY0, dstX1, dstY1 }) {
+    for (let az = cellZ - 1; az >= MIN_NATIVE_RASTER_ZOOM; az--) {
+      const shift = cellZ - az;
+      const div = 1 << shift;
+      const aTx = Math.floor(cellTx / div);
+      const aTy = Math.floor(cellTy / div);
+      const aN = 1 << az;
+      const aWx = ((aTx % aN) + aN) % aN;
+      const anc = this.peekRasterTile(layer, dateStr, az, aWx, aTy);
+      if (anc) {
+        this.drawTileIntoRect({
+          ctx,
+          dpr,
+          img: anc.img,
+          srcZ: az,
+          srcTx: aTx,
+          srcTy: aTy,
+          w,
+          h,
+          dstX0,
+          dstY0,
+          dstX1,
+          dstY1,
+        });
+        return true;
+      }
+    }
+    return false;
+  }
+
+  hasLoadedDescendant(layer, dateStr, cellZ, cellTx, cellTy, depth) {
+    if (depth <= 0 || cellZ >= MAX_NATIVE_RASTER_ZOOM) return false;
+    const childZ = cellZ + 1;
+    const childN = 1 << childZ;
+    for (let qy = 0; qy < 2; qy++) {
+      const qty = cellTy * 2 + qy;
+      if (qty < 0 || qty >= childN) continue;
+      for (let qx = 0; qx < 2; qx++) {
+        const qtx = cellTx * 2 + qx;
+        const qwx = ((qtx % childN) + childN) % childN;
+        if (this.peekRasterTile(layer, dateStr, childZ, qwx, qty)) return true;
+        if (depth > 1 && this.hasLoadedDescendant(layer, dateStr, childZ, qtx, qty, depth - 1)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  paintCellWithFallback({ ctx, dpr, layer, dateStr, cellZ, cellTx, cellTy, w, h, dstX0, dstY0, dstX1, dstY1, depth }) {
+    const cellN = 1 << cellZ;
+    const cellWx = ((cellTx % cellN) + cellN) % cellN;
+    const exact = this.peekRasterTile(layer, dateStr, cellZ, cellWx, cellTy);
+    if (exact) {
+      this.drawTileIntoRect({
+        ctx,
+        dpr,
+        img: exact.img,
+        srcZ: cellZ,
+        srcTx: cellTx,
+        srcTy: cellTy,
+        w,
+        h,
+        dstX0,
+        dstY0,
+        dstX1,
+        dstY1,
+      });
+      return;
+    }
+
+    if (depth < 2 && cellZ < MAX_NATIVE_RASTER_ZOOM && this.hasLoadedDescendant(layer, dateStr, cellZ, cellTx, cellTy, 2 - depth)) {
+      const childZ = cellZ + 1;
+      const childK = 2 ** (this.zoom - childZ);
+      const [cxC, cyC] = project(this.center[0], this.center[1], childZ);
+      const leftC = cxC - w / (2 * childK);
+      const topC = cyC - h / (2 * childK);
+      for (let qy = 0; qy < 2; qy++) {
+        const qty = cellTy * 2 + qy;
+        const qY0 = Math.max(dstY0, (qty * TILE_SIZE - topC) * childK);
+        const qY1 = Math.min(dstY1, ((qty + 1) * TILE_SIZE - topC) * childK);
+        if (qY1 <= qY0) continue;
+        for (let qx = 0; qx < 2; qx++) {
+          const qtx = cellTx * 2 + qx;
+          const qX0 = Math.max(dstX0, (qtx * TILE_SIZE - leftC) * childK);
+          const qX1 = Math.min(dstX1, ((qtx + 1) * TILE_SIZE - leftC) * childK);
+          if (qX1 <= qX0) continue;
+          this.paintCellWithFallback({
+            ctx,
+            dpr,
+            layer,
+            dateStr,
+            cellZ: childZ,
+            cellTx: qtx,
+            cellTy: qty,
+            w,
+            h,
+            dstX0: qX0,
+            dstY0: qY0,
+            dstX1: qX1,
+            dstY1: qY1,
+            depth: depth + 1,
+          });
+        }
+      }
+      return;
+    }
+
+    this.paintClosestAncestor({
+      ctx,
+      dpr,
+      layer,
+      dateStr,
+      cellZ,
+      cellTx,
+      cellTy,
+      w,
+      h,
+      dstX0,
+      dstY0,
+      dstX1,
+      dstY1,
+    });
+  }
+
+  drawRasterLayer(layerName, layerState, w, h) {
+    const canvas = layerState.canvas;
+    if (!canvas) return;
+    const dpr = typeof window !== 'undefined' && window.devicePixelRatio ? Math.min(window.devicePixelRatio, 2) : 1;
+    const pw = Math.max(1, Math.round(w * dpr));
+    const ph = Math.max(1, Math.round(h * dpr));
+    if (canvas.width !== pw || canvas.height !== ph) {
+      canvas.width = pw;
+      canvas.height = ph;
+    }
+    const ctx = canvas.getContext?.('2d');
+    if (!ctx) return;
+
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.globalCompositeOperation = 'source-over';
+
+    const targetZ = clamp(Math.round(this.zoom), MIN_NATIVE_RASTER_ZOOM, MAX_NATIVE_RASTER_ZOOM);
+    const tk = 2 ** (this.zoom - targetZ);
+    const [cxT, cyT] = project(this.center[0], this.center[1], targetZ);
+    const leftT = cxT - w / (2 * tk);
+    const topT = cyT - h / (2 * tk);
+    const nT = 2 ** targetZ;
+
+    const minTx = Math.floor(leftT / TILE_SIZE);
+    const maxTx = Math.floor((leftT + w / tk) / TILE_SIZE);
+    const minTy = Math.floor(topT / TILE_SIZE);
+    const maxTy = Math.floor((topT + h / tk) / TILE_SIZE);
+    const dateStr = this.selectedDate || 'latest';
+
+    for (let ty = minTy; ty <= maxTy; ty++) {
+      if (ty < 0 || ty >= nT) continue;
+      for (let tx = minTx; tx <= maxTx; tx++) {
+        const wx = ((tx % nT) + nT) % nT;
+        if (!intersectsIndonesia(targetZ, wx, ty)) continue;
+        const cellX0 = Math.max(0, (tx * TILE_SIZE - leftT) * tk);
+        const cellY0 = Math.max(0, (ty * TILE_SIZE - topT) * tk);
+        const cellX1 = Math.min(w, ((tx + 1) * TILE_SIZE - leftT) * tk);
+        const cellY1 = Math.min(h, ((ty + 1) * TILE_SIZE - topT) * tk);
+        if (cellX1 <= cellX0 || cellY1 <= cellY0) continue;
+
+        this.getOrFetchRasterTile(layerName, dateStr, targetZ, wx, ty, !this.skipTileFetch);
+        this.paintCellWithFallback({
+          ctx,
+          dpr,
+          layer: layerName,
+          dateStr,
+          cellZ: targetZ,
+          cellTx: tx,
+          cellTy: ty,
+          w,
+          h,
+          dstX0: cellX0,
+          dstY0: cellY0,
+          dstX1: cellX1,
+          dstY1: cellY1,
+          depth: 0,
+        });
+      }
+    }
   }
 
   drawOverlayTiles(w, h, z, k, left, top, n) {
@@ -1399,33 +1832,103 @@ export class MarineMap {
           for (const node of layerState.tiles.values()) node.remove();
           layerState.tiles.clear();
         }
+        const canvas = layerState.canvas;
+        const ctx = canvas?.getContext?.('2d');
+        if (ctx && canvas.width > 0 && canvas.height > 0) {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
         continue;
       }
 
-      this.drawTileSet({
-        tileMap: layerState.tiles,
-        container: layerState.container,
-        w,
-        h,
-        z,
-        k,
-        left,
-        top,
-        n,
-        keyPrefix: `${layerName}:${this.selectedDate}:`,
-        plainClass: `tile plain-overlay plain-${layerName}`,
-        layerName,
-        urlFor: (tz, wx, ty) => this.overlayTileUrl(layerName, tz, wx, ty),
-        filterFn: (tz, wx, ty) => intersectsIndonesia(tz, wx, ty),
-      });
+      if (this.plain) {
+        this.drawTileSet({
+          tileMap: layerState.tiles,
+          container: layerState.container,
+          w,
+          h,
+          z,
+          k,
+          left,
+          top,
+          n,
+          keyPrefix: `${layerName}:${this.selectedDate}:`,
+          plainClass: `tile plain-overlay plain-${layerName}`,
+          layerName,
+          urlFor: (tz, wx, ty) => this.overlayTileUrl(layerName, tz, wx, ty),
+          filterFn: (tz, wx, ty) => intersectsIndonesia(tz, wx, ty),
+        });
+      } else {
+        this.drawRasterLayer(layerName, layerState, w, h);
+      }
     }
   }
 
   currentsGridUrl(minLon, minLat, maxLon, maxLat) {
     const safeDate = encodeURIComponent(this.selectedDate || 'latest');
     const bbox = `${round(minLon, 3)},${round(minLat, 3)},${round(maxLon, 3)},${round(maxLat, 3)}`;
-    const path = `/v1/currents/grid?bbox=${encodeURIComponent(bbox)}&date=${safeDate}&max_vectors=289`;
+    const path = `/v1/currents/grid?bbox=${encodeURIComponent(bbox)}&date=${safeDate}&max_vectors=320`;
     return this.tileBaseUrl ? `${this.tileBaseUrl}${path}` : path;
+  }
+
+  padCurrentsBbox(bounds) {
+    const spanLon = bounds.maxLon - bounds.minLon;
+    const spanLat = bounds.maxLat - bounds.minLat;
+    const targetLon = Math.min(INDONESIA_BOUNDS.maxLon - INDONESIA_BOUNDS.minLon, Math.max(4.5, spanLon * 1.25));
+    const targetLat = Math.min(INDONESIA_BOUNDS.maxLat - INDONESIA_BOUNDS.minLat, Math.max(3.5, spanLat * 1.25));
+    const cLon = (bounds.minLon + bounds.maxLon) * 0.5;
+    const cLat = (bounds.minLat + bounds.maxLat) * 0.5;
+    let minLon = Math.max(INDONESIA_BOUNDS.minLon, cLon - targetLon * 0.5);
+    let maxLon = Math.min(INDONESIA_BOUNDS.maxLon, cLon + targetLon * 0.5);
+    if (maxLon - minLon < targetLon) {
+      if (minLon <= INDONESIA_BOUNDS.minLon) {
+        maxLon = Math.min(INDONESIA_BOUNDS.maxLon, minLon + targetLon);
+      } else {
+        minLon = Math.max(INDONESIA_BOUNDS.minLon, maxLon - targetLon);
+      }
+    }
+    let minLat = Math.max(INDONESIA_BOUNDS.minLat, cLat - targetLat * 0.5);
+    let maxLat = Math.min(INDONESIA_BOUNDS.maxLat, cLat + targetLat * 0.5);
+    if (maxLat - minLat < targetLat) {
+      if (minLat <= INDONESIA_BOUNDS.minLat) {
+        maxLat = Math.min(INDONESIA_BOUNDS.maxLat, minLat + targetLat);
+      } else {
+        minLat = Math.max(INDONESIA_BOUNDS.minLat, maxLat - targetLat);
+      }
+    }
+    return { minLon, minLat, maxLon, maxLat };
+  }
+
+  fieldCoverageScore(field, bounds) {
+    if (!field || !bounds) return 0;
+    const ox = Math.max(0, Math.min(field.maxLon, bounds.maxLon) - Math.max(field.minLon, bounds.minLon));
+    const oy = Math.max(0, Math.min(field.maxLat, bounds.maxLat) - Math.max(field.minLat, bounds.minLat));
+    const area = Math.max(1e-6, (bounds.maxLon - bounds.minLon) * (bounds.maxLat - bounds.minLat));
+    return (ox * oy) / area;
+  }
+
+  getVisibleOceanCells(field, bounds) {
+    if (!field || !field.oceanCells.length) return [];
+    if (!bounds) return field.oceanCells;
+    const collectWithin = (marginLon, marginLat) => {
+      const minLon = bounds.minLon - marginLon;
+      const maxLon = bounds.maxLon + marginLon;
+      const minLat = bounds.minLat - marginLat;
+      const maxLat = bounds.maxLat + marginLat;
+      const out = [];
+      for (const cell of field.oceanCells) {
+        if (cell.lat >= minLat && cell.lat <= maxLat && cell.lon >= minLon && cell.lon <= maxLon) {
+          out.push(cell);
+        }
+      }
+      return out;
+    };
+    const tight = collectWithin(
+      Math.max(field.dLon, (bounds.maxLon - bounds.minLon) * 0.12),
+      Math.max(field.dLat, (bounds.maxLat - bounds.minLat) * 0.12),
+    );
+    if (tight.length >= 4) return tight;
+    const medium = collectWithin(Math.max(0.65, field.dLon * 2), Math.max(0.65, field.dLat * 2));
+    return medium.length >= 1 ? medium : field.oceanCells;
   }
 
   buildCurrentsField(vectors) {
@@ -1527,7 +2030,7 @@ export class MarineMap {
       }
     }
 
-    if (validCount < 2 || wSum <= 0.22) return null;
+    if (validCount < 2 || wSum <= 0.36) return null;
     const u = uSum / wSum;
     const v = vSum / wSum;
     const speedMs = Math.hypot(u, v);
@@ -1535,19 +2038,45 @@ export class MarineMap {
     return { u, v, speedMs, speedKnots: speedMs * 1.94384 };
   }
 
+  particleMaxAgeForZoom(z) {
+    if (z < 4.5) return 1.8 + Math.random() * 1.3;
+    if (z < 7.5) return 2.5 + Math.random() * 1.9;
+    return 3.0 + Math.random() * 2.2;
+  }
+
+  trailLimitForZoom(z) {
+    if (z < 4.5) return 24;
+    if (z < 7.5) return 36;
+    return 46;
+  }
+
+  targetParticleCount(w, z, nVisibleCells) {
+    const mobile = w < 640;
+    if (z < 4.5) {
+      return clamp(Math.round(nVisibleCells * 1.15), mobile ? 95 : 145, mobile ? 135 : 205);
+    }
+    if (z < 7.5) {
+      return clamp(Math.round(nVisibleCells * 1.45), mobile ? 115 : 185, mobile ? 165 : 255);
+    }
+    return clamp(Math.round(nVisibleCells * 2.4), mobile ? 105 : 165, mobile ? 150 : 230);
+  }
+
   seedStreamParticle(particle, randomAge = false, preferredIdx = -1) {
     const f = this.currentsField;
     if (!f || f.oceanCells.length === 0) return false;
+    const pool = this.getVisibleOceanCells(f, this.currentsViewBounds);
+    const nCells = pool.length;
+    if (nCells === 0) return false;
+
     let lat = 0;
     let lon = 0;
     let found = false;
-    const nCells = f.oceanCells.length;
     const baseCell = preferredIdx >= 0
-      ? f.oceanCells[preferredIdx % nCells]
-      : f.oceanCells[Math.floor(Math.random() * nCells)];
+      ? pool[preferredIdx % nCells]
+      : pool[Math.floor(Math.random() * nCells)];
 
     for (let attempt = 0; attempt < 6; attempt++) {
-      const cell = attempt === 0 ? baseCell : f.oceanCells[Math.floor(Math.random() * nCells)];
+      const cell = attempt === 0 ? baseCell : pool[Math.floor(Math.random() * nCells)];
       const candLat = cell.lat + (Math.random() - 0.5) * f.dLat * 0.82;
       const candLon = cell.lon + (Math.random() - 0.5) * f.dLon * 0.82;
       if (this.sampleCurrentVelocity(candLat, candLon)) {
@@ -1565,7 +2094,7 @@ export class MarineMap {
     const trailLen = particle.trailLat.length;
     particle.lat = lat;
     particle.lon = lon;
-    particle.maxAge = 2.8 + Math.random() * 2.4;
+    particle.maxAge = this.particleMaxAgeForZoom(this.zoom);
     particle.age = randomAge ? Math.random() * particle.maxAge * 0.65 : 0;
     particle.trailCount = 1;
     particle.trailHead = 0;
@@ -1584,24 +2113,24 @@ export class MarineMap {
       this.currentsParticles = [];
       return;
     }
-    const nCells = f.oceanCells.length;
-    const count = clamp(Math.round(nCells * 1.45), w < 640 ? 110 : 190, w < 640 ? 160 : 260);
-    const trailLen = 44;
+    const pool = this.getVisibleOceanCells(f, this.currentsViewBounds);
+    const count = this.targetParticleCount(w, this.zoom, pool.length);
+    const trailCap = 48;
     const particles = [];
     for (let i = 0; i < count; i++) {
       const p = {
         lat: 0,
         lon: 0,
         age: 0,
-        maxAge: 3.6,
+        maxAge: 3.2,
         speedKnots: 0.4,
-        trailLat: new Float64Array(trailLen),
-        trailLon: new Float64Array(trailLen),
+        trailLat: new Float64Array(trailCap),
+        trailLon: new Float64Array(trailCap),
         trailCount: 0,
         trailHead: 0,
       };
       this.seedStreamParticle(p, true, i);
-      const warmup = 12 + (i % 30);
+      const warmup = 10 + (i % 24);
       for (let s = 0; s < warmup; s++) {
         this.stepSingleParticle(p, 0.032, false);
       }
@@ -1610,19 +2139,66 @@ export class MarineMap {
     this.currentsParticles = particles;
   }
 
+  rebalanceStreamParticles(w) {
+    const f = this.currentsField;
+    const vb = this.currentsViewBounds;
+    if (!f || !vb) return;
+    if (this.currentsParticles.length === 0) {
+      this.initStreamParticles(w);
+      return;
+    }
+    const pool = this.getVisibleOceanCells(f, vb);
+    const desired = this.targetParticleCount(w, this.zoom, pool.length);
+    const mLon = (vb.maxLon - vb.minLon) * 0.35;
+    const mLat = (vb.maxLat - vb.minLat) * 0.35;
+    let inView = 0;
+    for (const p of this.currentsParticles) {
+      if (
+        p.lat >= vb.minLat - mLat &&
+        p.lat <= vb.maxLat + mLat &&
+        p.lon >= vb.minLon - mLon &&
+        p.lon <= vb.maxLon + mLon
+      ) {
+        inView++;
+      }
+    }
+    if (inView < Math.max(18, Math.floor(desired * 0.3))) {
+      this.initStreamParticles(w);
+    }
+  }
+
   stepSingleParticle(p, dt, wrapAge = true) {
     p.age += dt;
     if (wrapAge && p.age >= p.maxAge) {
       this.seedStreamParticle(p, false);
       return;
     }
+    const vb = this.currentsViewBounds;
+    if (wrapAge && vb && this.zoom >= 6.5) {
+      const mLon = (vb.maxLon - vb.minLon) * 0.35;
+      const mLat = (vb.maxLat - vb.minLat) * 0.35;
+      if (
+        p.lat < vb.minLat - mLat ||
+        p.lat > vb.maxLat + mLat ||
+        p.lon < vb.minLon - mLon ||
+        p.lon > vb.maxLon + mLon
+      ) {
+        this.seedStreamParticle(p, false);
+        return;
+      }
+    }
+
     const v1 = this.sampleCurrentVelocity(p.lat, p.lon);
     if (!v1) {
       if (wrapAge) this.seedStreamParticle(p, false);
       return;
     }
-    const pxPerDeg = (TILE_SIZE * 2 ** this.zoom) / 360.0;
-    const degScale = 86.0 / Math.max(8.0, pxPerDeg);
+
+    const f = this.currentsField;
+    const zf = clamp(this.zoom, 2, 12);
+    const pxPerDeg = (TILE_SIZE * 2 ** zf) / 360.0;
+    const basePxPerSec = clamp(54 + (zf - 3) * 8.5, 52, 118);
+    const degScale = basePxPerSec / Math.max(2.5, pxPerDeg);
     const visGain = (vec) => clamp(0.42 + Math.pow(vec.speedMs, 0.65) * 0.78, 0.44, 1.35) / Math.max(0.008, vec.speedMs);
     const g1 = degScale * dt * visGain(v1);
     const cosLat1 = Math.max(0.35, Math.cos((p.lat * Math.PI) / 180));
@@ -1631,12 +2207,19 @@ export class MarineMap {
     const v2 = this.sampleCurrentVelocity(midLat, midLon) || v1;
     const g2 = degScale * dt * visGain(v2);
     const cosLat2 = Math.max(0.35, Math.cos((midLat * Math.PI) / 180));
-    const nextLat = p.lat + v2.v * g2;
-    const nextLon = p.lon + (v2.u / cosLat2) * g2;
+    const dLatStep = v2.v * g2;
+    const dLonStep = (v2.u / cosLat2) * g2;
+    const nextLat = p.lat + dLatStep;
+    const nextLon = p.lon + dLonStep;
 
-    if (!this.sampleCurrentVelocity(nextLat, nextLon)) {
-      if (wrapAge) this.seedStreamParticle(p, false);
-      return;
+    const minCell = f ? Math.max(0.05, Math.min(f.dLat, f.dLon) * 0.4) : 0.15;
+    const nSub = clamp(Math.ceil(Math.hypot(dLatStep, dLonStep) / minCell), 1, 5);
+    for (let s = 1; s <= nSub; s++) {
+      const frac = s / nSub;
+      if (!this.sampleCurrentVelocity(p.lat + dLatStep * frac, p.lon + dLonStep * frac)) {
+        if (wrapAge) this.seedStreamParticle(p, false);
+        return;
+      }
     }
 
     p.lat = nextLat;
@@ -1667,25 +2250,22 @@ export class MarineMap {
       return;
     }
 
-    const cam = this.cameraBbox();
-    const minLon = Math.max(INDONESIA_BOUNDS.minLon, cam.minLon);
-    const maxLon = Math.min(INDONESIA_BOUNDS.maxLon, cam.maxLon);
-    const minLat = Math.max(INDONESIA_BOUNDS.minLat, cam.minLat);
-    const maxLat = Math.min(INDONESIA_BOUNDS.maxLat, cam.maxLat);
-
-    if (minLon >= maxLon || minLat >= maxLat) {
+    const bounds = this.viewportIndonesiaBounds(w, h);
+    if (!bounds) {
+      this.currentsViewBounds = null;
       this.currentsVectors = [];
       this.currentsField = null;
       this.currentsParticles = [];
       this.renderCurrentsStreamlines(w, h, z, k, left, top, n);
       return;
     }
+    this.currentsViewBounds = bounds;
 
     if (this.plain) {
       if (!this.currentsField) {
         const synthetic = [];
-        for (let lat = Math.ceil(minLat); lat <= maxLat; lat += 2) {
-          for (let lon = Math.ceil(minLon); lon <= maxLon; lon += 2) {
+        for (let lat = Math.ceil(bounds.minLat); lat <= bounds.maxLat; lat += 2) {
+          for (let lon = Math.ceil(bounds.minLon); lon <= bounds.maxLon; lon += 2) {
             const speed = 0.45 + 0.35 * Math.abs(Math.sin(lat * 0.35 + lon * 0.15));
             const dir = ((lat * 19 + lon * 13) % 360 + 360) % 360;
             const rad = (dir * Math.PI) / 180;
@@ -1708,22 +2288,58 @@ export class MarineMap {
       return;
     }
 
-    const fetchKey = `${this.selectedDate}:${this.tileBaseUrl}:${round(minLon, 1)},${round(minLat, 1)},${round(maxLon, 1)},${round(maxLat, 1)},z${Math.round(this.zoom)}`;
+    const padded = this.padCurrentsBbox(bounds);
+    const zoomBucket = clamp(Math.round(this.zoom), MIN_NATIVE_RASTER_ZOOM, MAX_NATIVE_RASTER_ZOOM);
+    const fetchKey = `${this.selectedDate}:${this.tileBaseUrl}:${round(padded.minLon, 1)},${round(padded.minLat, 1)},${round(padded.maxLon, 1)},${round(padded.maxLat, 1)},z${zoomBucket}`;
+
+    if (this.currentsCache.has(fetchKey)) {
+      const cachedField = this.currentsCache.get(fetchKey);
+      this.currentsCache.delete(fetchKey);
+      this.currentsCache.set(fetchKey, cachedField);
+      if (this.currentsField !== cachedField) {
+        this.currentsField = cachedField;
+        this.currentsFetchKey = fetchKey;
+        this.initStreamParticles(w);
+      }
+    } else if (
+      this.wideCurrentsField &&
+      this.fieldCoverageScore(this.currentsField, bounds) < 0.45 &&
+      this.fieldCoverageScore(this.wideCurrentsField, bounds) > this.fieldCoverageScore(this.currentsField, bounds)
+    ) {
+      this.currentsField = this.wideCurrentsField;
+      this.initStreamParticles(w);
+    }
+
+    this.rebalanceStreamParticles(w);
+
     if (fetchKey !== this.currentsFetchKey && typeof fetch === 'function' && !this.skipTileFetch) {
       this.currentsFetchKey = fetchKey;
       clearTimeout(this.currentsFetchTimer);
-      const delay = this.currentsVectors.length === 0 ? 0 : 140;
+      const delay = this.currentsField === null ? 0 : 120;
       this.currentsFetchTimer = setTimeout(async () => {
         this.currentsAbort?.abort?.();
         const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
         this.currentsAbort = ctrl;
         try {
-          const resp = await fetch(this.currentsGridUrl(minLon, minLat, maxLon, maxLat), ctrl ? { signal: ctrl.signal } : undefined);
+          const resp = await fetch(
+            this.currentsGridUrl(padded.minLon, padded.minLat, padded.maxLon, padded.maxLat),
+            ctrl ? { signal: ctrl.signal } : undefined,
+          );
           if (!resp.ok) return;
           const data = await resp.json();
           if (this.currentsFetchKey !== fetchKey || !Array.isArray(data?.vectors)) return;
+          const nextField = this.buildCurrentsField(data.vectors);
+          if (!nextField) return;
           this.currentsVectors = data.vectors;
-          this.currentsField = this.buildCurrentsField(data.vectors);
+          this.currentsField = nextField;
+          if ((padded.maxLon - padded.minLon) >= 24 || !this.wideCurrentsField) {
+            this.wideCurrentsField = nextField;
+          }
+          this.currentsCache.set(fetchKey, nextField);
+          while (this.currentsCache.size > MAX_CURRENTS_CACHE_ENTRIES) {
+            const oldestKey = this.currentsCache.keys().next().value;
+            this.currentsCache.delete(oldestKey);
+          }
           const { w: cw, h: ch } = this.size;
           this.initStreamParticles(cw || w);
           if (cw && ch) {
@@ -1770,26 +2386,33 @@ export class MarineMap {
           [217, 119, 6],   // warm amber
         ];
 
+    const trailLimit = this.trailLimitForZoom(this.zoom);
+    const zoomGain = clamp(0.82 + (this.zoom - 3) * 0.08, 0.78, 1.38);
+
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 
     for (const p of this.currentsParticles) {
-      const cnt = p.trailCount;
+      const cnt = Math.min(p.trailCount, trailLimit);
       if (cnt < 4) continue;
       const life = clamp(Math.sin((p.age / p.maxAge) * Math.PI), 0, 1);
-      if (life < 0.14) continue;
+      if (life < 0.12) continue;
 
       const maxLen = p.trailLat.length;
       const startIdx = (p.trailHead - cnt + 1 + maxLen) % maxLen;
       const pts = [];
       let clipped = false;
+      let prevLon = 0;
       for (let i = 0; i < cnt; i++) {
         const idx = (startIdx + i) % maxLen;
-        const [sx, sy] = this.projectPointToViewport(p.trailLat[idx], p.trailLon[idx], z, k, left, top, n);
-        if (i > 0 && Math.hypot(sx - pts[pts.length - 1][0], sy - pts[pts.length - 1][1]) > 85) {
+        const pLat = p.trailLat[idx];
+        const pLon = p.trailLon[idx];
+        if (i > 0 && Math.abs(pLon - prevLon) > 30) {
           clipped = true;
           break;
         }
+        prevLon = pLon;
+        const [sx, sy] = this.projectPointToViewport(pLat, pLon, z, k, left, top, n);
         pts.push([sx, sy]);
       }
       if (clipped || pts.length < 4) continue;
@@ -1799,11 +2422,11 @@ export class MarineMap {
       if (headPt[0] < -60 || headPt[0] > w + 60 || headPt[1] < -60 || headPt[1] > h + 60) continue;
 
       const totalLen = Math.hypot(headPt[0] - tailPt[0], headPt[1] - tailPt[1]);
-      if (totalLen < 6) continue;
+      if (totalLen < 5) continue;
 
       const tier = p.speedKnots >= 0.9 ? 2 : p.speedKnots >= 0.28 ? 1 : 0;
       const [r, g, b] = rgbTiers[tier];
-      const peakAlpha = clamp(life * (night ? 0.9 : 0.84), 0.12, 0.92);
+      const peakAlpha = clamp(life * (night ? 0.92 : 0.86), 0.14, 0.94);
 
       const grad = ctx.createLinearGradient(tailPt[0], tailPt[1], headPt[0], headPt[1]);
       grad.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0)`);
@@ -1820,7 +2443,7 @@ export class MarineMap {
       }
       ctx.lineTo(headPt[0], headPt[1]);
       ctx.strokeStyle = grad;
-      ctx.lineWidth = tier === 2 ? 2.1 : 1.65;
+      ctx.lineWidth = (tier === 2 ? 2.1 : tier === 1 ? 1.75 : 1.5) * zoomGain;
       ctx.stroke();
     }
   }
@@ -1934,50 +2557,53 @@ export class MarineMap {
 
     const wppPts = this._renderedWppScreenPts ?? [];
     const placedPts = [];
-    const zoomWide = this.zoom < 5.75;
-    const offsets = zoomWide
-      ? [[0, 0]]
-      : [
-          [0, 0],
-          [0, -22],
-          [0, 22],
-          [26, 0],
-          [-26, 0],
-        ];
-    const rendered = [];
-    const orderedMarkers = [...this.markers].sort((a, b) => {
+    const isVeryWide = this.zoom < 4.5;
+    const isWide = this.zoom < 5.75;
+    const isMedium = this.zoom < 7.5;
+    const maxPins = isVeryWide ? 12 : isWide ? 22 : isMedium ? 48 : MAX_RENDERED_MARKERS;
+    const wppDx = isVeryWide ? 68 : isWide ? 64 : isMedium ? 54 : 44;
+    const wppDy = isVeryWide ? 30 : isWide ? 28 : isMedium ? 24 : 20;
+    const pinDx = isVeryWide ? 124 : isWide ? 104 : isMedium ? 76 : 54;
+    const pinDy = isVeryWide ? 44 : isWide ? 38 : isMedium ? 28 : 22;
+
+    const baseSorted = [...this.markers].sort((a, b) => {
       if (a.id === this.selectedMarkerId) return -1;
       if (b.id === this.selectedMarkerId) return 1;
       return (b.individualCount || 0) - (a.individualCount || 0);
     });
-    for (const marker of orderedMarkers) {
-      if (rendered.length >= MAX_RENDERED_MARKERS) break;
-      const [baseX, baseY] = this.projectPointToViewport(marker.lat, marker.lon, z, k, left, top, n);
-      if (baseX < -44 || baseX > w + 44 || baseY < -44 || baseY > h + 44) continue;
 
-      const wppDx = zoomWide ? 68 : 58;
-      const wppDy = zoomWide ? 28 : 24;
-      const pinDx = zoomWide ? 116 : 78;
-      const pinDy = zoomWide ? 42 : 28;
-      const selected = marker.id === this.selectedMarkerId;
-      let sx = baseX;
-      let sy = baseY;
-      let placed = false;
-      for (const [ox, oy] of offsets) {
-        const cx = baseX + ox;
-        const cy = baseY + oy;
-        if (cx < 24 || cx > w - 24 || cy < 20 || cy > h - 20) continue;
-        const hitsWpp = wppPts.some(([wx, wy]) => Math.abs(cx - wx) < wppDx && Math.abs(cy - wy) < wppDy);
-        const hitsPin = placedPts.some(([px, py]) => Math.abs(cx - px) < pinDx && Math.abs(cy - py) < pinDy);
-        if (!hitsWpp && !hitsPin) {
-          sx = cx;
-          sy = cy;
-          placed = true;
-          break;
+    let orderedMarkers = baseSorted;
+    if (isWide && baseSorted.length > 1) {
+      const primary = [];
+      const secondary = [];
+      const seenBuckets = new Set();
+      for (const m of baseSorted) {
+        const bucket = `${m.wppCode || 'sea'}:${m.shortName}`;
+        if (m.id === this.selectedMarkerId || !seenBuckets.has(bucket)) {
+          seenBuckets.add(bucket);
+          primary.push(m);
+        } else {
+          secondary.push(m);
         }
       }
-      if (!placed && !selected) continue;
-      placedPts.push([sx, sy]);
+      orderedMarkers = [...primary, ...secondary];
+    }
+
+    const rendered = [];
+    for (const marker of orderedMarkers) {
+      if (rendered.length >= maxPins) break;
+      const [baseX, baseY] = this.projectPointToViewport(marker.lat, marker.lon, z, k, left, top, n);
+      const selected = marker.id === this.selectedMarkerId;
+      if (selected) {
+        if (baseX < -24 || baseX > w + 24 || baseY < -24 || baseY > h + 24) continue;
+      } else {
+        if (baseX < 20 || baseX > w - 20 || baseY < 18 || baseY > h - 18) continue;
+        const hitsWpp = wppPts.some(([wx, wy]) => Math.abs(baseX - wx) < wppDx && Math.abs(baseY - wy) < wppDy);
+        const hitsPin = placedPts.some(([px, py]) => Math.abs(baseX - px) < pinDx && Math.abs(baseY - py) < pinDy);
+        if (hitsWpp || hitsPin) continue;
+      }
+
+      placedPts.push([baseX, baseY]);
 
       let btn = oldParts.get(marker.id);
       if (!btn) {
@@ -1989,8 +2615,8 @@ export class MarineMap {
       }
       btn.setAttribute('aria-label', `${marker.shortName} - ${marker.label}${marker.wppCode ? ` (WPP ${marker.wppCode})` : ''}`);
       btn.setAttribute('aria-pressed', String(selected));
-      btn.style.left = `${round(sx, 1)}px`;
-      btn.style.top = `${round(sy, 1)}px`;
+      btn.style.left = `${round(baseX, 1)}px`;
+      btn.style.top = `${round(baseY, 1)}px`;
 
       const dotColor = selected
         ? '#F97316'
@@ -2120,9 +2746,17 @@ export class MarineMap {
         const [c, d] = [...pointers.values()];
         const after = Math.hypot(c.x - d.x, c.y - d.y);
         if (before > 0 && after > 0) {
+          this.skipTileFetch = !this.plain;
           this.zoom = this.clampZoom(this.zoom + Math.log2(after / before));
           this.syncLayerStyles();
           this.draw();
+          if (!this.plain) {
+            clearTimeout(this.tileFetchTimer);
+            this.tileFetchTimer = setTimeout(() => {
+              this.skipTileFetch = false;
+              this.draw();
+            }, 90);
+          }
         }
         totalMove = DRAG_THRESHOLD_PX + 1;
         return;
@@ -2171,6 +2805,11 @@ export class MarineMap {
       if (!pointers.delete(ev.pointerId)) return;
       if (pointers.size === 0) {
         m.classList.remove('dragging');
+        if (this.skipTileFetch) {
+          clearTimeout(this.tileFetchTimer);
+          this.skipTileFetch = false;
+          this.draw();
+        }
         if (totalMove > DRAG_THRESHOLD_PX) {
           this.rest();
         } else if (ev.type === 'pointerup') {
@@ -2229,10 +2868,16 @@ export class MarineMap {
     clearTimeout(this.resting);
     clearTimeout(this.tileFetchTimer);
     clearTimeout(this.currentsFetchTimer);
+    if (this.overlayRedrawRaf !== null && typeof cancelAnimationFrame === 'function') {
+      cancelAnimationFrame(this.overlayRedrawRaf);
+      this.overlayRedrawRaf = null;
+    }
     if (this.currentsRaf !== null) {
       cancelAnimationFrame(this.currentsRaf);
       this.currentsRaf = null;
     }
+    this.clearOverlayTiles(true);
+    this.currentsCache?.clear?.();
     this.currentsAbort?.abort?.();
     this.resize?.disconnect?.();
     this.implementation?.gone?.(this.view);

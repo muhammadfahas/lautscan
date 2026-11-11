@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import hashlib
 import io
 import json
@@ -41,6 +42,7 @@ SUPPORTED_LAYERS: tuple[TileLayer, ...] = ("sst", "chlorophyll", "currents", "po
 SUPPORTED_FORMATS: tuple[TileFormat, ...] = ("png", "webp")
 MAX_TILE_ZOOM = 14
 TILE_CACHE_TTL_SECONDS = 3600
+TILE_CACHE_VERSION = "v2"
 MEDIA_TYPES: dict[str, str] = {
     "png": "image/png",
     "webp": "image/webp",
@@ -125,6 +127,16 @@ def _read_bytes_sync(path: Path) -> bytes:
     return path.read_bytes()
 
 
+def _is_file_sync(path: Path) -> bool:
+    return path.is_file()
+
+
+def _read_if_file_sync(path: Path) -> bytes | None:
+    if path.is_file():
+        return path.read_bytes()
+    return None
+
+
 async def _resolve_dataset_metadata(
     db: Any | None,
     tile_cache_dir: Path,
@@ -152,7 +164,7 @@ async def _resolve_dataset_metadata(
             row = (await db.execute(stmt)).scalar_one_or_none()
             if row is not None:
                 candidate = Path(str(row.file_path))
-                if candidate.is_file():
+                if await asyncio.to_thread(_is_file_sync, candidate):
                     dataset_id = row.id
                     dataset_path = candidate
                     resolved_date = row.acquisition_date.isoformat()
@@ -163,9 +175,9 @@ async def _resolve_dataset_metadata(
 
     if dataset_path is None and requested_date == "latest":
         global_nc = tile_cache_dir / "global" / f"noaa_{lookup_layer}.nc"
-        if global_nc.is_file():
+        if await asyncio.to_thread(_is_file_sync, global_nc):
             dataset_path = global_nc
-            grid_meta = _load_layer_grid(global_nc, lookup_layer)
+            grid_meta = await asyncio.to_thread(_load_layer_grid, global_nc, lookup_layer)
             fallback_now = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
             timestamp_utc = grid_meta.acquired_at_utc or fallback_now
             resolved_date = str(timestamp_utc)[:10]
@@ -237,10 +249,8 @@ async def _record_tile_index(
         await db.commit()
     except Exception as exc:
         logger.debug("Skipping tile_cache_index DB persistence: %s", exc)
-        try:
+        with contextlib.suppress(Exception):
             await db.rollback()
-        except Exception:
-            pass
 
 
 async def _set_redis_tile_meta(
@@ -278,7 +288,10 @@ async def get_raster_tile(
     dataset_id, dataset_path, resolved_date, source_key, timestamp_utc = (
         await _resolve_dataset_metadata(db, tile_cache_dir, valid_layer, valid_date)
     )
-    cache_key = f"tile:{valid_layer}:{resolved_date}:{z}:{x}:{y}:{valid_fmt}"
+    render_cache_root = tile_cache_dir / TILE_CACHE_VERSION
+    cache_key = (
+        f"tile:{TILE_CACHE_VERSION}:{valid_layer}:{resolved_date}:{z}:{x}:{y}:{valid_fmt}"
+    )
 
     # 1. Check Redis metadata cache + disk file
     if redis is not None:
@@ -287,12 +300,12 @@ async def get_raster_tile(
             if cached_raw:
                 meta = json.loads(cached_raw)
                 cached_path = Path(str(meta["file_path"]))
-                if cached_path.is_file():
-                    content = await asyncio.to_thread(_read_bytes_sync, cached_path)
+                content_opt = await asyncio.to_thread(_read_if_file_sync, cached_path)
+                if content_opt is not None:
                     is_empty = bool(meta.get("is_empty", False))
-                    etag = str(meta.get("etag") or hashlib.sha256(content).hexdigest())
+                    etag = str(meta.get("etag") or hashlib.sha256(content_opt).hexdigest())
                     return TileResult(
-                        content=content,
+                        content=content_opt,
                         media_type=media_type,
                         cache_status="EMPTY" if is_empty else "HIT",
                         data_source=str(meta.get("source_key") or source_key),
@@ -307,12 +320,12 @@ async def get_raster_tile(
 
     # 2. Check expected disk path directly
     expected_tile_path = (
-        tile_cache_dir / valid_layer / resolved_date / str(z) / str(x) / f"{y}.{valid_fmt}"
+        render_cache_root / valid_layer / resolved_date / str(z) / str(x) / f"{y}.{valid_fmt}"
     )
-    if expected_tile_path.is_file():
-        content = await asyncio.to_thread(_read_bytes_sync, expected_tile_path)
-        is_empty = await asyncio.to_thread(_is_tile_alpha_empty, content)
-        etag = hashlib.sha256(content).hexdigest()
+    disk_content = await asyncio.to_thread(_read_if_file_sync, expected_tile_path)
+    if disk_content is not None:
+        is_empty = await asyncio.to_thread(_is_tile_alpha_empty, disk_content)
+        etag = hashlib.sha256(disk_content).hexdigest()
         await _set_redis_tile_meta(
             redis,
             cache_key,
@@ -325,7 +338,7 @@ async def get_raster_tile(
             },
         )
         return TileResult(
-            content=content,
+            content=disk_content,
             media_type=media_type,
             cache_status="EMPTY" if is_empty else "HIT",
             data_source=source_key,
@@ -346,7 +359,7 @@ async def get_raster_tile(
             render_potential_tile_to_cache,
             sst_path,
             chl_path,
-            tile_cache_dir,
+            render_cache_root,
             resolved_date,
             z,
             x,
@@ -357,7 +370,7 @@ async def get_raster_tile(
         tile_path, byte_size, is_empty, etag = await asyncio.to_thread(
             render_tile_to_cache,
             dataset_path,
-            tile_cache_dir,
+            render_cache_root,
             valid_layer,
             resolved_date,
             z,
