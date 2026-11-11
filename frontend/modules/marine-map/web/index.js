@@ -738,6 +738,8 @@ export class MarineMap {
     this.parts = new Map();
     this.lastProps = {};
     this.resting = null;
+    this.tileFetchTimer = null;
+    this.skipTileFetch = false;
 
     if (typeof ResizeObserver === 'function') {
       this.resize = new ResizeObserver(() => {
@@ -946,7 +948,7 @@ export class MarineMap {
     }, REST_MS);
   }
 
-  zoomBy(dz, px = 0, py = 0) {
+  zoomBy(dz, px = 0, py = 0, deferFetch = false) {
     const z0 = this.zoom;
     const [x, y] = project(this.center[0], this.center[1], z0);
     const under = unproject(x + px, y + py, z0);
@@ -955,7 +957,18 @@ export class MarineMap {
     const [nextLat, nextLon] = unproject(ux - px, uy - py, this.zoom);
     this.center = [clamp(nextLat, -85, 85), nextLon];
     this.syncLayerStyles();
-    this.draw();
+    if (deferFetch && !this.plain) {
+      this.skipTileFetch = true;
+      this.draw();
+      clearTimeout(this.tileFetchTimer);
+      this.tileFetchTimer = setTimeout(() => {
+        this.skipTileFetch = false;
+        this.draw();
+      }, 90);
+    } else {
+      this.skipTileFetch = false;
+      this.draw();
+    }
     this.rest();
   }
 
@@ -1059,57 +1072,156 @@ export class MarineMap {
     }
   }
 
-  drawBaseTiles(w, h, z, k, left, top, n) {
-    const seen = new Set();
-    const minTx = Math.floor(left / TILE_SIZE);
-    const maxTx = Math.floor((left + w / k) / TILE_SIZE);
-    const minTy = Math.floor(top / TILE_SIZE);
-    const maxTy = Math.floor((top + h / k) / TILE_SIZE);
+  positionTileNode(tile, tileZ, tx, ty, w, h) {
+    const tk = 2 ** (this.zoom - tileZ);
+    const [cxZ, cyZ] = project(this.center[0], this.center[1], tileZ);
+    const leftZ = cxZ - w / (2 * tk);
+    const topZ = cyZ - h / (2 * tk);
+    tile.style.transform = `translate(${(tx * TILE_SIZE - leftZ) * tk}px, ${(ty * TILE_SIZE - topZ) * tk}px) scale(${tk})`;
+  }
 
-    for (let ty = minTy; ty <= maxTy; ty++) {
-      if (ty < 0 || ty >= n) continue;
-      for (let tx = minTx; tx <= maxTx; tx++) {
-        const wx = ((tx % n) + n) % n;
-        const key = `${z}/${wx}/${ty}@${tx}`;
-        seen.add(key);
-        let tile = this.baseTiles.get(key);
-        if (!tile) {
-          if (this.plain) {
-            tile = this.doc.createElement('div');
-            tile.className = 'tile plain';
-            tile.dataset.tile = `${z}/${wx}/${ty}`;
-          } else {
-            tile = this.doc.createElement('img');
-            tile.className = 'tile';
-            tile.alt = '';
-            tile.decoding = 'async';
-            tile.dataset.tile = `${z}/${wx}/${ty}`;
-            tile.addEventListener('error', () => {
-              tile.style.visibility = 'hidden';
-            });
-            tile.src = this.osmTileUrl(z, wx, ty);
+  drawTileSet({
+    tileMap,
+    container,
+    w,
+    h,
+    z,
+    k,
+    left,
+    top,
+    n,
+    keyPrefix,
+    plainClass,
+    layerName,
+    urlFor,
+    filterFn,
+  }) {
+    const seen = new Set();
+    let currentAllLoaded = true;
+
+    if (!this.skipTileFetch) {
+      const minTx = Math.floor(left / TILE_SIZE);
+      const maxTx = Math.floor((left + w / k) / TILE_SIZE);
+      const minTy = Math.floor(top / TILE_SIZE);
+      const maxTy = Math.floor((top + h / k) / TILE_SIZE);
+
+      for (let ty = minTy; ty <= maxTy; ty++) {
+        if (ty < 0 || ty >= n) continue;
+        for (let tx = minTx; tx <= maxTx; tx++) {
+          const wx = ((tx % n) + n) % n;
+          if (filterFn && !filterFn(z, wx, ty)) continue;
+          const key = `${keyPrefix}${z}/${wx}/${ty}@${tx}`;
+          seen.add(key);
+          let tile = tileMap.get(key);
+          if (!tile) {
+            if (this.plain) {
+              tile = this.doc.createElement('div');
+              tile.className = plainClass;
+              if (layerName) tile.dataset.layer = layerName;
+              tile.dataset.tile = `${z}/${wx}/${ty}`;
+              tile.dataset.loaded = '1';
+            } else {
+              tile = this.doc.createElement('img');
+              tile.className = 'tile';
+              tile.alt = '';
+              tile.decoding = 'async';
+              if (layerName) tile.dataset.layer = layerName;
+              tile.dataset.tile = `${z}/${wx}/${ty}`;
+              tile.dataset.loaded = '0';
+              tile.addEventListener('load', () => {
+                tile.dataset.loaded = '1';
+                this.pruneStaleTiles(tileMap, z);
+              });
+              tile.addEventListener('error', () => {
+                tile.dataset.loaded = '1';
+                tile.style.visibility = 'hidden';
+                this.pruneStaleTiles(tileMap, z);
+              });
+              tile.src = urlFor(z, wx, ty);
+            }
+            tile.dataset.z = String(z);
+            tile.dataset.tx = String(tx);
+            tile.dataset.ty = String(ty);
+            tileMap.set(key, tile);
+            container.append(tile);
           }
-          this.baseTiles.set(key, tile);
-          this.baseLayer.append(tile);
+          if (tile.dataset.loaded !== '1') {
+            currentAllLoaded = false;
+          }
+          tile.style.zIndex = '1';
+          tile.style.transform = `translate(${(tx * TILE_SIZE - left) * k}px, ${(ty * TILE_SIZE - top) * k}px) scale(${k})`;
         }
-        tile.style.transform = `translate(${(tx * TILE_SIZE - left) * k}px, ${(ty * TILE_SIZE - top) * k}px) scale(${k})`;
       }
+    } else {
+      currentAllLoaded = false;
     }
 
-    for (const [key, tile] of this.baseTiles) {
-      if (!seen.has(key)) {
+    let retainedCount = 0;
+    for (const [key, tile] of tileMap) {
+      if (seen.has(key)) continue;
+      const tileZ = Number(tile.dataset.z);
+      const isLoaded = tile.dataset.loaded === '1';
+      const canRetain =
+        !this.plain &&
+        isLoaded &&
+        Number.isFinite(tileZ) &&
+        (this.skipTileFetch || (!currentAllLoaded && tileZ !== z)) &&
+        retainedCount < 36;
+      if (canRetain) {
+        retainedCount += 1;
+        tile.style.zIndex = '0';
+        this.positionTileNode(
+          tile,
+          tileZ,
+          Number(tile.dataset.tx),
+          Number(tile.dataset.ty),
+          w,
+          h,
+        );
+      } else {
         tile.remove();
-        this.baseTiles.delete(key);
+        tileMap.delete(key);
       }
     }
   }
 
-  drawOverlayTiles(w, h, z, k, left, top, n) {
-    const minTx = Math.floor(left / TILE_SIZE);
-    const maxTx = Math.floor((left + w / k) / TILE_SIZE);
-    const minTy = Math.floor(top / TILE_SIZE);
-    const maxTy = Math.floor((top + h / k) / TILE_SIZE);
+  pruneStaleTiles(tileMap, activeZ) {
+    let anyLoading = false;
+    for (const tile of tileMap.values()) {
+      if (Number(tile.dataset.z) === activeZ && tile.dataset.loaded !== '1') {
+        anyLoading = true;
+        break;
+      }
+    }
+    if (anyLoading) return;
+    for (const [key, tile] of tileMap) {
+      if (Number(tile.dataset.z) !== activeZ) {
+        tile.remove();
+        tileMap.delete(key);
+      }
+    }
+  }
 
+  drawBaseTiles(w, h, z, k, left, top, n) {
+    this.drawTileSet({
+      tileMap: this.baseTiles,
+      container: this.baseLayer,
+      w,
+      h,
+      z,
+      k,
+      left,
+      top,
+      n,
+      keyPrefix: '',
+      plainClass: 'tile plain',
+      layerName: '',
+      urlFor: (tz, wx, ty) => this.osmTileUrl(tz, wx, ty),
+      filterFn: null,
+    });
+  }
+
+  drawOverlayTiles(w, h, z, k, left, top, n) {
     for (const [layerName, layerState] of Object.entries(this.layers)) {
       if (!layerState.visible || layerState.opacity <= 0) {
         if (layerState.tiles.size > 0) {
@@ -1119,46 +1231,22 @@ export class MarineMap {
         continue;
       }
 
-      const seen = new Set();
-      for (let ty = minTy; ty <= maxTy; ty++) {
-        if (ty < 0 || ty >= n) continue;
-        for (let tx = minTx; tx <= maxTx; tx++) {
-          const wx = ((tx % n) + n) % n;
-          if (!intersectsIndonesia(z, wx, ty)) continue;
-          const key = `${layerName}:${this.selectedDate}:${z}/${wx}/${ty}@${tx}`;
-          seen.add(key);
-          let tile = layerState.tiles.get(key);
-          if (!tile) {
-            if (this.plain) {
-              tile = this.doc.createElement('div');
-              tile.className = `tile plain-overlay plain-${layerName}`;
-              tile.dataset.layer = layerName;
-              tile.dataset.tile = `${z}/${wx}/${ty}`;
-            } else {
-              tile = this.doc.createElement('img');
-              tile.className = 'tile';
-              tile.alt = '';
-              tile.decoding = 'async';
-              tile.dataset.layer = layerName;
-              tile.dataset.tile = `${z}/${wx}/${ty}`;
-              tile.addEventListener('error', () => {
-                tile.style.visibility = 'hidden';
-              });
-              tile.src = this.overlayTileUrl(layerName, z, wx, ty);
-            }
-            layerState.tiles.set(key, tile);
-            layerState.container.append(tile);
-          }
-          tile.style.transform = `translate(${(tx * TILE_SIZE - left) * k}px, ${(ty * TILE_SIZE - top) * k}px) scale(${k})`;
-        }
-      }
-
-      for (const [key, tile] of layerState.tiles) {
-        if (!seen.has(key)) {
-          tile.remove();
-          layerState.tiles.delete(key);
-        }
-      }
+      this.drawTileSet({
+        tileMap: layerState.tiles,
+        container: layerState.container,
+        w,
+        h,
+        z,
+        k,
+        left,
+        top,
+        n,
+        keyPrefix: `${layerName}:${this.selectedDate}:`,
+        plainClass: `tile plain-overlay plain-${layerName}`,
+        layerName,
+        urlFor: (tz, wx, ty) => this.overlayTileUrl(layerName, tz, wx, ty),
+        filterFn: (tz, wx, ty) => intersectsIndonesia(tz, wx, ty),
+      });
     }
   }
 
@@ -1460,7 +1548,7 @@ export class MarineMap {
         const rect = m.getBoundingClientRect();
         const px = ev.clientX - rect.left - rect.width / 2;
         const py = ev.clientY - rect.top - rect.height / 2;
-        this.zoomBy(-ev.deltaY * (ev.ctrlKey ? 0.01 : 0.002), px, py);
+        this.zoomBy(-ev.deltaY * (ev.ctrlKey ? 0.01 : 0.002), px, py, true);
       },
       { passive: false },
     );
@@ -1493,6 +1581,7 @@ export class MarineMap {
 
   destroy() {
     clearTimeout(this.resting);
+    clearTimeout(this.tileFetchTimer);
     this.resize?.disconnect?.();
     this.implementation?.gone?.(this.view);
     this.map.remove();

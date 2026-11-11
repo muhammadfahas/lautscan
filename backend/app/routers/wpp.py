@@ -105,24 +105,25 @@ async def list_wpp_zones(
             "(set false for low-bandwidth tables)."
         ),
     ),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession | None = Depends(get_db),
 ) -> WppZoneListResponse:
     """Return WPP-NRI zones from PostGIS or fall back to P0 seed JSON in dev/smoke mode."""
     items: list[WppZoneRecord] = []
-    try:
-        items = await asyncio.wait_for(
-            _query_wpp_from_db(
-                db,
-                code=code,
-                include_geometry=include_geometry,
-            ),
-            timeout=2.5,
-        )
-    except Exception as exc:
-        logger.warning(
-            "PostGIS unavailable for /v1/wpp (%s); falling back to WPP-NRI seed JSON.",
-            type(exc).__name__,
-        )
+    if db is not None:
+        try:
+            items = await asyncio.wait_for(
+                _query_wpp_from_db(
+                    db,
+                    code=code,
+                    include_geometry=include_geometry,
+                ),
+                timeout=2.5,
+            )
+        except Exception as exc:
+            logger.warning(
+                "PostGIS unavailable for /v1/wpp (%s); falling back to WPP-NRI seed JSON.",
+                type(exc).__name__,
+            )
 
     if not items:
         items = _load_wpp_from_seed(code=code, include_geometry=include_geometry)
