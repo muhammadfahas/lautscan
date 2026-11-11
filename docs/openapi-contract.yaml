@@ -1,0 +1,768 @@
+openapi: "3.1.0"
+info:
+  title: LAUT SCAN Marine Intelligence API
+  version: "1.2.0"
+  summary: Open-source geospatial REST & XYZ raster tile API for Indonesian marine intelligence.
+  description: >
+    OpenAPI contract for LAUT SCAN connecting the Expo Exact frontend
+    (@lautscan/marine-map, app.contract, app.ts) to the FastAPI backend.
+    Every JSON schema uses flat typed records, nullable scalar option fields,
+    and homogeneous arrays of typed records with additionalProperties disabled so
+    Expo Exact Contract `shape` validation binds without untyped dicts or
+    heterogeneous arrays.
+  license:
+    name: MIT
+    identifier: MIT
+servers:
+  - url: http://127.0.0.1:8080
+    description: Local FastAPI server (matches API_BASE_URL in infra/.env.example)
+  - url: http://api:8080
+    description: Internal Docker Compose API service
+tags:
+  - name: health
+    description: Service, PostGIS, Redis, and tile cache readiness checks
+  - name: wpp
+    description: Indonesian Fisheries Management Areas (WPP-NRI 571-718)
+  - name: tiles
+    description: EPSG:3857 256x256 colorblind-safe XYZ oceanographic raster tiles
+  - name: map
+    description: Coordinate-level oceanographic interpolation and WPP-NRI point inspection
+  - name: species
+    description: Marine biodiversity and fish occurrence observations (OBIS)
+  - name: sources
+    description: Data provider freshness, sync logs, attribution, and license compliance
+
+paths:
+  /v1/health:
+    get:
+      tags: [health]
+      operationId: getHealth
+      summary: Health and dependency readiness check
+      description: Reports FastAPI service health alongside PostgreSQL/PostGIS, Redis, and tile cache status.
+      responses:
+        "200":
+          description: Service health status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+        "503":
+          description: Service degraded or dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /v1/wpp:
+    get:
+      tags: [wpp]
+      operationId: listWppZones
+      summary: List WPP-NRI boundaries and oceanographic summaries
+      description: >
+        Returns the 11 Indonesian WPP-NRI zones (571-718) as flat typed records.
+        Each record carries bounding coordinates, centroid, latest zone summary metrics,
+        and an optional JSON-serialized RFC 7946 Geometry string (`geometry_geojson`)
+        for @lautscan/marine-map while remaining strictly compatible with Exact Contract `shape`.
+      parameters:
+        - name: code
+          in: query
+          required: false
+          description: Filter by specific 3-digit WPP-NRI code (571-718).
+          schema:
+            type: string
+            enum: ["571", "572", "573", "711", "712", "713", "714", "715", "716", "717", "718"]
+        - name: include_geometry
+          in: query
+          required: false
+          description: Include serialized GeoJSON geometry string in each item (set false for low-bandwidth tables).
+          schema:
+            type: boolean
+            default: true
+      responses:
+        "200":
+          description: List of WPP-NRI zones
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WppZoneListResponse"
+        "422":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /v1/tiles/{layer}/{date}/{z}/{x}/{y}.png:
+    get:
+      tags: [tiles]
+      operationId: getRasterTile
+      summary: Serve 256x256 EPSG:3857 RGBA oceanographic raster tile
+      description: >
+        Serves cached or on-demand rendered 256x256 XYZ Web Mercator (EPSG:3857)
+        raster tiles using colorblind-safe perceptually uniform colormaps:
+        `plasma` for SST, `viridis` for Chlorophyll-a, and `cividis` for Ocean Current speed.
+        Out-of-bounds, land, or cloud-masked pixels are rendered transparent (alpha = 0).
+      parameters:
+        - name: layer
+          in: path
+          required: true
+          description: Oceanographic raster layer key.
+          schema:
+            type: string
+            enum: ["sst", "chlorophyll", "currents"]
+        - name: date
+          in: path
+          required: true
+          description: Acquisition date in YYYY-MM-DD (UTC) or `latest`.
+          schema:
+            type: string
+            pattern: '^(\d{4}-\d{2}-\d{2}|latest)$'
+        - name: z
+          in: path
+          required: true
+          description: Web Mercator zoom level (0-14).
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 14
+        - name: x
+          in: path
+          required: true
+          description: Slippy map tile column X.
+          schema:
+            type: integer
+            minimum: 0
+        - name: y
+          in: path
+          required: true
+          description: Slippy map tile row Y.
+          schema:
+            type: integer
+            minimum: 0
+        - name: format
+          in: query
+          required: false
+          description: Output raster encoding (`png` default or `webp` for low-bandwidth clients).
+          schema:
+            type: string
+            enum: ["png", "webp"]
+            default: "png"
+      responses:
+        "200":
+          description: 256x256 RGBA raster tile image
+          headers:
+            Cache-Control:
+              description: Browser and CDN caching directive
+              schema:
+                type: string
+            X-Tile-Cache:
+              description: Tile cache status (HIT, MISS, or EMPTY)
+              schema:
+                type: string
+                enum: ["HIT", "MISS", "EMPTY"]
+            X-Data-Source:
+              description: Source provider key used to render this tile
+              schema:
+                type: string
+            X-Dataset-Timestamp-UTC:
+              description: ISO-8601 UTC acquisition timestamp of the underlying dataset
+              schema:
+                type: string
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/webp:
+              schema:
+                type: string
+                format: binary
+        "400":
+          description: Invalid tile coordinates or parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Layer dataset not available for requested date
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Path or query parameter validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /v1/map/point:
+    get:
+      tags: [map]
+      operationId: inspectMapPoint
+      summary: Inspect interpolated oceanographic parameters at a coordinate
+      description: >
+        Returns interpolated Sea Surface Temperature (SST), Chlorophyll-a, Ocean Current
+        velocity/direction, optional Salinity/Wave Height, and matching WPP-NRI zone
+        metadata for a clicked/tapped `(lat, lon)` coordinate and target `date`.
+      parameters:
+        - name: lat
+          in: query
+          required: true
+          description: WGS84 latitude in decimal degrees.
+          schema:
+            type: number
+            format: double
+            minimum: -90
+            maximum: 90
+        - name: lon
+          in: query
+          required: true
+          description: WGS84 longitude in decimal degrees.
+          schema:
+            type: number
+            format: double
+            minimum: -180
+            maximum: 180
+        - name: date
+          in: query
+          required: false
+          description: Target date in YYYY-MM-DD (UTC) or `latest`.
+          schema:
+            type: string
+            pattern: '^(\d{4}-\d{2}-\d{2}|latest)$'
+            default: "latest"
+      responses:
+        "200":
+          description: Interpolated oceanographic conditions and WPP-NRI metadata at coordinate
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MapPointInspection"
+        "422":
+          description: Coordinate or date validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /v1/species:
+    get:
+      tags: [species]
+      operationId: listSpeciesOccurrences
+      summary: Query fish and marine species occurrences (OBIS)
+      description: >
+        Searches PostGIS-indexed species occurrence records synced from OBIS,
+        supporting taxonomic text search, WPP-NRI code filter, bounding box spatial filter,
+        and deterministic offset pagination.
+      parameters:
+        - name: taxon
+          in: query
+          required: false
+          description: Scientific name, common name, or family filter (case-insensitive substring).
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 120
+        - name: wpp
+          in: query
+          required: false
+          description: Filter occurrences intersecting a specific WPP-NRI zone code (571-718).
+          schema:
+            type: string
+            enum: ["571", "572", "573", "711", "712", "713", "714", "715", "716", "717", "718"]
+        - name: bbox
+          in: query
+          required: false
+          description: Spatial bounding box formatted as `min_lon,min_lat,max_lon,max_lat` in EPSG:4326.
+          schema:
+            type: string
+            pattern: '^-?\d+(\.\d+)?,-?\d+(\.\d+)?,-?\d+(\.\d+)?,-?\d+(\.\d+)?$'
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of occurrence records to return.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+            default: 50
+        - name: offset
+          in: query
+          required: false
+          description: Pagination offset.
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        "200":
+          description: Paginated fish species occurrence records
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeciesOccurrenceListResponse"
+        "400":
+          description: Malformed bounding box coordinates
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Query parameter validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /v1/sources:
+    get:
+      tags: [sources]
+      operationId: listDataSources
+      summary: List marine data source health, freshness, attribution, and sync logs
+      description: >
+        Returns provider availability, latest dataset timestamps, license attribution metadata,
+        and recent ARQ ETL ingestion logs for the Overview & Sources screen and map attribution badge.
+      parameters:
+        - name: include_recent_logs
+          in: query
+          required: false
+          description: Include recent ETL synchronization logs.
+          schema:
+            type: boolean
+            default: true
+      responses:
+        "200":
+          description: Data provider statuses and sync history
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataSourcesResponse"
+        "500":
+          description: Internal error retrieving source telemetry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      additionalProperties: false
+      required:
+        - status
+        - service
+        - version
+        - environment
+        - db_ok
+        - postgis_version
+        - redis_ok
+        - tile_cache_ok
+        - timestamp_utc
+      properties:
+        status:
+          type: string
+          enum: ["ok", "degraded", "error"]
+        service:
+          type: string
+        version:
+          type: string
+        environment:
+          type: string
+        db_ok:
+          type: boolean
+        postgis_version:
+          type: ["string", "null"]
+        redis_ok:
+          type: boolean
+        tile_cache_ok:
+          type: boolean
+        timestamp_utc:
+          type: string
+          format: date-time
+
+    WppZoneRecord:
+      type: object
+      additionalProperties: false
+      required:
+        - wpp_code
+        - name
+        - waters_id
+        - waters_en
+        - legal_basis
+        - geometry_source
+        - centroid_lat
+        - centroid_lon
+        - min_lon
+        - min_lat
+        - max_lon
+        - max_lat
+        - area_km2
+        - sst_mean_c
+        - chlorophyll_mean_mg_m3
+        - latest_observation_utc
+        - geometry_geojson
+      properties:
+        wpp_code:
+          type: string
+          enum: ["571", "572", "573", "711", "712", "713", "714", "715", "716", "717", "718"]
+        name:
+          type: string
+        waters_id:
+          type: string
+        waters_en:
+          type: string
+        legal_basis:
+          type: string
+        geometry_source:
+          type: string
+          enum: ["p0_seed", "kkp_official"]
+        centroid_lat:
+          type: number
+          format: double
+        centroid_lon:
+          type: number
+          format: double
+        min_lon:
+          type: number
+          format: double
+        min_lat:
+          type: number
+          format: double
+        max_lon:
+          type: number
+          format: double
+        max_lat:
+          type: number
+          format: double
+        area_km2:
+          type: ["number", "null"]
+          format: double
+        sst_mean_c:
+          type: ["number", "null"]
+          format: double
+        chlorophyll_mean_mg_m3:
+          type: ["number", "null"]
+          format: double
+        latest_observation_utc:
+          type: ["string", "null"]
+          format: date-time
+        geometry_geojson:
+          type: ["string", "null"]
+          description: JSON-serialized RFC 7946 Polygon or MultiPolygon Geometry string in EPSG:4326.
+
+    WppZoneListResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+        - total
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/WppZoneRecord"
+        total:
+          type: integer
+          minimum: 0
+
+    MapPointInspection:
+      type: object
+      additionalProperties: false
+      required:
+        - lat
+        - lon
+        - requested_date
+        - resolved_date
+        - wpp_code
+        - wpp_name
+        - wpp_waters_id
+        - sst_c
+        - sst_f
+        - chlorophyll_mg_m3
+        - current_speed_ms
+        - current_speed_knots
+        - current_direction_deg
+        - current_compass
+        - salinity_psu
+        - wave_height_m
+        - interpolation_method
+        - spatial_resolution_km
+        - primary_source
+        - attribution
+        - acquired_at_utc
+        - is_cached_fallback
+        - disclaimer
+      properties:
+        lat:
+          type: number
+          format: double
+        lon:
+          type: number
+          format: double
+        requested_date:
+          type: string
+        resolved_date:
+          type: ["string", "null"]
+        wpp_code:
+          type: ["string", "null"]
+        wpp_name:
+          type: ["string", "null"]
+        wpp_waters_id:
+          type: ["string", "null"]
+        sst_c:
+          type: ["number", "null"]
+          format: double
+        sst_f:
+          type: ["number", "null"]
+          format: double
+        chlorophyll_mg_m3:
+          type: ["number", "null"]
+          format: double
+        current_speed_ms:
+          type: ["number", "null"]
+          format: double
+        current_speed_knots:
+          type: ["number", "null"]
+          format: double
+        current_direction_deg:
+          type: ["number", "null"]
+          format: double
+        current_compass:
+          type: ["string", "null"]
+        salinity_psu:
+          type: ["number", "null"]
+          format: double
+        wave_height_m:
+          type: ["number", "null"]
+          format: double
+        interpolation_method:
+          type: string
+          enum: ["bilinear", "nearest", "unavailable"]
+        spatial_resolution_km:
+          type: ["number", "null"]
+          format: double
+        primary_source:
+          type: ["string", "null"]
+        attribution:
+          type: string
+        acquired_at_utc:
+          type: ["string", "null"]
+          format: date-time
+        is_cached_fallback:
+          type: boolean
+        disclaimer:
+          type: string
+
+    SpeciesOccurrenceRecord:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - obis_id
+        - scientific_name
+        - common_name
+        - taxon_rank
+        - family
+        - lat
+        - lon
+        - wpp_code
+        - depth_m
+        - event_date_utc
+        - individual_count
+        - habitat_note
+        - dataset_name
+        - attribution
+        - license
+      properties:
+        id:
+          type: string
+        obis_id:
+          type: ["string", "null"]
+        scientific_name:
+          type: string
+        common_name:
+          type: ["string", "null"]
+        taxon_rank:
+          type: ["string", "null"]
+        family:
+          type: ["string", "null"]
+        lat:
+          type: number
+          format: double
+        lon:
+          type: number
+          format: double
+        wpp_code:
+          type: ["string", "null"]
+        depth_m:
+          type: ["number", "null"]
+          format: double
+        event_date_utc:
+          type: ["string", "null"]
+          format: date-time
+        individual_count:
+          type: ["integer", "null"]
+        habitat_note:
+          type: ["string", "null"]
+        dataset_name:
+          type: ["string", "null"]
+        attribution:
+          type: string
+        license:
+          type: ["string", "null"]
+
+    SpeciesOccurrenceListResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+        - total
+        - limit
+        - offset
+        - has_more
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SpeciesOccurrenceRecord"
+        total:
+          type: integer
+          minimum: 0
+        limit:
+          type: integer
+          minimum: 1
+        offset:
+          type: integer
+          minimum: 0
+        has_more:
+          type: boolean
+
+    DataSourceStatusRecord:
+      type: object
+      additionalProperties: false
+      required:
+        - source_key
+        - display_name
+        - priority
+        - enabled
+        - requires_credentials
+        - non_commercial_only
+        - status
+        - last_sync_utc
+        - latest_data_timestamp_utc
+        - last_error
+        - attribution
+        - license_summary
+        - official_url
+      properties:
+        source_key:
+          type: string
+          enum: ["noaa_erddap", "obis", "copernicus_marine", "kkp_pdpi", "gfw"]
+        display_name:
+          type: string
+        priority:
+          type: string
+          enum: ["P1", "P1/P2", "P2"]
+        enabled:
+          type: boolean
+        requires_credentials:
+          type: boolean
+        non_commercial_only:
+          type: boolean
+        status:
+          type: string
+          enum: ["healthy", "degraded", "disabled", "unconfigured", "error"]
+        last_sync_utc:
+          type: ["string", "null"]
+          format: date-time
+        latest_data_timestamp_utc:
+          type: ["string", "null"]
+          format: date-time
+        last_error:
+          type: ["string", "null"]
+        attribution:
+          type: string
+        license_summary:
+          type: string
+        official_url:
+          type: string
+
+    SourceSyncLogRecord:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - source_key
+        - dataset_type
+        - status
+        - records_ingested
+        - started_at_utc
+        - finished_at_utc
+        - duration_ms
+        - error_message
+      properties:
+        id:
+          type: string
+        source_key:
+          type: string
+          enum: ["noaa_erddap", "obis", "copernicus_marine", "kkp_pdpi", "gfw"]
+        dataset_type:
+          type: string
+        status:
+          type: string
+          enum: ["success", "partial", "failed", "skipped"]
+        records_ingested:
+          type: integer
+          minimum: 0
+        started_at_utc:
+          type: string
+          format: date-time
+        finished_at_utc:
+          type: ["string", "null"]
+          format: date-time
+        duration_ms:
+          type: ["integer", "null"]
+          minimum: 0
+        error_message:
+          type: ["string", "null"]
+
+    DataSourcesResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - sources
+        - recent_logs
+        - checked_at_utc
+      properties:
+        sources:
+          type: array
+          items:
+            $ref: "#/components/schemas/DataSourceStatusRecord"
+        recent_logs:
+          type: array
+          items:
+            $ref: "#/components/schemas/SourceSyncLogRecord"
+        checked_at_utc:
+          type: string
+          format: date-time
+
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - error_code
+        - message
+        - detail
+        - timestamp_utc
+      properties:
+        error_code:
+          type: string
+        message:
+          type: string
+        detail:
+          type: ["string", "null"]
+        timestamp_utc:
+          type: string
+          format: date-time
