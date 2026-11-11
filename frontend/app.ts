@@ -1,27 +1,28 @@
 // app.ts: LAUT SCAN Expo Exact TypeScript Data Seam
-// Bridges app.contract shapes & resources to FastAPI (/v1/*) with strict null -> undefined Option conversion
+// Bridges app.contract shapes & resources to FastAPI (/v1/*) with strict Option<T> = T | null conversion
 // and graceful cached / offline seed fallbacks.
+
+import type { Answer, Sources, Store } from './app.contract.d.ts';
 
 declare global {
   interface ImportMetaEnv {
     readonly API_BASE_URL?: string;
   }
   interface ImportMeta {
-    readonly env?: ImportMetaEnv;
+    readonly env: ImportMetaEnv;
   }
 }
 
 export const grants = 'net.fetch http://127.0.0.1:8080';
 
-export const API_BASE_URL: string =
-  (typeof import.meta !== 'undefined' && import.meta.env?.API_BASE_URL) ||
-  'http://127.0.0.1:8080';
+const ENV_API_BASE_URL = import.meta.env.API_BASE_URL ?? 'http://127.0.0.1:8080';
+export const API_BASE_URL: string = ENV_API_BASE_URL || 'http://127.0.0.1:8080';
 
 export function getApiBaseUrl(): string {
   return API_BASE_URL;
 }
 
-export type Option<T> = T | undefined;
+export type Option<T> = T | null;
 
 const FALLBACK_UTC_ISO = '2026-11-11T09:00:00Z';
 
@@ -163,17 +164,17 @@ export interface UserPreferences {
   low_bandwidth: boolean;
 }
 
-// Option / Null Normalizers (JSON null -> undefined for Exact option<T>)
+// Option / Null Normalizers (Exact option<T> maps to T | null)
 
 function optString(value: unknown): Option<string> {
-  return typeof value === 'string' ? value : undefined;
+  return typeof value === 'string' ? value : null;
 }
 
 function optNumber(value: unknown): Option<number> {
   if (typeof value === 'number' && Number.isFinite(value)) {
     return value;
   }
-  return undefined;
+  return null;
 }
 
 function reqString(value: unknown, fallback = ''): string {
@@ -414,10 +415,10 @@ const OFFLINE_WPP_SEEDS: SeedWppInput[] = [
 
 // In-Memory Response Cache
 
-let cachedHealth: Option<HealthStatus> = undefined;
-let cachedWppZones: Option<WppZoneListResponse> = undefined;
-let cachedSources: Option<DataSourcesResponse> = undefined;
-let cachedSpecies: Option<SpeciesOccurrenceListResponse> = undefined;
+let cachedHealth: Option<HealthStatus> = null;
+let cachedWppZones: Option<WppZoneListResponse> = null;
+let cachedSources: Option<DataSourcesResponse> = null;
+let cachedSpecies: Option<SpeciesOccurrenceListResponse> = null;
 const cachedPoints = new Map<string, MapPointInspection>();
 let cachedPrefs: UserPreferences = loadStoredPreferences();
 
@@ -590,24 +591,31 @@ function findOfflineWppForCoord(lat: number, lon: number): Option<SeedWppInput> 
       return seed;
     }
   }
-  return undefined;
+  return null;
+}
+
+interface StorageLike {
+  getItem(key: string): string | null;
+  setItem(key: string, value: string): void;
 }
 
 function applyThemeAttribute(themeMode: string): void {
-  if (typeof document !== 'undefined' && document.documentElement) {
-    document.documentElement.setAttribute('data-theme', themeMode);
+  const host = globalThis as { document?: { documentElement?: { setAttribute(k: string, v: string): void } } };
+  if (host.document?.documentElement) {
+    host.document.documentElement.setAttribute('data-theme', themeMode);
   }
 }
 
-function getBrowserStorage(): Storage | undefined {
+function getBrowserStorage(): Option<StorageLike> {
   try {
-    if (typeof window !== 'undefined' && window.localStorage) {
-      return window.localStorage;
+    const host = globalThis as { localStorage?: StorageLike };
+    if (host.localStorage) {
+      return host.localStorage;
     }
   } catch {
     // Storage unavailable in non-browser or restricted environments.
   }
-  return undefined;
+  return null;
 }
 
 function loadStoredPreferences(): UserPreferences {
@@ -657,7 +665,7 @@ export function fallbackHealth(): HealthStatus {
       version: '1.2.0',
       environment: 'offline-fallback',
       db_ok: false,
-      postgis_version: undefined,
+      postgis_version: null,
       redis_ok: false,
       tile_cache_ok: false,
       timestamp_utc: FALLBACK_UTC_ISO,
@@ -685,10 +693,10 @@ export function fallbackWppZones(includeGeometry = true): WppZoneListResponse {
     area_km2: seed.area_km2,
     sst_mean_c: seed.sst_mean_c,
     chlorophyll_mean_mg_m3: seed.chlorophyll_mean_mg_m3,
-    latest_observation_utc: undefined,
+    latest_observation_utc: null,
     geometry_geojson: includeGeometry
       ? JSON.stringify({ type: 'Polygon', coordinates: [seed.ring] })
-      : undefined,
+      : null,
   }));
   return { items, total: items.length };
 }
@@ -708,8 +716,8 @@ export function fallbackSources(): DataSourcesResponse {
         requires_credentials: false,
         non_commercial_only: false,
         status: 'degraded',
-        last_sync_utc: undefined,
-        latest_data_timestamp_utc: undefined,
+        last_sync_utc: null,
+        latest_data_timestamp_utc: null,
         last_error: 'Backend API offline; displaying cached/seed fallback',
         attribution: 'NOAA CoastWatch / NESDIS ERDDAP',
         license_summary: 'Public domain (U.S. Government)',
@@ -723,8 +731,8 @@ export function fallbackSources(): DataSourcesResponse {
         requires_credentials: false,
         non_commercial_only: false,
         status: 'degraded',
-        last_sync_utc: undefined,
-        latest_data_timestamp_utc: undefined,
+        last_sync_utc: null,
+        latest_data_timestamp_utc: null,
         last_error: 'Backend API offline; displaying baseline OBIS fallback',
         attribution: 'OBIS / UNESCO IOC',
         license_summary: 'CC0 / CC-BY per dataset attribution',
@@ -738,9 +746,9 @@ export function fallbackSources(): DataSourcesResponse {
         requires_credentials: true,
         non_commercial_only: false,
         status: 'unconfigured',
-        last_sync_utc: undefined,
-        latest_data_timestamp_utc: undefined,
-        last_error: undefined,
+        last_sync_utc: null,
+        latest_data_timestamp_utc: null,
+        last_error: null,
         attribution: 'E.U. Copernicus Marine Service Information',
         license_summary: 'Free registration; attribution required',
         official_url: 'https://marine.copernicus.eu/',
@@ -753,9 +761,9 @@ export function fallbackSources(): DataSourcesResponse {
         requires_credentials: false,
         non_commercial_only: false,
         status: 'unconfigured',
-        last_sync_utc: undefined,
-        latest_data_timestamp_utc: undefined,
-        last_error: undefined,
+        last_sync_utc: null,
+        latest_data_timestamp_utc: null,
+        last_error: null,
         attribution: 'Kementerian Kelautan dan Perikanan RI (KKP)',
         license_summary: 'Pluggable adapter pending official endpoint config',
         official_url: 'https://portal-informasi.kkp.go.id/pdpi/',
@@ -768,9 +776,9 @@ export function fallbackSources(): DataSourcesResponse {
         requires_credentials: true,
         non_commercial_only: true,
         status: 'disabled',
-        last_sync_utc: undefined,
-        latest_data_timestamp_utc: undefined,
-        last_error: undefined,
+        last_sync_utc: null,
+        latest_data_timestamp_utc: null,
+        last_error: null,
         attribution: 'Global Fishing Watch',
         license_summary: 'Opt-in NON-COMMERCIAL / public-interest only; BYO-Token for commercial use',
         official_url: 'https://globalfishingwatch.org/',
@@ -910,30 +918,30 @@ export function fallbackPointInspection(
     return existing;
   }
   const zone = findOfflineWppForCoord(lat, lon);
-  const sstC = zone ? zone.sst_mean_c : undefined;
-  const sstF = sstC !== undefined ? Number(((sstC * 9) / 5 + 32).toFixed(2)) : undefined;
+  const sstC = zone ? zone.sst_mean_c : null;
+  const sstF = sstC !== null ? Number(((sstC * 9) / 5 + 32).toFixed(2)) : null;
   return {
     lat,
     lon,
     requested_date: date,
-    resolved_date: undefined,
-    wpp_code: zone?.code,
-    wpp_name: zone ? `WPP-NRI ${zone.code}` : undefined,
-    wpp_waters_id: zone?.waters_id,
+    resolved_date: null,
+    wpp_code: zone ? zone.code : null,
+    wpp_name: zone ? `WPP-NRI ${zone.code}` : null,
+    wpp_waters_id: zone ? zone.waters_id : null,
     sst_c: sstC,
     sst_f: sstF,
-    chlorophyll_mg_m3: zone?.chlorophyll_mean_mg_m3,
-    current_speed_ms: zone ? 0.42 : undefined,
-    current_speed_knots: zone ? Number((0.42 * 1.94384).toFixed(2)) : undefined,
-    current_direction_deg: zone ? 115 : undefined,
-    current_compass: zone ? 'ESE' : undefined,
-    salinity_psu: undefined,
-    wave_height_m: undefined,
+    chlorophyll_mg_m3: zone ? zone.chlorophyll_mean_mg_m3 : null,
+    current_speed_ms: zone ? 0.42 : null,
+    current_speed_knots: zone ? Number((0.42 * 1.94384).toFixed(2)) : null,
+    current_direction_deg: zone ? 115 : null,
+    current_compass: zone ? 'ESE' : null,
+    salinity_psu: null,
+    wave_height_m: null,
     interpolation_method: zone ? 'nearest' : 'unavailable',
-    spatial_resolution_km: zone ? 4.0 : undefined,
+    spatial_resolution_km: zone ? 4.0 : null,
     primary_source: 'offline_seed_fallback',
     attribution: 'WPP-NRI P0 Seed & Cached Baseline (Backend Offline)',
-    acquired_at_utc: undefined,
+    acquired_at_utc: null,
     is_cached_fallback: true,
     disclaimer: MARINE_DISCLAIMER,
   };
@@ -1076,7 +1084,26 @@ export async function fetchPointInspection(
   }
 }
 
-export async function loadPreferences(): Promise<UserPreferences> {
+export async function loadPreferences(store?: Store): Promise<UserPreferences> {
+  if (store) {
+    try {
+      const storedRaw = store.get(PREFS_STORAGE_KEY);
+      if (storedRaw) {
+        const parsed = JSON.parse(storedRaw) as Record<string, unknown>;
+        cachedPrefs = {
+          temp_unit: parsed.temp_unit === 'F' ? 'F' : 'C',
+          speed_unit: parsed.speed_unit === 'ms' ? 'ms' : 'knots',
+          theme_mode:
+            parsed.theme_mode === 'daylight' || parsed.theme_mode === 'night'
+              ? parsed.theme_mode
+              : 'system',
+          low_bandwidth: Boolean(parsed.low_bandwidth),
+        };
+      }
+    } catch {
+      // Ignore malformed persisted settings in Store.
+    }
+  }
   return { ...cachedPrefs };
 }
 
@@ -1085,6 +1112,7 @@ export async function savePreferences(
   speedUnit: string,
   themeMode: string,
   lowBandwidth: boolean,
+  store?: Store,
 ): Promise<UserPreferences> {
   const next: UserPreferences = {
     temp_unit: tempUnit === 'F' ? 'F' : 'C',
@@ -1094,6 +1122,13 @@ export async function savePreferences(
   };
   cachedPrefs = next;
   applyThemeAttribute(next.theme_mode);
+  if (store) {
+    try {
+      store.set(PREFS_STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      // Ignore Store write failures.
+    }
+  }
   try {
     const storage = getBrowserStorage();
     if (storage) {
@@ -1169,9 +1204,9 @@ export function parsePointClickLat(payload: string): Option<number> {
       return parsed.lat;
     }
   } catch {
-    return undefined;
+    return null;
   }
-  return undefined;
+  return null;
 }
 
 export function parsePointClickLon(payload: string): Option<number> {
@@ -1186,9 +1221,9 @@ export function parsePointClickLon(payload: string): Option<number> {
       return parsed.lon;
     }
   } catch {
-    return undefined;
+    return null;
   }
-  return undefined;
+  return null;
 }
 
 export function parseMoveEndBbox(payload: string): string {
@@ -1199,3 +1234,25 @@ export function parseMapChangeWpp(payload: string): string {
   const trimmed = payload.trim();
   return /^(57[1-3]|71[1-8])$/.test(trimmed) ? trimmed : '';
 }
+
+const sources: Sources = {
+  loadHealth: ([refreshNonce]) => loadHealth(refreshNonce),
+  fallbackHealth: () => fallbackHealth(),
+  loadWppZones: ([includeGeometry, refreshNonce]) => loadWppZones(includeGeometry, refreshNonce),
+  fallbackWppZones: () => fallbackWppZones(),
+  loadSources: ([refreshNonce]) => loadSources(refreshNonce),
+  fallbackSources: () => fallbackSources(),
+  loadSpecies: ([taxon, wppCode, bbox, limit, offset]) => loadSpecies(taxon, wppCode, bbox, limit, offset),
+  fallbackSpecies: () => fallbackSpecies(),
+  loadPointInspection: ([lat, lon, date]) => loadPointInspection(lat, lon, date),
+  fallbackPointInspection: () => fallbackPointInspection(),
+  loadPreferences: (_args, store) => loadPreferences(store),
+  defaultPreferences: () => defaultPreferences(),
+  getApiBaseUrl: () => getApiBaseUrl(),
+  fetchPointInspection: ([lat, lon, date]) => fetchPointInspection(lat, lon, date),
+  savePreferences: ([tempUnit, speedUnit, themeMode, lowBandwidth], store) =>
+    savePreferences(tempUnit, speedUnit, themeMode, lowBandwidth, store),
+};
+
+export const answer: Answer = (source, args, store, storage, native) =>
+  sources[source](args, store, storage, native);
