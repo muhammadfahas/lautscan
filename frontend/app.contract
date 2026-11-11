@@ -14,6 +14,22 @@ routes nav
   tab sources   "/sources"
   tab settings  "/settings"
 
+fn escJsonText(raw: string): string = raw.replaceAll("\\", "\\\\").replaceAll("\"", "'")
+
+fn optNumJson(v: option<number>): string = match v { case some(n) => `${n}`, case none => "null" }
+
+fn optTextVal(v: option<string>, fallback: string): string = match v { case some(s) => s, case none => fallback }
+
+fn hasGeoJson(z: WppZoneRecord): bool = match z.geometry_geojson { case some(g) => g.length > 0, case none => false }
+
+fn wppFeatureJson(z: WppZoneRecord): string = match z.geometry_geojson { case some(g) => `{"type":"Feature","id":"${escJsonText(z.wpp_code)}","properties":{"wpp_code":"${escJsonText(z.wpp_code)}","name":"${escJsonText(z.name)}","waters_id":"${escJsonText(z.waters_id)}","waters_en":"${escJsonText(z.waters_en)}","centroid_lat":${z.centroid_lat},"centroid_lon":${z.centroid_lon},"sst_mean_c":${optNumJson(z.sst_mean_c)},"chlorophyll_mean_mg_m3":${optNumJson(z.chlorophyll_mean_mg_m3)}},"geometry":${g}}`, case none => "" }
+
+fn buildWppGeoJson(zones: WppZoneRecord[]): string = `{"type":"FeatureCollection","name":"wpp_nri_zones","features":[${zones.filter(z => hasGeoJson(z)).map(z => wppFeatureJson(z)).join(",")}]}`
+
+fn speciesMarkerJson(sp: SpeciesOccurrenceRecord): string = `{"id":"${escJsonText(sp.id)}","lat":${sp.lat},"lon":${sp.lon},"scientific_name":"${escJsonText(sp.scientific_name)}","common_name":"${escJsonText(optTextVal(sp.common_name, sp.scientific_name))}","wpp_code":"${escJsonText(optTextVal(sp.wpp_code, ""))}","depth_m":${optNumJson(sp.depth_m)}}`
+
+fn buildSpeciesMarkers(items: SpeciesOccurrenceRecord[]): string = `[${items.map(sp => speciesMarkerJson(sp)).join(",")}]`
+
 fn resolvePointInspection(hasSel: bool, insp: option<MapPointInspection>, fallbackPt: MapPointInspection): option<MapPointInspection> = hasSel ? (match insp { case some(pt) => some(pt), case none => some(fallbackPt) }) : none
 
 component LautScanApp
@@ -32,15 +48,16 @@ component LautScanApp
   resource wppZones = loadWppZones(true, refreshNonce) as shape WppZoneListResponse else fallbackWppZones()
   resource sourcesData = loadSources(refreshNonce) as shape DataSourcesResponse else fallbackSources()
   resource speciesData = loadSpecies(speciesTaxon, speciesWpp, speciesBbox, 50, speciesOffset) as shape SpeciesOccurrenceListResponse else fallbackSpecies()
-  resource pointData = loadPointInspection(selectedLat, selectedLon, selectedDate) as shape MapPointInspection else fallbackPointInspection(selectedLat, selectedLon, selectedDate)
+  resource pointData = loadPointInspection(selectedLat, selectedLon, selectedDate) as shape MapPointInspection else fallbackPointInspection(-5.1233, 111.3205, "latest")
   resource prefs = loadPreferences() as shape UserPreferences else defaultPreferences()
+  resource apiBaseUrlRaw = getApiBaseUrl() as shape string else empty()
 
   mutation inspectPoint as shape MapPointInspection refreshes pointData
   mutation savePrefs as shape UserPreferences refreshes prefs
 
-  derive apiBaseUrl = getApiBaseUrl()
-  derive wppGeoJsonCollection = buildWppGeoJsonCollection(wppZones.items)
-  derive speciesMarkersJson = buildSpeciesMarkersJson(speciesData.items)
+  derive apiBaseUrl = apiBaseUrlRaw == "" ? "http://127.0.0.1:8080" : apiBaseUrlRaw
+  derive wppGeoJsonCollection = buildWppGeoJson(wppZones.items)
+  derive speciesMarkersJson = buildSpeciesMarkers(speciesData.items)
   derive activePointInspection = resolvePointInspection(hasPointSelection, inspectPoint, pointData)
 
   action selectTab(tabName: string)
