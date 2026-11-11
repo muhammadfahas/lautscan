@@ -1,0 +1,13 @@
+﻿node_modules/
+dist/
+.venv/
+__pycache__/
+*.pyc
+bin/
+obj/
+.vs/
+*.user
+*.suo
+.env
+*.db
+*.sqlite
