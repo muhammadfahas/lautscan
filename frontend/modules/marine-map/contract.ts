@@ -13,6 +13,7 @@ export interface MarineMapProps {
   centerLat: number;
   centerLon: number;
   zoom: number;
+  zoomLevel?: number;
   baseStyle: BaseMapStyle;
   potentialVisible: boolean;
   potentialOpacity: number;
@@ -35,6 +36,7 @@ export interface MarineMapRawProps {
   centerLat?: number | string | null;
   centerLon?: number | string | null;
   zoom?: number | string | null;
+  zoomLevel?: number | string | null;
   baseStyle?: string | null;
   potentialVisible?: boolean | string | null;
   potentialOpacity?: number | string | null;

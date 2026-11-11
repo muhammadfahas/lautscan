@@ -923,9 +923,9 @@ export class MarineMap {
       }
     }
 
-    const zoomChanged = changed('zoom');
+    const zoomChanged = changed('zoomLevel') || changed('zoom');
     if (zoomChanged) {
-      const nextZoom = parseNum(safeProps.zoom, this.zoom);
+      const nextZoom = parseNum(safeProps.zoomLevel ?? safeProps.zoom, this.zoom);
       const clampedZoom = this.clampZoom(nextZoom);
       if (Math.abs(clampedZoom - this.zoom) > 1e-3) {
         this.zoom = clampedZoom;

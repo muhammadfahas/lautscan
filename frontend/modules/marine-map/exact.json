@@ -25,7 +25,7 @@
       "props": {
         "centerLat": "number",
         "centerLon": "number",
-        "zoom": "number",
+        "zoomLevel": "number",
         "baseStyle": "string",
         "potentialVisible": "bool",
         "potentialOpacity": "number",
