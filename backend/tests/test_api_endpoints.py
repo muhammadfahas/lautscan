@@ -967,6 +967,18 @@ class ApiFeatureEndpointsTests(unittest.TestCase):
         # Open Makassar Strait waters with >= 1 cell ocean margin pass cleanly.
         self.assertTrue(_is_strict_open_ocean(-1.45, 117.75, sst_nc, sst_grid, mur))
 
+    def test_recent_year_filter_and_obis_start_date_param(self) -> None:
+        from app.etl.live_sync import MIN_RECENT_OBSERVATION_YEAR, _event_year
+        from app.etl.obis_client import ObisClient
+
+        self.assertEqual(MIN_RECENT_OBSERVATION_YEAR, 2020)
+        self.assertEqual(_event_year("1976-06-26T00:00:00Z"), 1976)
+        self.assertEqual(_event_year("2026-10-04T10:30:58Z"), 2026)
+        self.assertEqual(_event_year(None), 0)
+        client = ObisClient()
+        params = client.build_query_params(taxon="Thunnus albacares", start_date="2020-01-01")
+        self.assertEqual(params.get("startdate"), "2020-01-01")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -130,6 +130,7 @@ class ObisClient(ProviderAdapter):
         bbox: BoundingBox = INDONESIA_BBOX,
         limit: int = 100,
         offset: int = 0,
+        start_date: str | None = None,
     ) -> dict[str, str | int]:
         """Construct OBIS `/occurrence` query parameters bounded to Indonesia/WPP bbox."""
         clamped_limit = max(1, min(500, int(limit)))
@@ -142,6 +143,8 @@ class ObisClient(ProviderAdapter):
             params["offset"] = clamped_offset
         if taxon and taxon.strip():
             params["scientificname"] = taxon.strip()
+        if start_date and start_date.strip():
+            params["startdate"] = start_date.strip()
         return params
 
     async def fetch_occurrences(
@@ -152,6 +155,7 @@ class ObisClient(ProviderAdapter):
         wpp_code: str | None = None,
         limit: int = 100,
         offset: int = 0,
+        start_date: str | None = None,
     ) -> ObisFetchResult:
         """Query OBIS `/occurrence` and normalize results into `SpeciesOccurrenceRecord` shape."""
         endpoint = f"{self.base_url}/occurrence"
@@ -167,6 +171,7 @@ class ObisClient(ProviderAdapter):
             bbox=bbox,
             limit=limit,
             offset=offset,
+            start_date=start_date,
         )
 
         try:
