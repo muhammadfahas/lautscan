@@ -621,7 +621,11 @@ export class MarineMap {
     this.osmTemplate = parseStr(this.config.tiles, DEFAULT_OSM_TILES) || DEFAULT_OSM_TILES;
     this.attributionText = parseStr(this.config.attribution, DEFAULT_ATTRIBUTION) || DEFAULT_ATTRIBUTION;
 
-    if (!element.style.position) {
+    const computedPos =
+      typeof getComputedStyle === 'function'
+        ? getComputedStyle(element)?.position
+        : element.style.position;
+    if (!computedPos || computedPos === 'static') {
       element.style.position = 'relative';
     }
 
@@ -710,7 +714,11 @@ export class MarineMap {
     );
     element.append(this.map);
 
-    this.size = { w: 0, h: 0 };
+    const initRect = this.map.getBoundingClientRect?.();
+    this.size = {
+      w: initRect?.width || 0,
+      h: initRect?.height || 0,
+    };
     this.center = [DEFAULT_CENTER_LAT, DEFAULT_CENTER_LON];
     this.zoom = DEFAULT_ZOOM;
     this.baseStyle = 'daylight';
