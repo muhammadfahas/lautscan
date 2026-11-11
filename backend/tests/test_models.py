@@ -288,14 +288,10 @@ class SettingsRuntimeTests(unittest.TestCase):
         from app.core.config import Settings, get_settings
 
         get_settings.cache_clear()
-        with patch.dict(
-            os.environ,
-            {
-                "COPERNICUS_PASSWORD": "super-secret-copernicus-pw",
-                "GFW_API_TOKEN": "super-secret-gfw-token",
-            },
-            clear=False,
-        ):
+        clean_env = {k: v for k, v in os.environ.items() if k != "TILE_CACHE_DIR"}
+        clean_env["COPERNICUS_PASSWORD"] = "super-secret-copernicus-pw"
+        clean_env["GFW_API_TOKEN"] = "super-secret-gfw-token"
+        with patch.dict(os.environ, clean_env, clear=True):
             settings = Settings()
             self.assertEqual(settings.TILE_CACHE_DIR.as_posix(), "/data/tiles")
             self.assertTrue(settings.WPP_SEED_PATH.is_file())

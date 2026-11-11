@@ -82,13 +82,13 @@ fn curScoreNum(curKn: option<number>): number = match curKn { case some(k) => (k
 
 fn potentialPct(sst: option<number>, chl: option<number>, curKn: option<number>): number = round(0.40 * sstScoreNum(sst) + 0.45 * chlScoreNum(chl) + 0.15 * curScoreNum(curKn))
 
-fn potentialVerdict(sst: option<number>, chl: option<number>, curKn: option<number>): string = match sst { case none => match chl { case none => "Luar Laut", case some(_) => potentialPct(sst, chl, curKn) >= 72 ? "Padat Potensi" : (potentialPct(sst, chl, curKn) >= 46 ? "Potensi Sedang" : "Area Sepi") }, case some(_) => potentialPct(sst, chl, curKn) >= 72 ? "Padat Potensi" : (potentialPct(sst, chl, curKn) >= 46 ? "Potensi Sedang" : "Area Sepi") }
+fn potentialVerdict(sst: option<number>, chl: option<number>, curKn: option<number>): string = match sst { case some(_) => potentialPct(sst, chl, curKn) >= 72 ? "Padat Potensi" : (potentialPct(sst, chl, curKn) >= 46 ? "Potensi Sedang" : "Area Sepi"), case none => match chl { case some(_) => potentialPct(sst, chl, curKn) >= 72 ? "Padat Potensi" : (potentialPct(sst, chl, curKn) >= 46 ? "Potensi Sedang" : "Area Sepi"), case none => "Luar Laut" } }
 
 fn potentialVerdictColor(sst: option<number>, chl: option<number>, curKn: option<number>): string = potentialPct(sst, chl, curKn) >= 72 ? "#16A34A" : (potentialPct(sst, chl, curKn) >= 46 ? "#0284C7" : "#64748B")
 
-fn currentPhraseText(curKn: option<number>, curMs: option<number>, useMs: bool): string = match curKn { case none => "tenang", case some(k) => k >= 0.9 ? `, namun waspadai arus deras (${useMs ? formatOptNumber(curMs, 2, "m/s") : `${k.toFixed(2)} kt`})` : ` dengan arus ${currentStrengthLabel(curKn)} (${useMs ? formatOptNumber(curMs, 2, "m/s") : `${k.toFixed(2)} kt`})` }
+fn currentPhraseText(curKn: option<number>, curMs: option<number>, useMs: bool): string = match curKn { case some(k) => k >= 0.9 ? `, namun waspadai arus deras (${useMs ? formatOptNumber(curMs, 2, "m/s") : `${k.toFixed(2)} kt`})` : ` dengan arus ${currentStrengthLabel(curKn)} (${useMs ? formatOptNumber(curMs, 2, "m/s") : `${k.toFixed(2)} kt`})`, case none => "tenang" }
 
-fn pointTakeawayText(pt: MapPointInspection, useF: bool, useMs: bool): string = match pt.sst_c { case none => match pt.chlorophyll_mg_m3 { case none => "Tidak ada data perairan laut di koordinat ini. Ketuk area laut untuk melihat kondisi.", case some(ch) => `Kadar plankton ${chlRichnessLabel(some(ch))} (${ch.toFixed(2)} mg/m3) terdeteksi di perairan ini${currentPhraseText(pt.current_speed_knots, pt.current_speed_ms, useMs)}.` }, case some(t) => match pt.chlorophyll_mg_m3 { case none => `Suhu ${useF ? formatOptNumber(pt.sst_f, 1, "°F") : `${t.toFixed(1)} °C`} (${sstComfortLabel(pt.sst_c)})${currentPhraseText(pt.current_speed_knots, pt.current_speed_ms, useMs)}; data plankton pesisir sedang berawan.`, case some(ch) => potentialPct(pt.sst_c, pt.chlorophyll_mg_m3, pt.current_speed_knots) >= 72 ? `Potensi padat: suhu ${useF ? formatOptNumber(pt.sst_f, 1, "°F") : `${t.toFixed(1)} °C`} (${sstComfortLabel(pt.sst_c)}) bertemu pakan ${chlRichnessLabel(some(ch))} (${ch.toFixed(2)} mg/m3)${currentPhraseText(pt.current_speed_knots, pt.current_speed_ms, useMs)}.` : (ch < 0.18 ? `Suhu ${useF ? formatOptNumber(pt.sst_f, 1, "°F") : `${t.toFixed(1)} °C`} (${sstComfortLabel(pt.sst_c)}) mendukung, namun pakan masih ${chlRichnessLabel(some(ch))} (${ch.toFixed(2)} mg/m3) sehingga ikan tersebar${currentPhraseText(pt.current_speed_knots, pt.current_speed_ms, useMs)}.` : `Peluang sedang: suhu ${useF ? formatOptNumber(pt.sst_f, 1, "°F") : `${t.toFixed(1)} °C`} (${sstComfortLabel(pt.sst_c)}) dan pakan ${chlRichnessLabel(some(ch))} (${ch.toFixed(2)} mg/m3)${currentPhraseText(pt.current_speed_knots, pt.current_speed_ms, useMs)}.`) } }
+fn pointTakeawayText(pt: MapPointInspection, useF: bool, useMs: bool): string = match pt.sst_c { case some(t) => match pt.chlorophyll_mg_m3 { case some(ch) => potentialPct(pt.sst_c, pt.chlorophyll_mg_m3, pt.current_speed_knots) >= 72 ? `Potensi padat: suhu ${useF ? formatOptNumber(pt.sst_f, 1, "°F") : `${t.toFixed(1)} °C`} (${sstComfortLabel(pt.sst_c)}) bertemu pakan ${chlRichnessLabel(some(ch))} (${ch.toFixed(2)} mg/m3)${currentPhraseText(pt.current_speed_knots, pt.current_speed_ms, useMs)}.` : (ch < 0.18 ? `Suhu ${useF ? formatOptNumber(pt.sst_f, 1, "°F") : `${t.toFixed(1)} °C`} (${sstComfortLabel(pt.sst_c)}) mendukung, namun pakan masih ${chlRichnessLabel(some(ch))} (${ch.toFixed(2)} mg/m3) sehingga ikan tersebar${currentPhraseText(pt.current_speed_knots, pt.current_speed_ms, useMs)}.` : `Peluang sedang: suhu ${useF ? formatOptNumber(pt.sst_f, 1, "°F") : `${t.toFixed(1)} °C`} (${sstComfortLabel(pt.sst_c)}) dan pakan ${chlRichnessLabel(some(ch))} (${ch.toFixed(2)} mg/m3)${currentPhraseText(pt.current_speed_knots, pt.current_speed_ms, useMs)}.`), case none => `Suhu ${useF ? formatOptNumber(pt.sst_f, 1, "°F") : `${t.toFixed(1)} °C`} (${sstComfortLabel(pt.sst_c)})${currentPhraseText(pt.current_speed_knots, pt.current_speed_ms, useMs)}; data plankton pesisir sedang berawan.` }, case none => match pt.chlorophyll_mg_m3 { case some(ch) => `Kadar plankton ${chlRichnessLabel(some(ch))} (${ch.toFixed(2)} mg/m3) terdeteksi di perairan ini${currentPhraseText(pt.current_speed_knots, pt.current_speed_ms, useMs)}.`, case none => "Tidak ada data perairan laut di koordinat ini. Ketuk area laut untuk melihat kondisi." } }
 
 component OceanMapView
   props
@@ -99,10 +99,10 @@ component OceanMapView
     sources: DataSourceStatusRecord[]
     prefs: UserPreferences
     apiBaseUrl: string
-    onInspectPoint: (lat: number, lon: number, date: string) => void
-    onClearInspection: () => void
-    onBoundsChange: (bbox: string) => void
-    onWppSelected: (wppCode: string) => void
+    onInspectPoint: action
+    onClearInspection: action
+    onBoundsChange: action
+    onWppSelected: action
 
   state activeLens = "potential"
   state potentialOpacity = 0.88

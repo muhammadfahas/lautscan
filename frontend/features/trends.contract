@@ -59,7 +59,7 @@ component TrendsView
     wppZones: WppZoneRecord[]
     prefs: UserPreferences
     pointInspection: option<MapPointInspection>
-    onInspectZone: (lat: number, lon: number, date: string) => void
+    onInspectZone: action
 
   state selectedPeriod = "30d"
   state selectedWppCode = "712"

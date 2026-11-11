@@ -40,7 +40,7 @@ component OverviewSourcesView
     recentLogs: SourceSyncLogRecord[]
     checkedAtUtc: string
     prefs: UserPreferences
-    onRefresh: () => void
+    onRefresh: action
 
   derive useFahrenheit = prefs.temp_unit == "F"
 

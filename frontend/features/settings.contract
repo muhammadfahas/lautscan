@@ -14,7 +14,7 @@ component SettingsView
   props
     prefs: UserPreferences
     health: HealthStatus
-    onSavePrefs: (tempUnit: string, speedUnit: string, themeMode: string, lowBandwidth: bool) => void
+    onSavePrefs: action
 
   state savedNotice = false
 

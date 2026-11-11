@@ -12,7 +12,7 @@ component SpeciesView
     total: number
     hasMore: bool
     wppZones: WppZoneRecord[]
-    onFilterSpecies: (taxon: string, wppCode: string, offset: number) => void
+    onFilterSpecies: action
 
   state taxonDraft = ""
   state selectedWpp = ""
