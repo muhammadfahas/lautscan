@@ -77,8 +77,10 @@ component OverviewSourcesView
         row align-items="center" gap=16 flex-wrap="wrap"
           text `PostGIS: ${health.db_ok ? "Connected" : "Fallback"}` font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-primary)"
           match health.postgis_version
-            case some(pg) => text `Engine: ${pg}` font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-muted)"
-            case none => text "Engine: Offline Seed" font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-muted)"
+            case some(pg)
+              text `Engine: ${pg}` font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-muted)"
+            case none
+              text "Engine: Offline Seed" font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-muted)"
           text `Redis: ${health.redis_ok ? "Online" : "Bypassed"}` font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-primary)"
           text `Tile Cache: ${health.tile_cache_ok ? "Writable" : "Unavailable"}` font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-primary)"
           text `Status WIB: ${formatWibTimestamp(health.timestamp_utc)}` font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-muted)"
@@ -109,19 +111,25 @@ component OverviewSourcesView
 
               column gap=4
                 match src.last_sync_utc
-                  case some(ts) => text `Sinkron WIB: ${formatWibTimestamp(ts)}` font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--ink-primary)"
-                  case none => text "Sinkron WIB: Menunggu" font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--ink-muted)"
+                  case some(ts)
+                    text `Sinkron WIB: ${formatWibTimestamp(ts)}` font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--ink-primary)"
+                  case none
+                    text "Sinkron WIB: Menunggu" font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--ink-muted)"
                 match src.latest_data_timestamp_utc
-                  case some(ds) => text `Dataset WIB: ${formatWibTimestamp(ds)}` font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--ink-muted)"
-                  case none => text "Dataset WIB: Data dasar" font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--ink-muted)"
+                  case some(ds)
+                    text `Dataset WIB: ${formatWibTimestamp(ds)}` font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--ink-muted)"
+                  case none
+                    text "Dataset WIB: Data dasar" font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--ink-muted)"
 
               text `Attribution: ${src.attribution}` font-size=13 color="var(--ink-primary)"
               text `License: ${src.license_summary}` font-size=13 color="var(--ink-muted)"
               text src.official_url font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--accent-primary)"
 
               match src.last_error
-                case some(err) => text `Note: ${err}` font-size=12 color="var(--status-degraded)"
-                case none => box display="none"
+                case some(err)
+                  text `Note: ${err}` font-size=12 color="var(--status-degraded)"
+                case none
+                  box display="none"
 
       // National WPP-NRI Overview Table (WPP 571-718)
       column width="100%" padding="16px" gap=12 border-radius=12 background-color="var(--surface-elevated)" border="1px solid var(--border-subtle)"
@@ -156,22 +164,30 @@ component OverviewSourcesView
                     text z.waters_id
                   td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" text-align="right"
                     match z.sst_mean_c
-                      case some(sst) => text formatSstCell(sst, useFahrenheit) font-variant-numeric="tabular-nums" font-family="var(--font-mono)"
-                      case none => text "N/A" font-variant-numeric="tabular-nums" font-family="var(--font-mono)"
+                      case some(sst)
+                        text formatSstCell(sst, useFahrenheit) font-variant-numeric="tabular-nums" font-family="var(--font-mono)"
+                      case none
+                        text "N/A" font-variant-numeric="tabular-nums" font-family="var(--font-mono)"
                   td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" text-align="right"
                     match z.chlorophyll_mean_mg_m3
-                      case some(chl) => text `${chl.toFixed(2)}` font-variant-numeric="tabular-nums" font-family="var(--font-mono)"
-                      case none => text "N/A" font-variant-numeric="tabular-nums" font-family="var(--font-mono)"
+                      case some(chl)
+                        text `${chl.toFixed(2)}` font-variant-numeric="tabular-nums" font-family="var(--font-mono)"
+                      case none
+                        text "N/A" font-variant-numeric="tabular-nums" font-family="var(--font-mono)"
                   td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" text-align="right"
                     match z.area_km2
-                      case some(area) => text `${round(area)}` font-variant-numeric="tabular-nums" font-family="var(--font-mono)"
-                      case none => text "N/A" font-variant-numeric="tabular-nums" font-family="var(--font-mono)"
+                      case some(area)
+                        text `${round(area)}` font-variant-numeric="tabular-nums" font-family="var(--font-mono)"
+                      case none
+                        text "N/A" font-variant-numeric="tabular-nums" font-family="var(--font-mono)"
                   td padding="10px 8px" border-bottom="1px solid var(--border-subtle)"
                     text z.geometry_source font-variant-numeric="tabular-nums" font-family="var(--font-mono)"
                   td padding="10px 8px" border-bottom="1px solid var(--border-subtle)"
                     match z.latest_observation_utc
-                      case some(ts) => text formatWibTimestamp(ts) font-variant-numeric="tabular-nums" font-family="var(--font-mono)"
-                      case none => text "Baseline seed" font-variant-numeric="tabular-nums" font-family="var(--font-mono)"
+                      case some(ts)
+                        text formatWibTimestamp(ts) font-variant-numeric="tabular-nums" font-family="var(--font-mono)"
+                      case none
+                        text "Baseline seed" font-variant-numeric="tabular-nums" font-family="var(--font-mono)"
 
       // Recent SourceSyncLogRecord Table
       column width="100%" padding="16px" gap=12 border-radius=12 background-color="var(--surface-elevated)" border="1px solid var(--border-subtle)"
@@ -212,9 +228,13 @@ component OverviewSourcesView
                       text formatWibTimestamp(log.started_at_utc) font-variant-numeric="tabular-nums" font-family="var(--font-mono)"
                     td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" text-align="right"
                       match log.duration_ms
-                        case some(ms) => text `${ms}` font-variant-numeric="tabular-nums" font-family="var(--font-mono)"
-                        case none => text "N/A" font-variant-numeric="tabular-nums" font-family="var(--font-mono)"
+                        case some(ms)
+                          text `${ms}` font-variant-numeric="tabular-nums" font-family="var(--font-mono)"
+                        case none
+                          text "N/A" font-variant-numeric="tabular-nums" font-family="var(--font-mono)"
                     td padding="10px 8px" border-bottom="1px solid var(--border-subtle)"
                       match log.error_message
-                        case some(err) => text err
-                        case none => text "OK"
+                        case some(err)
+                          text err
+                        case none
+                          text "OK"

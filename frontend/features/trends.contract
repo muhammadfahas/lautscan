@@ -183,11 +183,11 @@ component TrendsView
 
       // Active Point Telemetry Summary if inspected
       match pointInspection
-        case some(pt) =>
+        case some(pt)
           row width="100%" padding="12px 16px" gap=12 flex-wrap="wrap" align-items="center" justify-content="space-between" border-radius=10 background-color="var(--surface-elevated)" border="1px solid var(--border-subtle)" testId="trends-point-summary"
             text `Last Inspected Coordinate: ${pt.lat.toFixed(4)}, ${pt.lon.toFixed(4)} (${formatWibTimestamp(pt.requested_date)})` font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-primary)"
             text `Attribution: ${pt.attribution}` font-size=13 color="var(--ink-muted)"
-        case none =>
+        case none
           text "Select a WPP-NRI zone above or click any point on Ocean Map to synchronize historical coordinates." font-size=13 color="var(--ink-muted)"
 
       // Accessible WPP-NRI Summary Table Fallback
@@ -223,13 +223,19 @@ component TrendsView
                     text z.waters_id
                   td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" text-align="right"
                     match z.sst_mean_c
-                      case some(sst) => text formatSstValue(sst, useFahrenheit) font-variant-numeric="tabular-nums" font-family="var(--font-mono)"
-                      case none => text "N/A" font-variant-numeric="tabular-nums" font-family="var(--font-mono)"
+                      case some(sst)
+                        text formatSstValue(sst, useFahrenheit) font-variant-numeric="tabular-nums" font-family="var(--font-mono)"
+                      case none
+                        text "N/A" font-variant-numeric="tabular-nums" font-family="var(--font-mono)"
                   td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" text-align="right"
                     match z.chlorophyll_mean_mg_m3
-                      case some(chl) => text `${chl.toFixed(2)}` font-variant-numeric="tabular-nums" font-family="var(--font-mono)"
-                      case none => text "N/A" font-variant-numeric="tabular-nums" font-family="var(--font-mono)"
+                      case some(chl)
+                        text `${chl.toFixed(2)}` font-variant-numeric="tabular-nums" font-family="var(--font-mono)"
+                      case none
+                        text "N/A" font-variant-numeric="tabular-nums" font-family="var(--font-mono)"
                   td padding="10px 8px" border-bottom="1px solid var(--border-subtle)"
                     match z.latest_observation_utc
-                      case some(ts) => text formatWibTimestamp(ts) font-variant-numeric="tabular-nums" font-family="var(--font-mono)"
-                      case none => text "Baseline seed" font-variant-numeric="tabular-nums" font-family="var(--font-mono)"
+                      case some(ts)
+                        text formatWibTimestamp(ts) font-variant-numeric="tabular-nums" font-family="var(--font-mono)"
+                      case none
+                        text "Baseline seed" font-variant-numeric="tabular-nums" font-family="var(--font-mono)"

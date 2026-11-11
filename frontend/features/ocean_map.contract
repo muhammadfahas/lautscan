@@ -404,7 +404,7 @@ component OceanMapView
                   line x1=6 y1=6 x2=18 y2=18
 
             match pointInspection
-              case some(pt) =>
+              case some(pt)
                 column width="100%" gap=10
                   row width="100%" align-items="center" justify-content="space-between" gap=8 padding="10px" border-radius=10 background-color="var(--surface-canvas)" border="1px solid var(--border-subtle)"
                     column flex=1 min-width=0 gap=2
@@ -461,16 +461,20 @@ component OceanMapView
                       text `Koordinat: ${pt.lat.toFixed(4)}, ${pt.lon.toFixed(4)}` font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--ink-primary)" testId="inspector-coords"
                       text `Arah Kompas: ${formatOptNumber(pt.current_direction_deg, 0, "deg")} (${formatOptText(pt.current_compass, "N/A")})` font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--ink-muted)"
                       match pt.salinity_psu
-                        case some(sal) => text `Salinitas: ${sal.toFixed(2)} PSU` font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--ink-muted)" testId="inspector-salinity"
-                        case none => box display="none"
+                        case some(sal)
+                          text `Salinitas: ${sal.toFixed(2)} PSU` font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--ink-muted)" testId="inspector-salinity"
+                        case none
+                          box display="none"
                       match pt.wave_height_m
-                        case some(wh) => text `Tinggi Gelombang: ${wh.toFixed(2)} m` font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--ink-muted)" testId="inspector-wave"
-                        case none => box display="none"
+                        case some(wh)
+                          text `Tinggi Gelombang: ${wh.toFixed(2)} m` font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--ink-muted)" testId="inspector-wave"
+                        case none
+                          box display="none"
                       text `Interpolasi: ${pt.interpolation_method} | Res: ${formatOptNumber(pt.spatial_resolution_km, 1, "km")}` font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=11 color="var(--ink-muted)"
                       text `Waktu Data (WIB): ${formatWibOpt(pt.acquired_at_utc, "Basis data lokal")}` font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=11 color="var(--ink-muted)"
                       text `Sumber: ${pt.attribution}` font-size=11 color="var(--ink-primary)"
 
-              case none =>
+              case none
                 text "Ketuk titik laut mana saja di peta untuk melihat suhu air, kesuburan pakan alami, dan arah arus." font-size=13 line-height=1.5 color="var(--ink-muted)"
 
       // Slim Footer Strip: Freshness & Safety Notice
