@@ -163,21 +163,20 @@ component LautScanApp
               line x1=16 y1=18 x2=16 y2=22
             text "Pengaturan" font-size=14 font-weight=600
 
-      column flex=1 min-height=0 width="100%"
-        for e in stack(nav) key=e.id
-          column navigationKey=`${e.id}` flex=1 min-height=0 width="100%"
-            if e.name == "ocean_map"
-              column flex=1 min-height=0 width="100%" testId="view-ocean-map"
-                OceanMapView(wppZones=wppZones.items, wppGeoJsonCollection=wppGeoJsonCollection, speciesMarkers=speciesMarkersJson, pointInspection=activePointInspection, sources=sourcesData.sources, prefs=prefs, apiBaseUrl=apiBaseUrl, onInspectPoint=inspectPointAt, onClearInspection=clearInspection, onBoundsChange=updateSpeciesBbox, onWppSelected=selectWppZone)
-            else if e.name == "species"
-              column flex=1 min-height=0 width="100%" testId="view-species"
-                SpeciesView(items=speciesData.items, total=speciesData.total, hasMore=speciesData.has_more, wppZones=wppZones.items, onFilterSpecies=filterSpecies)
-            else if e.name == "trends"
-              column flex=1 min-height=0 width="100%" testId="view-trends"
-                TrendsView(wppZones=wppZones.items, prefs=prefs, pointInspection=activePointInspection, onInspectZone=inspectZoneAndOpenMap)
-            else if e.name == "sources"
-              column flex=1 min-height=0 width="100%" testId="view-sources"
-                OverviewSourcesView(health=health, wppZones=wppZones.items, sources=sourcesData.sources, recentLogs=sourcesData.recent_logs, checkedAtUtc=sourcesData.checked_at_utc, prefs=prefs, onRefresh=refreshAllData)
-            else if e.name == "settings"
-              column flex=1 min-height=0 width="100%" testId="view-settings"
-                SettingsView(prefs=prefs, health=health, onSavePrefs=saveUserPrefs)
+      for e in stack(nav) key=e.id
+        column navigationKey=`${e.id}` flex=1 min-height=0 width="100%" display="flex" flex-direction="column"
+          if e.name == "ocean_map"
+            column flex=1 min-height=0 width="100%" testId="view-ocean-map"
+              OceanMapView(wppZones=wppZones.items, wppGeoJsonCollection=wppGeoJsonCollection, speciesMarkers=speciesMarkersJson, pointInspection=activePointInspection, sources=sourcesData.sources, prefs=prefs, apiBaseUrl=apiBaseUrl, onInspectPoint=inspectPointAt, onClearInspection=clearInspection, onBoundsChange=updateSpeciesBbox, onWppSelected=selectWppZone)
+          else if e.name == "species"
+            column flex=1 min-height=0 width="100%" testId="view-species"
+              SpeciesView(items=speciesData.items, total=speciesData.total, hasMore=speciesData.has_more, wppZones=wppZones.items, onFilterSpecies=filterSpecies)
+          else if e.name == "trends"
+            column flex=1 min-height=0 width="100%" testId="view-trends"
+              TrendsView(wppZones=wppZones.items, prefs=prefs, pointInspection=activePointInspection, onInspectZone=inspectZoneAndOpenMap)
+          else if e.name == "sources"
+            column flex=1 min-height=0 width="100%" testId="view-sources"
+              OverviewSourcesView(health=health, wppZones=wppZones.items, sources=sourcesData.sources, recentLogs=sourcesData.recent_logs, checkedAtUtc=sourcesData.checked_at_utc, prefs=prefs, onRefresh=refreshAllData)
+          else if e.name == "settings"
+            column flex=1 min-height=0 width="100%" testId="view-settings"
+              SettingsView(prefs=prefs, health=health, onSavePrefs=saveUserPrefs)
