@@ -104,7 +104,7 @@ def validate_tile_request(
     if date_str != "latest":
         _parse_iso_date(date_str)
 
-    return layer, date_str, fmt  # type: ignore[return-value]
+    return layer, date_str, fmt
 
 
 def _format_utc_iso(dt: datetime) -> str:
@@ -117,8 +117,10 @@ def _is_tile_alpha_empty(tile_bytes: bytes) -> bool:
     try:
         with Image.open(io.BytesIO(tile_bytes)) as img:
             rgba = img.convert("RGBA")
-            alpha_extrema = rgba.getchannel("A").getextrema()
-            return int(alpha_extrema[1]) == 0
+            ext: Any = rgba.getchannel("A").getextrema()
+            if isinstance(ext, tuple):
+                return int(ext[1]) == 0
+            return int(ext) == 0
     except Exception:
         return False
 
@@ -184,9 +186,7 @@ async def _resolve_dataset_metadata(
 
     if dataset_path is None:
         resolved_date = (
-            datetime.now(UTC).date().isoformat()
-            if requested_date == "latest"
-            else requested_date
+            datetime.now(UTC).date().isoformat() if requested_date == "latest" else requested_date
         )
         dataset_path = await asyncio.to_thread(
             ensure_sample_netcdf, tile_cache_dir, lookup_layer, resolved_date
@@ -280,18 +280,18 @@ async def get_raster_tile(
     valid_layer, valid_date, valid_fmt = validate_tile_request(layer, date_str, z, x, y, fmt)
     settings = get_settings()
     tile_cache_dir = Path(settings.TILE_CACHE_DIR)
-    cache_control = (
-        "public, max-age=1800" if valid_date == "latest" else "public, max-age=3600"
-    )
+    cache_control = "public, max-age=1800" if valid_date == "latest" else "public, max-age=3600"
     media_type = MEDIA_TYPES[valid_fmt]
 
-    dataset_id, dataset_path, resolved_date, source_key, timestamp_utc = (
-        await _resolve_dataset_metadata(db, tile_cache_dir, valid_layer, valid_date)
-    )
+    (
+        dataset_id,
+        dataset_path,
+        resolved_date,
+        source_key,
+        timestamp_utc,
+    ) = await _resolve_dataset_metadata(db, tile_cache_dir, valid_layer, valid_date)
     render_cache_root = tile_cache_dir / TILE_CACHE_VERSION
-    cache_key = (
-        f"tile:{TILE_CACHE_VERSION}:{valid_layer}:{resolved_date}:{z}:{x}:{y}:{valid_fmt}"
-    )
+    cache_key = f"tile:{TILE_CACHE_VERSION}:{valid_layer}:{resolved_date}:{z}:{x}:{y}:{valid_fmt}"
 
     # 1. Check Redis metadata cache + disk file
     if redis is not None:
@@ -309,9 +309,7 @@ async def get_raster_tile(
                         media_type=media_type,
                         cache_status="EMPTY" if is_empty else "HIT",
                         data_source=str(meta.get("source_key") or source_key),
-                        dataset_timestamp_utc=str(
-                            meta.get("timestamp_utc") or timestamp_utc
-                        ),
+                        dataset_timestamp_utc=str(meta.get("timestamp_utc") or timestamp_utc),
                         cache_control=cache_control,
                         etag=etag,
                     )

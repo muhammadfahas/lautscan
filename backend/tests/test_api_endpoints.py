@@ -44,8 +44,7 @@ def _has_real_module(name: str) -> bool:
 
 
 _REAL_DEPS_AVAILABLE = all(
-    _has_real_module(pkg)
-    for pkg in ("sqlalchemy", "geoalchemy2", "redis", "pydantic_settings")
+    _has_real_module(pkg) for pkg in ("sqlalchemy", "geoalchemy2", "redis", "pydantic_settings")
 )
 
 _MANAGED_APP_MODULES: tuple[str, ...] = (
@@ -337,9 +336,7 @@ class ApiFeatureEndpointsTests(unittest.TestCase):
     def setUpClass(cls) -> None:
         if not _REAL_DEPS_AVAILABLE:
             cls._saved_modules = {
-                name: sys.modules.pop(name)
-                for name in _MANAGED_APP_MODULES
-                if name in sys.modules
+                name: sys.modules.pop(name) for name in _MANAGED_APP_MODULES if name in sys.modules
             }
             cls._sys_patcher = patch.dict(sys.modules, _build_local_stubs())
             cls._sys_patcher.start()

@@ -2,191 +2,93 @@
 
 use WppZoneRecord, MapPointInspection, DataSourceStatusRecord, UserPreferences from "../shapes.contract"
 
-fn clampOpacity(val: number): number =
-  Math.max(0.1, Math.min(1.0, Math.round(val * 100) / 100))
+fn clampOpacity(val: number): number = max(0.1, min(1.0, round(val * 100) / 100))
 
-fn opacityPct(val: number): string =
-  `${Math.round(val * 100)}%`
+fn opacityPct(val: number): string = `${round(val * 100)}%`
 
-fn parseNum(raw: string, fallback: number): number =
-  Number.isFinite(Number(raw)) ? Number(raw) : fallback
+fn absVal(x: number): number = x < 0 ? -x : x
 
-fn extractJsonNum(json: string, keyToken: string, fallback: number): number =
-  json.indexOf(keyToken) >= 0 ? parseNum(json.slice(json.indexOf(keyToken) + keyToken.length).split(",")[0].split("}")[0].trim(), fallback) : fallback
+fn parseNum(raw: string, fallback: number): number = match parseNumber(raw) { case some(v) => v, case none => fallback }
 
-fn extractWppCode(payload: string): string =
-  payload.trim().length == 3 ? payload.trim() : ""
+fn extractJsonNum(json: string, keyToken: string, fallback: number): number = (json.indexOf(keyToken) >= 0) ? (match first(json.slice(json.indexOf(keyToken) + keyToken.length).split(",")) { case some(seg) => match first(seg.split("}")) { case some(rawNum) => parseNum(rawNum.trim(), fallback), case none => fallback }, case none => fallback }) : fallback
 
-fn zoneLat(zones: WppZoneRecord[], code: string): number =
-  match zones.find(z => z.wpp_code == code)
-    case some(z) => z.centroid_lat
-    case none => -2.5
+fn extractWppCode(payload: string): string = payload.trim().length == 3 ? payload.trim() : ""
 
-fn zoneLon(zones: WppZoneRecord[], code: string): number =
-  match zones.find(z => z.wpp_code == code)
-    case some(z) => z.centroid_lon
-    case none => 118.0
+fn zoneLat(zones: WppZoneRecord[], code: string): number = match first(zones.filter(z => z.wpp_code == code)) { case some(z) => z.centroid_lat, case none => -2.5 }
 
-fn selectedZoneTitle(zones: WppZoneRecord[], code: string): string =
-  code == "" ? "Semua Perairan" : (match zones.find(z => z.wpp_code == code) case some(z) => `${z.name} (${z.waters_id})` case none => `WPP-NRI ${code}`)
+fn zoneLon(zones: WppZoneRecord[], code: string): number = match first(zones.filter(z => z.wpp_code == code)) { case some(z) => z.centroid_lon, case none => 118.0 }
 
-fn zoomScaleLabel(z: number): string =
-  z < 4.5 ? "Skala Regional" : (z < 6.0 ? "Skala Nusantara" : (z < 7.8 ? "Perairan Wilayah" : "Detail Perairan Selat"))
+fn selectedZoneTitle(zones: WppZoneRecord[], code: string): string = code == "" ? "Semua Perairan" : (match first(zones.filter(z => z.wpp_code == code)) { case some(z) => `${z.name} (${z.waters_id})`, case none => `WPP-NRI ${code}` })
 
-fn activeLensInsight(lens: string, useF: bool, useMs: bool): string =
-  lens == "potential" ? "Warna keemasan menandai pertemuan suhu nyaman dan pakan plankton subur" : (lens == "sst" ? (useF ? "Rentang nyaman ikan pelagis di kisaran 81 hingga 85 °F" : "Rentang nyaman ikan pelagis di kisaran 27 hingga 29.5 °C") : (lens == "chlorophyll" ? "Warna hijau terang menandai perairan subur plankton makanan ikan kecil" : (useMs ? "Aliran biru tenang (<0.15 m/s), hijau mengalir (0.15-0.46 m/s), jingga deras (>0.46 m/s)" : "Aliran biru tenang (<0.3 kt), hijau mengalir (0.3-0.9 kt), jingga deras (>0.9 kt)")))
+fn zoomScaleLabel(z: number): string = z < 4.5 ? "Skala Regional" : (z < 6.0 ? "Skala Nusantara" : (z < 7.8 ? "Perairan Wilayah" : "Detail Perairan Selat"))
 
-fn formatFreshnessSource(sources: DataSourceStatusRecord[], inspection: option<MapPointInspection>): string =
-  match inspection
-    case some(pt) => pt.attribution
-    case none =>
-      match sources.find(s => s.source_key == "noaa_erddap")
-        case some(src) => `${src.display_name} (${src.status})`
-        case none => "NOAA CoastWatch & OBIS"
+fn activeLensInsight(lens: string, useF: bool, useMs: bool): string = lens == "potential" ? "Warna keemasan menandai pertemuan suhu nyaman dan pakan plankton subur" : (lens == "sst" ? (useF ? "Rentang nyaman ikan pelagis di kisaran 81 hingga 85 °F" : "Rentang nyaman ikan pelagis di kisaran 27 hingga 29.5 °C") : (lens == "chlorophyll" ? "Warna hijau terang menandai perairan subur plankton makanan ikan kecil" : (useMs ? "Aliran biru tenang (<0.15 m/s), hijau mengalir (0.15-0.46 m/s), jingga deras (>0.46 m/s)" : "Aliran biru tenang (<0.3 kt), hijau mengalir (0.3-0.9 kt), jingga deras (>0.9 kt)")))
 
-fn wibMonthName(m: number): string =
-  m == 1 ? "Jan" : (m == 2 ? "Feb" : (m == 3 ? "Mar" : (m == 4 ? "Apr" : (m == 5 ? "Mei" : (m == 6 ? "Jun" : (m == 7 ? "Jul" : (m == 8 ? "Agu" : (m == 9 ? "Sep" : (m == 10 ? "Okt" : (m == 11 ? "Nov" : "Des"))))))))))
+fn formatFreshnessSource(sources: DataSourceStatusRecord[], inspection: option<MapPointInspection>): string = match inspection { case some(pt) => pt.attribution, case none => match first(sources.filter(s => s.source_key == "noaa_erddap")) { case some(src) => `${src.display_name} (${src.status})`, case none => "NOAA CoastWatch & OBIS" } }
 
-fn pad2Num(n: number): string =
-  n < 10 ? `0${n}` : `${n}`
+fn wibMonthName(m: number): string = m == 1 ? "Jan" : (m == 2 ? "Feb" : (m == 3 ? "Mar" : (m == 4 ? "Apr" : (m == 5 ? "Mei" : (m == 6 ? "Jun" : (m == 7 ? "Jul" : (m == 8 ? "Agu" : (m == 9 ? "Sep" : (m == 10 ? "Okt" : (m == 11 ? "Nov" : "Des"))))))))))
 
-fn formatDayMonthWib(baseY: number, doy: number, mp: number, hh: number, mm: number): string =
-  `${pad2Num(doy - Math.floor((153 * mp + 2) / 5) + 1)} ${wibMonthName(mp + (mp < 10 ? 3 : -9))} ${baseY + ((mp + (mp < 10 ? 3 : -9)) <= 2 ? 1 : 0)}, ${pad2Num(hh)}:${pad2Num(mm)} WIB`
+fn pad2Num(n: number): string = n < 10 ? `0${n}` : `${n}`
 
-fn formatMpDoyWib(baseY: number, doy: number, hh: number, mm: number): string =
-  formatDayMonthWib(baseY, doy, Math.floor((5 * doy + 2) / 153), hh, mm)
+fn civilToDays(y: number, m: number, d: number): number = (((y - (m <= 2 ? 1 : 0)) - floor((y - (m <= 2 ? 1 : 0)) / 400) * 400) * 365 + floor(((y - (m <= 2 ? 1 : 0)) - floor((y - (m <= 2 ? 1 : 0)) / 400) * 400) / 4) - floor(((y - (m <= 2 ? 1 : 0)) - floor((y - (m <= 2 ? 1 : 0)) / 400) * 400) / 100) + floor((153 * (m + (m > 2 ? -3 : 9)) + 2) / 5) + d - 1) + floor((y - (m <= 2 ? 1 : 0)) / 400) * 146097 - 719468
 
-fn formatYoeDoyWib(era: number, doe: number, yoe: number, hh: number, mm: number): string =
-  formatMpDoyWib(yoe + era * 400, doe - (365 * yoe + Math.floor(yoe / 4) - Math.floor(yoe / 100)), hh, mm)
+fn formatDayMonthWib(baseY: number, doy: number, mp: number, hh: number, mm: number): string = `${pad2Num(doy - floor((153 * mp + 2) / 5) + 1)} ${wibMonthName(mp + (mp < 10 ? 3 : -9))} ${baseY + ((mp + (mp < 10 ? 3 : -9)) <= 2 ? 1 : 0)}, ${pad2Num(hh)}:${pad2Num(mm)} WIB`
 
-fn formatEraDoeWib(era: number, doe: number, hh: number, mm: number): string =
-  formatYoeDoyWib(era, doe, Math.floor((doe - Math.floor(doe / 1460) + Math.floor(doe / 36524) - Math.floor(doe / 146096)) / 365), hh, mm)
+fn formatMpDoyWib(baseY: number, doy: number, hh: number, mm: number): string = formatDayMonthWib(baseY, doy, floor((5 * doy + 2) / 153), hh, mm)
 
-fn formatDaysClockWib(z: number, hh: number, mm: number): string =
-  formatEraDoeWib(Math.floor(z / 146097), z - Math.floor(z / 146097) * 146097, hh, mm)
+fn formatYoeDoyWib(era: number, doe: number, yoe: number, hh: number, mm: number): string = formatMpDoyWib(yoe + era * 400, doe - (365 * yoe + floor(yoe / 4) - floor(yoe / 100)), hh, mm)
 
-fn formatWibFromMs(wibMs: number): string =
-  formatDaysClockWib(Math.floor(wibMs / 86400000) + 719468, Math.floor((wibMs - Math.floor(wibMs / 86400000) * 86400000) / 3600000), Math.floor(((wibMs - Math.floor(wibMs / 86400000) * 86400000) % 3600000) / 60000))
+fn formatEraDoeWib(era: number, doe: number, hh: number, mm: number): string = formatYoeDoyWib(era, doe, floor((doe - floor(doe / 1460) + floor(doe / 36524) - floor(doe / 146096)) / 365), hh, mm)
 
-fn parseUtcMs(raw: string): number =
-  Date.parse((raw.indexOf("Z") >= 0 or raw.indexOf("+") >= 0 or (raw.length > 10 and raw.slice(10).indexOf("-") >= 0)) ? raw.replace(" ", "T") : `${raw.replace(" ", "T")}Z`)
+fn formatDaysClockWib(z: number, hh: number, mm: number): string = formatEraDoeWib(floor(z / 146097), z - floor(z / 146097) * 146097, hh, mm)
 
-fn formatWibTimestamp(raw: string): string =
-  raw == "latest" ? "Terbaru (Hari Ini · WIB)" : ((raw.length == 10 and raw.indexOf("-") == 4) ? `${pad2Num(Number(raw.slice(8, 10)))} ${wibMonthName(Number(raw.slice(5, 7)))} ${raw.slice(0, 4)} (WIB)` : (Number.isFinite(parseUtcMs(raw)) ? formatWibFromMs(parseUtcMs(raw) + 25200000) : raw))
+fn formatWibTotalMins(totalMins: number): string = formatDaysClockWib(floor(totalMins / 1440) + 719468, floor((totalMins - floor(totalMins / 1440) * 1440) / 60), (totalMins - floor(totalMins / 1440) * 1440) % 60)
 
-fn formatWibOpt(val: option<string>, fallback: string): string =
-  match val
-    case some(s) => formatWibTimestamp(s)
-    case none => fallback
+fn tzOffsetShift(raw: string): number = (raw.length >= 25 and (raw.slice(19, 20) == "+" or raw.slice(19, 20) == "-")) ? (match parseNumber(raw.slice(19, 22)) { case some(oh) => match parseNumber(raw.slice(23, 25)) { case some(om) => 420 - (oh < 0 ? oh * 60 - om : oh * 60 + om), case none => 420 }, case none => 420 }) : 420
 
-fn formatFreshnessTimestamp(sources: DataSourceStatusRecord[], inspection: option<MapPointInspection>): string =
-  match inspection
-    case some(pt) =>
-      match pt.acquired_at_utc
-        case some(ts) => formatWibTimestamp(ts)
-        case none => "Basis data lokal"
-    case none =>
-      match sources.find(s => s.source_key == "noaa_erddap")
-        case some(src) =>
-          match src.latest_data_timestamp_utc
-            case some(ts) => formatWibTimestamp(ts)
-            case none =>
-              match src.last_sync_utc
-                case some(syncTs) => formatWibTimestamp(syncTs)
-                case none => "Basis data lokal"
-        case none => "Basis data lokal"
+fn formatDateOnlyWib(raw: string): string = match parseNumber(raw.slice(5, 7)) { case some(m) => match parseNumber(raw.slice(8, 10)) { case some(d) => `${pad2Num(d)} ${wibMonthName(m)} ${raw.slice(0, 4)} (WIB)`, case none => raw }, case none => raw }
 
-fn formatOptNumber(val: option<number>, decimals: number, unit: string): string =
-  match val
-    case some(v) => `${v.toFixed(decimals)} ${unit}`
-    case none => "Tidak tersedia"
+fn formatIsoUtcWib(raw: string): string = match parseNumber(raw.slice(0, 4)) { case some(y) => match parseNumber(raw.slice(5, 7)) { case some(m) => match parseNumber(raw.slice(8, 10)) { case some(d) => match parseNumber(raw.slice(11, 13)) { case some(hh) => match parseNumber(raw.slice(14, 16)) { case some(mm) => formatWibTotalMins(civilToDays(y, m, d) * 1440 + hh * 60 + mm + tzOffsetShift(raw)), case none => raw }, case none => raw }, case none => raw }, case none => raw }, case none => raw }
 
-fn formatOptText(val: option<string>, fallback: string): string =
-  match val
-    case some(s) => s
-    case none => fallback
+fn formatWibTimestamp(raw: string): string = raw == "latest" ? "Terbaru (Hari Ini · WIB)" : ((raw.length == 10 and raw.indexOf("-") == 4) ? formatDateOnlyWib(raw) : ((raw.length >= 16 and raw.slice(4, 5) == "-" and raw.slice(7, 8) == "-") ? formatIsoUtcWib(raw) : raw))
 
-fn activeOpacityValue(lens: string, potOp: number, sstOp: number, chlOp: number, curOp: number): number =
-  lens == "potential" ? potOp : (lens == "sst" ? sstOp : (lens == "chlorophyll" ? chlOp : curOp))
+fn formatWibOpt(val: option<string>, fallback: string): string = match val { case some(s) => formatWibTimestamp(s), case none => fallback }
 
-fn sstComfortLabel(val: option<number>): string =
-  match val
-    case some(c) => (c >= 26.0 and c <= 30.0) ? "Nyaman" : (c > 30.0 ? "Hangat" : "Sejuk")
-    case none => "Tidak terukur"
+fn formatFreshnessTimestamp(sources: DataSourceStatusRecord[], inspection: option<MapPointInspection>): string = match inspection { case some(pt) => formatWibOpt(pt.acquired_at_utc, "Basis data lokal"), case none => match first(sources.filter(s => s.source_key == "noaa_erddap")) { case some(src) => match src.latest_data_timestamp_utc { case some(ts) => formatWibTimestamp(ts), case none => formatWibOpt(src.last_sync_utc, "Basis data lokal") }, case none => "Basis data lokal" } }
 
-fn chlRichnessLabel(val: option<number>): string =
-  match val
-    case some(c) => c >= 0.45 ? "Subur Plankton" : (c >= 0.18 ? "Cukup" : "Jernih")
-    case none => "Berawan / Pesisir"
+fn formatOptNumber(val: option<number>, decimals: number, unit: string): string = match val { case some(v) => `${v.toFixed(decimals)} ${unit}`, case none => "Tidak tersedia" }
 
-fn chlMeterPercent(val: option<number>): string =
-  match val
-    case some(c) => `${Math.max(12, Math.min(100, Math.round((c / 1.2) * 100)))}%`
-    case none => "0%"
+fn formatOptText(val: option<string>, fallback: string): string = match val { case some(s) => s, case none => fallback }
 
-fn currentStrengthLabel(kn: option<number>): string =
-  match kn
-    case some(v) => v >= 0.9 ? "Deras" : (v >= 0.3 ? "Mengalir" : "Tenang")
-    case none => "Tidak terukur"
+fn activeOpacityValue(lens: string, potOp: number, sstOp: number, chlOp: number, curOp: number): number = lens == "potential" ? potOp : (lens == "sst" ? sstOp : (lens == "chlorophyll" ? chlOp : curOp))
 
-fn compassDirId(code: option<string>): string =
-  match code
-    case some(raw) =>
-      raw == "N" ? "Utara" : ((raw == "NE" or raw == "NNE" or raw == "ENE") ? "Timur Laut" : (raw == "E" ? "Timur" : ((raw == "SE" or raw == "ESE" or raw == "SSE") ? "Tenggara" : (raw == "S" ? "Selatan" : ((raw == "SW" or raw == "SSW" or raw == "WSW") ? "Barat Daya" : (raw == "W" ? "Barat" : ((raw == "NW" or raw == "WNW" or raw == "NNW") ? "Barat Laut" : raw)))))))
-    case none => "Arah variabel"
+fn sstComfortLabel(val: option<number>): string = match val { case some(c) => (c >= 26.0 and c <= 30.0) ? "Nyaman" : (c > 30.0 ? "Hangat" : "Sejuk"), case none => "Tidak terukur" }
 
-fn compassDeg(deg: option<number>): number =
-  match deg
-    case some(d) => Math.round(d)
-    case none => 0
+fn chlRichnessLabel(val: option<number>): string = match val { case some(c) => c >= 0.45 ? "Subur Plankton" : (c >= 0.18 ? "Cukup" : "Jernih"), case none => "Berawan / Pesisir" }
 
-fn sstScoreNum(sst: option<number>): number =
-  match sst
-    case some(t) => Math.max(20, Math.min(100, Math.round(100 - Math.abs(t - 28.5) * 14)))
-    case none => 65
+fn chlMeterPercent(val: option<number>): string = match val { case some(c) => `${max(12, min(100, round((c / 1.2) * 100)))}%`, case none => "0%" }
 
-fn chlScoreNum(chl: option<number>): number =
-  match chl
-    case some(c) => Math.max(15, Math.min(100, Math.round((Math.min(c, 1.2) / 1.2) * 100)))
-    case none => 55
+fn currentStrengthLabel(kn: option<number>): string = match kn { case some(v) => v >= 0.9 ? "Deras" : (v >= 0.3 ? "Mengalir" : "Tenang"), case none => "Tidak terukur" }
 
-fn curScoreNum(curKn: option<number>): number =
-  match curKn
-    case some(k) => (k <= 0.8 ? 94 : (k <= 1.4 ? 75 : 48))
-    case none => 80
+fn compassDirId(code: option<string>): string = match code { case some(raw) => raw == "N" ? "Utara" : ((raw == "NE" or raw == "NNE" or raw == "ENE") ? "Timur Laut" : (raw == "E" ? "Timur" : ((raw == "SE" or raw == "ESE" or raw == "SSE") ? "Tenggara" : (raw == "S" ? "Selatan" : ((raw == "SW" or raw == "SSW" or raw == "WSW") ? "Barat Daya" : (raw == "W" ? "Barat" : ((raw == "NW" or raw == "WNW" or raw == "NNW") ? "Barat Laut" : raw))))))), case none => "Arah variabel" }
 
-fn potentialPct(sst: option<number>, chl: option<number>, curKn: option<number>): number =
-  Math.round(0.40 * sstScoreNum(sst) + 0.45 * chlScoreNum(chl) + 0.15 * curScoreNum(curKn))
+fn compassDeg(deg: option<number>): number = match deg { case some(d) => round(d), case none => 0 }
 
-fn potentialVerdict(sst: option<number>, chl: option<number>, curKn: option<number>): string =
-  match sst
-    case none =>
-      match chl
-        case none => "Luar Laut"
-        case some(_) => potentialPct(sst, chl, curKn) >= 72 ? "Padat Potensi" : (potentialPct(sst, chl, curKn) >= 46 ? "Potensi Sedang" : "Area Sepi")
-    case some(_) =>
-      potentialPct(sst, chl, curKn) >= 72 ? "Padat Potensi" : (potentialPct(sst, chl, curKn) >= 46 ? "Potensi Sedang" : "Area Sepi")
+fn sstScoreNum(sst: option<number>): number = match sst { case some(t) => max(20, min(100, round(100 - absVal(t - 28.5) * 14))), case none => 65 }
 
-fn potentialVerdictColor(sst: option<number>, chl: option<number>, curKn: option<number>): string =
-  potentialPct(sst, chl, curKn) >= 72 ? "#16A34A" : (potentialPct(sst, chl, curKn) >= 46 ? "#0284C7" : "#64748B")
+fn chlScoreNum(chl: option<number>): number = match chl { case some(c) => max(15, min(100, round((min(c, 1.2) / 1.2) * 100))), case none => 55 }
 
-fn currentPhraseText(curKn: option<number>, curMs: option<number>, useMs: bool): string =
-  match curKn
-    case none => "tenang"
-    case some(k) =>
-      k >= 0.9 ? `, namun waspadai arus deras (${useMs ? formatOptNumber(curMs, 2, "m/s") : `${k.toFixed(2)} kt`})` : ` dengan arus ${currentStrengthLabel(curKn)} (${useMs ? formatOptNumber(curMs, 2, "m/s") : `${k.toFixed(2)} kt`})`
+fn curScoreNum(curKn: option<number>): number = match curKn { case some(k) => (k <= 0.8 ? 94 : (k <= 1.4 ? 75 : 48)), case none => 80 }
 
-fn pointTakeawayText(pt: MapPointInspection, useF: bool, useMs: bool): string =
-  match pt.sst_c
-    case none =>
-      match pt.chlorophyll_mg_m3
-        case none => "Tidak ada data perairan laut di koordinat ini. Ketuk area laut untuk melihat kondisi."
-        case some(ch) => `Kadar plankton ${chlRichnessLabel(some(ch))} (${ch.toFixed(2)} mg/m3) terdeteksi di perairan ini${currentPhraseText(pt.current_speed_knots, pt.current_speed_ms, useMs)}.`
-    case some(t) =>
-      match pt.chlorophyll_mg_m3
-        case none => `Suhu ${useF ? formatOptNumber(pt.sst_f, 1, "°F") : `${t.toFixed(1)} °C`} (${sstComfortLabel(pt.sst_c)})${currentPhraseText(pt.current_speed_knots, pt.current_speed_ms, useMs)}; data plankton pesisir sedang berawan.`
-        case some(ch) =>
-          potentialPct(pt.sst_c, pt.chlorophyll_mg_m3, pt.current_speed_knots) >= 72 ? `Potensi padat: suhu ${useF ? formatOptNumber(pt.sst_f, 1, "°F") : `${t.toFixed(1)} °C`} (${sstComfortLabel(pt.sst_c)}) bertemu pakan ${chlRichnessLabel(some(ch))} (${ch.toFixed(2)} mg/m3)${currentPhraseText(pt.current_speed_knots, pt.current_speed_ms, useMs)}.` : (ch < 0.18 ? `Suhu ${useF ? formatOptNumber(pt.sst_f, 1, "°F") : `${t.toFixed(1)} °C`} (${sstComfortLabel(pt.sst_c)}) mendukung, namun pakan masih ${chlRichnessLabel(some(ch))} (${ch.toFixed(2)} mg/m3) sehingga ikan tersebar${currentPhraseText(pt.current_speed_knots, pt.current_speed_ms, useMs)}.` : `Peluang sedang: suhu ${useF ? formatOptNumber(pt.sst_f, 1, "°F") : `${t.toFixed(1)} °C`} (${sstComfortLabel(pt.sst_c)}) dan pakan ${chlRichnessLabel(some(ch))} (${ch.toFixed(2)} mg/m3)${currentPhraseText(pt.current_speed_knots, pt.current_speed_ms, useMs)}.`)
+fn potentialPct(sst: option<number>, chl: option<number>, curKn: option<number>): number = round(0.40 * sstScoreNum(sst) + 0.45 * chlScoreNum(chl) + 0.15 * curScoreNum(curKn))
+
+fn potentialVerdict(sst: option<number>, chl: option<number>, curKn: option<number>): string = match sst { case none => match chl { case none => "Luar Laut", case some(_) => potentialPct(sst, chl, curKn) >= 72 ? "Padat Potensi" : (potentialPct(sst, chl, curKn) >= 46 ? "Potensi Sedang" : "Area Sepi") }, case some(_) => potentialPct(sst, chl, curKn) >= 72 ? "Padat Potensi" : (potentialPct(sst, chl, curKn) >= 46 ? "Potensi Sedang" : "Area Sepi") }
+
+fn potentialVerdictColor(sst: option<number>, chl: option<number>, curKn: option<number>): string = potentialPct(sst, chl, curKn) >= 72 ? "#16A34A" : (potentialPct(sst, chl, curKn) >= 46 ? "#0284C7" : "#64748B")
+
+fn currentPhraseText(curKn: option<number>, curMs: option<number>, useMs: bool): string = match curKn { case none => "tenang", case some(k) => k >= 0.9 ? `, namun waspadai arus deras (${useMs ? formatOptNumber(curMs, 2, "m/s") : `${k.toFixed(2)} kt`})` : ` dengan arus ${currentStrengthLabel(curKn)} (${useMs ? formatOptNumber(curMs, 2, "m/s") : `${k.toFixed(2)} kt`})` }
+
+fn pointTakeawayText(pt: MapPointInspection, useF: bool, useMs: bool): string = match pt.sst_c { case none => match pt.chlorophyll_mg_m3 { case none => "Tidak ada data perairan laut di koordinat ini. Ketuk area laut untuk melihat kondisi.", case some(ch) => `Kadar plankton ${chlRichnessLabel(some(ch))} (${ch.toFixed(2)} mg/m3) terdeteksi di perairan ini${currentPhraseText(pt.current_speed_knots, pt.current_speed_ms, useMs)}.` }, case some(t) => match pt.chlorophyll_mg_m3 { case none => `Suhu ${useF ? formatOptNumber(pt.sst_f, 1, "°F") : `${t.toFixed(1)} °C`} (${sstComfortLabel(pt.sst_c)})${currentPhraseText(pt.current_speed_knots, pt.current_speed_ms, useMs)}; data plankton pesisir sedang berawan.`, case some(ch) => potentialPct(pt.sst_c, pt.chlorophyll_mg_m3, pt.current_speed_knots) >= 72 ? `Potensi padat: suhu ${useF ? formatOptNumber(pt.sst_f, 1, "°F") : `${t.toFixed(1)} °C`} (${sstComfortLabel(pt.sst_c)}) bertemu pakan ${chlRichnessLabel(some(ch))} (${ch.toFixed(2)} mg/m3)${currentPhraseText(pt.current_speed_knots, pt.current_speed_ms, useMs)}.` : (ch < 0.18 ? `Suhu ${useF ? formatOptNumber(pt.sst_f, 1, "°F") : `${t.toFixed(1)} °C`} (${sstComfortLabel(pt.sst_c)}) mendukung, namun pakan masih ${chlRichnessLabel(some(ch))} (${ch.toFixed(2)} mg/m3) sehingga ikan tersebar${currentPhraseText(pt.current_speed_knots, pt.current_speed_ms, useMs)}.` : `Peluang sedang: suhu ${useF ? formatOptNumber(pt.sst_f, 1, "°F") : `${t.toFixed(1)} °C`} (${sstComfortLabel(pt.sst_c)}) dan pakan ${chlRichnessLabel(some(ch))} (${ch.toFixed(2)} mg/m3)${currentPhraseText(pt.current_speed_knots, pt.current_speed_ms, useMs)}.`) } }
 
 component OceanMapView
   props
@@ -227,10 +129,7 @@ component OceanMapView
   derive useMs = prefs.speed_unit == "ms"
   derive freshnessSource = formatFreshnessSource(sources, pointInspection)
   derive freshnessTimestamp = formatFreshnessTimestamp(sources, pointInspection)
-  derive showInspector =
-    match pointInspection
-      case some(_) => true
-      case none => inspectorOpen
+  derive showInspector = match pointInspection { case some(_) => true, case none => inspectorOpen }
 
   action setLens(lens: string)
     activeLens = lens
@@ -264,16 +163,15 @@ component OceanMapView
     else
       currentsOpacity = clampOpacity(presetVal)
 
-  action setActiveOpacity(value: string)
-    let parsed = parseNum(value, activeOpacity)
+  action setActiveOpacity(value: number)
     if activeLens == "potential"
-      potentialOpacity = clampOpacity(parsed)
+      potentialOpacity = clampOpacity(value)
     else if activeLens == "sst"
-      sstOpacity = clampOpacity(parsed)
+      sstOpacity = clampOpacity(value)
     else if activeLens == "chlorophyll"
-      chlorophyllOpacity = clampOpacity(parsed)
+      chlorophyllOpacity = clampOpacity(value)
     else
-      currentsOpacity = clampOpacity(parsed)
+      currentsOpacity = clampOpacity(value)
 
   action selectWpp(code: string)
     selectedWppCode = code
@@ -313,8 +211,14 @@ component OceanMapView
       zoom = 5
       onWppSelected("")
 
-  action handleMapMoveEnd(payload: string)
-    if payload.indexOf("minLon") >= 0
+  action handleMapMessage(payload: string)
+    if payload.indexOf("pointclick") >= 0
+      let lat = extractJsonNum(payload, "\"lat\":", centerLat)
+      let lon = extractJsonNum(payload, "\"lon\":", centerLon)
+      inspectorOpen = true
+      techDetailsOpen = false
+      onInspectPoint(lat, lon, selectedDate)
+    else if payload.indexOf("minLon") >= 0
       let minLon = extractJsonNum(payload, "\"minLon\":", 90.0)
       let minLat = extractJsonNum(payload, "\"minLat\":", -15.0)
       let maxLon = extractJsonNum(payload, "\"maxLon\":", 145.0)
@@ -327,14 +231,6 @@ component OceanMapView
       zoom = nextZoom
       onBoundsChange(`${minLon.toFixed(4)},${minLat.toFixed(4)},${maxLon.toFixed(4)},${maxLat.toFixed(4)}`)
 
-  action handleMapMessage(payload: string)
-    if payload.indexOf("pointclick") >= 0
-      let lat = extractJsonNum(payload, "\"lat\":", centerLat)
-      let lon = extractJsonNum(payload, "\"lon\":", centerLon)
-      inspectorOpen = true
-      techDetailsOpen = false
-      onInspectPoint(lat, lon, selectedDate)
-
   action closeInspector()
     inspectorOpen = false
     techDetailsOpen = false
@@ -342,16 +238,16 @@ component OceanMapView
 
   view
     column width="100%" flex=1 min-height="84vh" overflow-x="hidden" background-color="var(--surface-canvas)" color="var(--ink-primary)" testId="ocean-map-workspace"
-      div width="100%" flex=1 min-height="78vh" position="relative" overflow="hidden" z-index=10 testId="ocean-map-canvas-wrap"
-        marine-map centerLat=centerLat centerLon=centerLon zoom=zoom baseStyle=baseStyle potentialVisible=potentialVisible potentialOpacity=potentialOpacity sstVisible=sstVisible sstOpacity=sstOpacity chlorophyllVisible=chlorophyllVisible chlorophyllOpacity=chlorophyllOpacity currentsVisible=currentsVisible currentsOpacity=currentsOpacity showSpeciesPins=showSpeciesPins selectedDate=selectedDate tileBaseUrl=apiBaseUrl wppGeoJsonCollection=wppGeoJsonCollection selectedWppCode=selectedWppCode speciesMarkers=speciesMarkers change=handleMapChange moveend=handleMapMoveEnd message=handleMapMessage width="100%" height="100%" min-height="78vh" testId="marine-map-canvas"
+      box width="100%" flex=1 min-height="78vh" position="relative" overflow="hidden" z-index=10 testId="ocean-map-canvas-wrap"
+        marine-map centerLat=centerLat centerLon=centerLon zoom=zoom baseStyle=baseStyle potentialVisible=potentialVisible potentialOpacity=potentialOpacity sstVisible=sstVisible sstOpacity=sstOpacity chlorophyllVisible=chlorophyllVisible chlorophyllOpacity=chlorophyllOpacity currentsVisible=currentsVisible currentsOpacity=currentsOpacity showSpeciesPins=showSpeciesPins selectedDate=selectedDate tileBaseUrl=apiBaseUrl wppGeoJsonCollection=wppGeoJsonCollection selectedWppCode=selectedWppCode speciesMarkers=speciesMarkers change=handleMapChange message=handleMapMessage width="100%" height="100%" min-height="78vh" testId="marine-map-canvas"
 
-        // Top-Left Slim Quick Controls + Zoom & Area Insight Pill
+        // Top-Left Slim Quick Controls & Zoom Insight Pill
         column position="absolute" top=12 left=12 max-width="calc(100% - 24px)" gap=8 align-items="flex-start" z-index=20
           row width="100%" max-width="100%" gap=8 flex-wrap="wrap" align-items="center" testId="top-quick-controls"
             select value=selectedWppCode change=selectWpp min-height=44 min-width=180 max-width=260 padding="8px 12px" border-radius=999 border="1px solid var(--border-subtle)" background-color="var(--surface-elevated)" color="var(--ink-primary)" font-size=14 font-weight=600 cursor="pointer" aria-label="Pilih Wilayah Laut WPP-NRI" testId="wpp-zone-select"
-              option value="" "Semua Perairan Indonesia"
+              option "Semua Perairan Indonesia" value=""
               for z in wppZones key=z.wpp_code
-                option value=z.wpp_code `${z.name}: ${z.waters_id}`
+                option `${z.name}: ${z.waters_id}` value=z.wpp_code
 
             button press=toggleSpeciesPins min-height=44 min-width=44 padding="8px 14px" border-radius=999 border=(showSpeciesPins ? "1px solid var(--accent-primary)" : "1px solid var(--border-subtle)") background-color=(showSpeciesPins ? "var(--accent-primary)" : "var(--surface-elevated)") color=(showSpeciesPins ? "#FFFFFF" : "var(--ink-primary)") cursor="pointer" aria-pressed=showSpeciesPins aria-label="Tampilkan titik tangkapan ikan" testId="toggle-species-pins"
               row align-items="center" gap=6
@@ -371,37 +267,37 @@ component OceanMapView
                 text "Cek Titik" font-size=13 font-weight=600
 
           row align-items="center" flex-wrap="wrap" gap=8 padding="7px 12px" border-radius=12 border="1px solid var(--border-subtle)" background-color="var(--surface-elevated)" max-width=640 testId="zoom-area-insight-pill"
-            div padding="2px 8px" border-radius=999 background-color="var(--surface-canvas)" border="1px solid var(--border-subtle)"
-              text `${zoomScaleLabel(zoom)} · Z${Math.round(zoom * 10) / 10}` class="tabular-nums" font-family="var(--font-mono)" font-size=11 font-weight=700 color="var(--accent-primary)"
+            box padding="2px 8px" border-radius=999 background-color="var(--surface-canvas)" border="1px solid var(--border-subtle)"
+              text `${zoomScaleLabel(zoom)} · Z${round(zoom * 10) / 10}` font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=11 font-weight=700 color="var(--accent-primary)"
             text `${selectedZoneTitle(wppZones, selectedWppCode)}: ${activeLensInsight(activeLens, useFahrenheit, useMs)}` font-size=12 color="var(--ink-muted)"
 
-        // Floating Bottom-Center Dock: 4 Lensa Laut Pills + Qualitative & Numeric Tiered Legend
-        column position="absolute" bottom=14 left="50%" transform="translateX(-50%)" width="calc(100% - 136px)" max-width=650 gap=8 z-index=22 align-items="center" testId="lensa-laut-dock"
+        // Floating Bottom-Center Dock: 4 Lensa Laut Pills & Tiered Legend
+        column position="absolute" bottom=14 left="50%" translate="-50% 0px" width="calc(100% - 136px)" max-width=650 gap=8 z-index=22 align-items="center" testId="lensa-laut-dock"
           if tunePanelOpen
             column width="100%" max-width=380 padding="12px" gap=10 border-radius=14 background-color="var(--surface-elevated)" border="1px solid var(--border-subtle)" testId="tune-panel-popover"
               row width="100%" align-items="center" justify-content="space-between" gap=8
                 text "Transparansi Lapisan" font-size=13 font-weight=700 color="var(--ink-primary)"
-                text opacityPct(activeOpacity) class="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-muted)" testId="active-opacity-value"
+                text opacityPct(activeOpacity) font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-muted)" testId="active-opacity-value"
               row width="100%" align-items="center" gap=6
                 button press=stepActiveOpacity(-0.1) min-height=44 min-width=44 padding="6px" border-radius=8 border="1px solid var(--border-subtle)" background-color="var(--surface-canvas)" color="var(--ink-primary)" cursor="pointer" aria-label="Kurangi transparansi lapisan" testId="active-opacity-down"
                   text "-" font-size=16 font-weight=700
-                input type="range" min="0.1" max="1" step="0.05" value=`${activeOpacity}` change=setActiveOpacity min-height=44 min-width=44 flex=1 cursor="pointer" aria-label="Pengatur transparansi lapisan" testId="opacity-slider-active"
+                input type="range" min=0.1 max=1 step=0.05 value=activeOpacity change=setActiveOpacity min-height=44 min-width=44 flex=1 cursor="pointer" aria-label="Pengatur transparansi lapisan" testId="opacity-slider-active"
                 button press=stepActiveOpacity(0.1) min-height=44 min-width=44 padding="6px" border-radius=8 border="1px solid var(--border-subtle)" background-color="var(--surface-canvas)" color="var(--ink-primary)" cursor="pointer" aria-label="Tambah transparansi lapisan" testId="active-opacity-up"
                   text "+" font-size=16 font-weight=700
               row width="100%" align-items="center" gap=6
-                button press=setOpacityPreset(0.4) flex=1 min-height=44 min-width=44 padding="6px 8px" border-radius=8 border=(Math.abs(activeOpacity - 0.4) <= 0.02 ? "1px solid var(--accent-primary)" : "1px solid var(--border-subtle)") background-color="var(--surface-canvas)" color=(Math.abs(activeOpacity - 0.4) <= 0.02 ? "var(--accent-primary)" : "var(--ink-primary)") cursor="pointer" aria-label="Atur transparansi tipis 40 persen"
+                button press=setOpacityPreset(0.4) flex=1 min-height=44 min-width=44 padding="6px 8px" border-radius=8 border=(absVal(activeOpacity - 0.4) <= 0.02 ? "1px solid var(--accent-primary)" : "1px solid var(--border-subtle)") background-color="var(--surface-canvas)" color=(absVal(activeOpacity - 0.4) <= 0.02 ? "var(--accent-primary)" : "var(--ink-primary)") cursor="pointer" aria-label="Atur transparansi tipis 40 persen"
                   text "Tipis (40%)" font-size=12 font-weight=600
-                button press=setOpacityPreset(0.7) flex=1 min-height=44 min-width=44 padding="6px 8px" border-radius=8 border=(Math.abs(activeOpacity - 0.7) <= 0.02 ? "1px solid var(--accent-primary)" : "1px solid var(--border-subtle)") background-color="var(--surface-canvas)" color=(Math.abs(activeOpacity - 0.7) <= 0.02 ? "var(--accent-primary)" : "var(--ink-primary)") cursor="pointer" aria-label="Atur transparansi seimbang 70 persen"
+                button press=setOpacityPreset(0.7) flex=1 min-height=44 min-width=44 padding="6px 8px" border-radius=8 border=(absVal(activeOpacity - 0.7) <= 0.02 ? "1px solid var(--accent-primary)" : "1px solid var(--border-subtle)") background-color="var(--surface-canvas)" color=(absVal(activeOpacity - 0.7) <= 0.02 ? "var(--accent-primary)" : "var(--ink-primary)") cursor="pointer" aria-label="Atur transparansi seimbang 70 persen"
                   text "Seimbang (70%)" font-size=12 font-weight=600
-                button press=setOpacityPreset(0.9) flex=1 min-height=44 min-width=44 padding="6px 8px" border-radius=8 border=(Math.abs(activeOpacity - 0.9) <= 0.02 ? "1px solid var(--accent-primary)" : "1px solid var(--border-subtle)") background-color="var(--surface-canvas)" color=(Math.abs(activeOpacity - 0.9) <= 0.02 ? "var(--accent-primary)" : "var(--ink-primary)") cursor="pointer" aria-label="Atur transparansi jelas 90 persen"
+                button press=setOpacityPreset(0.9) flex=1 min-height=44 min-width=44 padding="6px 8px" border-radius=8 border=(absVal(activeOpacity - 0.9) <= 0.02 ? "1px solid var(--accent-primary)" : "1px solid var(--border-subtle)") background-color="var(--surface-canvas)" color=(absVal(activeOpacity - 0.9) <= 0.02 ? "var(--accent-primary)" : "var(--ink-primary)") cursor="pointer" aria-label="Atur transparansi jelas 90 persen"
                   text "Jelas (90%)" font-size=12 font-weight=600
               row width="100%" align-items="center" justify-content="space-between" gap=8
-                label "Tanggal Data (WIB)" font-size=12 font-weight=600 color="var(--ink-muted)"
+                text "Tanggal Data (WIB)" font-size=12 font-weight=600 color="var(--ink-muted)"
                 select value=selectedDate change=selectDate min-height=44 min-width=160 padding="8px 10px" border-radius=8 border="1px solid var(--border-subtle)" background-color="var(--surface-canvas)" color="var(--ink-primary)" font-size=13 cursor="pointer" aria-label="Pilih tanggal pengamatan" testId="date-selector"
-                  option value="latest" "Terbaru (Hari Ini · WIB)"
-                  option value="2026-11-10" "10 Nov 2026 (WIB)"
-                  option value="2026-11-01" "01 Nov 2026 (WIB)"
-                  option value="2026-10-15" "15 Okt 2026 (WIB)"
+                  option "Terbaru (Hari Ini · WIB)" value="latest"
+                  option "10 Nov 2026 (WIB)" value="2026-11-10"
+                  option "01 Nov 2026 (WIB)" value="2026-11-01"
+                  option "15 Okt 2026 (WIB)" value="2026-10-15"
 
           column width="100%" padding="8px 10px" gap=8 border-radius=16 background-color="var(--surface-elevated)" border="1px solid var(--border-subtle)"
             row width="100%" align-items="center" justify-content="space-between" gap=6 flex-wrap="wrap"
@@ -428,70 +324,69 @@ component OceanMapView
                     line x1=20 y1=12 x2=20 y2=3
                   text "Atur" font-size=12 font-weight=600
 
-            // Single Dynamic Tiered Legend matching active lens
             if potentialVisible
               column width="100%" gap=6 padding="2px 4px" testId="legend-potential"
                 row width="100%" align-items="center" gap=10
                   text "Gabungan suhu nyaman & pakan plankton" font-size=11 font-weight=600 color="var(--ink-muted)"
-                  div flex=1 height=8 border-radius=999 background="linear-gradient(90deg, rgba(20,184,166,0.16) 0%, #14B8A6 42%, #22C55E 72%, #F59E0B 100%)" aria-hidden="true"
+                  box flex=1 height=8 border-radius=999 background-image="linear-gradient(90deg, rgba(20,184,166,0.16) 0%, #14B8A6 42%, #22C55E 72%, #F59E0B 100%)" aria-hidden="true"
                 row width="100%" gap=6
                   row flex=1 min-width=0 align-items="center" justify-content="center" gap=5 padding="4px 6px" border-radius=8 background-color="var(--surface-canvas)" border="1px solid var(--border-subtle)"
-                    div width=10 height=10 border-radius=999 background-color="rgba(20,184,166,0.22)" aria-hidden="true"
-                    text "Sepi (<45%)" class="tabular-nums" font-size=11 font-weight=600 color="var(--ink-primary)"
+                    box width=10 height=10 border-radius=999 background-color="rgba(20,184,166,0.22)" aria-hidden="true"
+                    text "Sepi (<45%)" font-variant-numeric="tabular-nums" font-size=11 font-weight=600 color="var(--ink-primary)"
                   row flex=1 min-width=0 align-items="center" justify-content="center" gap=5 padding="4px 6px" border-radius=8 background-color="var(--surface-canvas)" border="1px solid var(--border-subtle)"
-                    div width=10 height=10 border-radius=999 background-color="#22C55E" aria-hidden="true"
-                    text "Sedang (45-71%)" class="tabular-nums" font-size=11 font-weight=600 color="var(--ink-primary)"
+                    box width=10 height=10 border-radius=999 background-color="#22C55E" aria-hidden="true"
+                    text "Sedang (45-71%)" font-variant-numeric="tabular-nums" font-size=11 font-weight=600 color="var(--ink-primary)"
                   row flex=1 min-width=0 align-items="center" justify-content="center" gap=5 padding="4px 6px" border-radius=8 background-color="var(--surface-canvas)" border="1px solid var(--border-subtle)"
-                    div width=10 height=10 border-radius=999 background-color="#F59E0B" aria-hidden="true"
-                    text "Padat Potensi (>=72%)" class="tabular-nums" font-size=11 font-weight=700 color="var(--ink-primary)"
+                    box width=10 height=10 border-radius=999 background-color="#F59E0B" aria-hidden="true"
+                    text "Padat Potensi (>=72%)" font-variant-numeric="tabular-nums" font-size=11 font-weight=700 color="var(--ink-primary)"
 
             if sstVisible
               column width="100%" gap=6 padding="2px 4px" testId="legend-sst"
                 row width="100%" align-items="center" gap=10
                   text "Suhu permukaan laut untuk aktivitas ikan" font-size=11 font-weight=600 color="var(--ink-muted)"
-                  div flex=1 height=8 border-radius=999 background="linear-gradient(90deg, #0d0887 0%, #6a00a8 25%, #b12a90 50%, #e16462 72%, #fca636 88%, #f0f921 100%)" aria-hidden="true"
+                  box flex=1 height=8 border-radius=999 background-image="linear-gradient(90deg, #0d0887 0%, #6a00a8 25%, #b12a90 50%, #e16462 72%, #fca636 88%, #f0f921 100%)" aria-hidden="true"
                 row width="100%" gap=6
                   row flex=1 min-width=0 align-items="center" justify-content="center" gap=5 padding="4px 6px" border-radius=8 background-color="var(--surface-canvas)" border="1px solid var(--border-subtle)"
-                    div width=10 height=10 border-radius=999 background-color="#4c02a1" aria-hidden="true"
-                    text (useFahrenheit ? "Sejuk (<79 °F)" : "Sejuk (<26 °C)") class="tabular-nums" font-size=11 font-weight=600 color="var(--ink-primary)"
+                    box width=10 height=10 border-radius=999 background-color="#4c02a1" aria-hidden="true"
+                    text (useFahrenheit ? "Sejuk (<79 °F)" : "Sejuk (<26 °C)") font-variant-numeric="tabular-nums" font-size=11 font-weight=600 color="var(--ink-primary)"
                   row flex=1 min-width=0 align-items="center" justify-content="center" gap=5 padding="4px 6px" border-radius=8 background-color="var(--surface-canvas)" border="1px solid var(--border-subtle)"
-                    div width=10 height=10 border-radius=999 background-color="#cc4778" aria-hidden="true"
-                    text (useFahrenheit ? "Nyaman (81-85 °F)" : "Nyaman (27-29.5 °C)") class="tabular-nums" font-size=11 font-weight=600 color="var(--ink-primary)"
+                    box width=10 height=10 border-radius=999 background-color="#cc4778" aria-hidden="true"
+                    text (useFahrenheit ? "Nyaman (81-85 °F)" : "Nyaman (27-29.5 °C)") font-variant-numeric="tabular-nums" font-size=11 font-weight=600 color="var(--ink-primary)"
                   row flex=1 min-width=0 align-items="center" justify-content="center" gap=5 padding="4px 6px" border-radius=8 background-color="var(--surface-canvas)" border="1px solid var(--border-subtle)"
-                    div width=10 height=10 border-radius=999 background-color="#f89540" aria-hidden="true"
-                    text (useFahrenheit ? "Hangat (>86 °F)" : "Hangat (>30 °C)") class="tabular-nums" font-size=11 font-weight=700 color="var(--ink-primary)"
+                    box width=10 height=10 border-radius=999 background-color="#f89540" aria-hidden="true"
+                    text (useFahrenheit ? "Hangat (>86 °F)" : "Hangat (>30 °C)") font-variant-numeric="tabular-nums" font-size=11 font-weight=700 color="var(--ink-primary)"
 
             if chlorophyllVisible
               column width="100%" gap=6 padding="2px 4px" testId="legend-chlorophyll"
                 row width="100%" align-items="center" gap=10
                   text "Kadar klorofil penanda plankton makanan ikan" font-size=11 font-weight=600 color="var(--ink-muted)"
-                  div flex=1 height=8 border-radius=999 background="linear-gradient(90deg, #440154 0%, #3b528b 25%, #21918c 55%, #5ec962 80%, #fde725 100%)" aria-hidden="true"
+                  box flex=1 height=8 border-radius=999 background-image="linear-gradient(90deg, #440154 0%, #3b528b 25%, #21918c 55%, #5ec962 80%, #fde725 100%)" aria-hidden="true"
                 row width="100%" gap=6
                   row flex=1 min-width=0 align-items="center" justify-content="center" gap=5 padding="4px 6px" border-radius=8 background-color="var(--surface-canvas)" border="1px solid var(--border-subtle)"
-                    div width=10 height=10 border-radius=999 background-color="#440154" aria-hidden="true"
-                    text "Jernih (<0.18)" class="tabular-nums" font-size=11 font-weight=600 color="var(--ink-primary)"
+                    box width=10 height=10 border-radius=999 background-color="#440154" aria-hidden="true"
+                    text "Jernih (<0.18)" font-variant-numeric="tabular-nums" font-size=11 font-weight=600 color="var(--ink-primary)"
                   row flex=1 min-width=0 align-items="center" justify-content="center" gap=5 padding="4px 6px" border-radius=8 background-color="var(--surface-canvas)" border="1px solid var(--border-subtle)"
-                    div width=10 height=10 border-radius=999 background-color="#21918c" aria-hidden="true"
-                    text "Cukup (0.18-0.45)" class="tabular-nums" font-size=11 font-weight=600 color="var(--ink-primary)"
+                    box width=10 height=10 border-radius=999 background-color="#21918c" aria-hidden="true"
+                    text "Cukup (0.18-0.45)" font-variant-numeric="tabular-nums" font-size=11 font-weight=600 color="var(--ink-primary)"
                   row flex=1 min-width=0 align-items="center" justify-content="center" gap=5 padding="4px 6px" border-radius=8 background-color="var(--surface-canvas)" border="1px solid var(--border-subtle)"
-                    div width=10 height=10 border-radius=999 background-color="#5ec962" aria-hidden="true"
-                    text "Subur Plankton (>0.45 mg/m3)" class="tabular-nums" font-size=11 font-weight=700 color="var(--ink-primary)"
+                    box width=10 height=10 border-radius=999 background-color="#5ec962" aria-hidden="true"
+                    text "Subur Plankton (>0.45 mg/m3)" font-variant-numeric="tabular-nums" font-size=11 font-weight=700 color="var(--ink-primary)"
 
             if currentsVisible
               column width="100%" gap=6 padding="2px 4px" testId="legend-currents"
                 text "Arah garis mengikuti aliran arus permukaan laut" font-size=11 font-weight=600 color="var(--ink-muted)"
                 row width="100%" gap=6
                   row flex=1 min-width=0 align-items="center" justify-content="center" gap=5 padding="4px 6px" border-radius=8 background-color="var(--surface-canvas)" border="1px solid var(--border-subtle)"
-                    div width=14 height=3 border-radius=2 background-color="#0284C7" aria-hidden="true"
-                    text (useMs ? "Tenang (<0.15 m/s)" : "Tenang (<0.3 kt)") class="tabular-nums" font-size=11 font-weight=600 color="#0284C7"
+                    box width=14 height=3 border-radius=2 background-color="#0284C7" aria-hidden="true"
+                    text (useMs ? "Tenang (<0.15 m/s)" : "Tenang (<0.3 kt)") font-variant-numeric="tabular-nums" font-size=11 font-weight=600 color="#0284C7"
                   row flex=1 min-width=0 align-items="center" justify-content="center" gap=5 padding="4px 6px" border-radius=8 background-color="var(--surface-canvas)" border="1px solid var(--border-subtle)"
-                    div width=14 height=3 border-radius=2 background-color="#0D9488" aria-hidden="true"
-                    text (useMs ? "Mengalir (0.15-0.46 m/s)" : "Mengalir (0.3-0.9 kt)") class="tabular-nums" font-size=11 font-weight=600 color="#0D9488"
+                    box width=14 height=3 border-radius=2 background-color="#0D9488" aria-hidden="true"
+                    text (useMs ? "Mengalir (0.15-0.46 m/s)" : "Mengalir (0.3-0.9 kt)") font-variant-numeric="tabular-nums" font-size=11 font-weight=600 color="#0D9488"
                   row flex=1 min-width=0 align-items="center" justify-content="center" gap=5 padding="4px 6px" border-radius=8 background-color="var(--surface-canvas)" border="1px solid var(--border-subtle)"
-                    div width=14 height=3 border-radius=2 background-color="#D97706" aria-hidden="true"
-                    text (useMs ? "Deras (>0.46 m/s)" : "Deras (>0.9 kt)") class="tabular-nums" font-size=11 font-weight=700 color="#D97706"
+                    box width=14 height=3 border-radius=2 background-color="#D97706" aria-hidden="true"
+                    text (useMs ? "Deras (>0.46 m/s)" : "Deras (>0.9 kt)") font-variant-numeric="tabular-nums" font-size=11 font-weight=700 color="#D97706"
 
-        // Kondisi Titik Ini (Layperson Interpretive Point Inspector Card)
+        // Kondisi Titik Ini Card
         if showInspector
           column position="absolute" top=12 right=12 max-width=380 width="calc(100% - 24px)" max-height="calc(78vh - 58px)" overflow-y="auto" padding="14px" gap=10 border-radius=14 background-color="var(--surface-elevated)" border="1px solid var(--border-subtle)" z-index=30 testId="point-inspector-drawer"
             row width="100%" align-items="center" justify-content="space-between" gap=8
@@ -515,7 +410,7 @@ component OceanMapView
                     column flex=1 min-width=0 gap=2
                       text `${formatOptText(pt.wpp_name, "Perairan Lepas")}` font-size=14 font-weight=700 color="var(--ink-primary)" testId="inspector-wpp"
                       text formatOptText(pt.wpp_waters_id, "Wilayah perairan sekitar") font-size=12 color="var(--ink-muted)"
-                    div padding="5px 10px" border-radius=999 background-color=potentialVerdictColor(pt.sst_c, pt.chlorophyll_mg_m3, pt.current_speed_knots) color="#FFFFFF"
+                    box padding="5px 10px" border-radius=999 background-color=potentialVerdictColor(pt.sst_c, pt.chlorophyll_mg_m3, pt.current_speed_knots) color="#FFFFFF"
                       text potentialVerdict(pt.sst_c, pt.chlorophyll_mg_m3, pt.current_speed_knots) font-size=12 font-weight=700
 
                   column width="100%" padding="10px 12px" gap=4 border-radius=10 background-color="var(--surface-canvas)" border="1px solid var(--accent-primary)" testId="inspector-takeaway"
@@ -528,7 +423,7 @@ component OceanMapView
                         svg width=15 height=15 viewBox="0 0 24 24" fill="none" stroke="var(--accent-cta)" stroke-width=2 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
                           path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"
                         text "Suhu Air" font-size=12 font-weight=600 color="var(--ink-muted)"
-                      text (useFahrenheit ? formatOptNumber(pt.sst_f, 1, "°F") : formatOptNumber(pt.sst_c, 1, "°C")) class="tabular-nums" font-family="var(--font-mono)" font-size=17 font-weight=700 color="var(--ink-primary)"
+                      text (useFahrenheit ? formatOptNumber(pt.sst_f, 1, "°F") : formatOptNumber(pt.sst_c, 1, "°C")) font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=17 font-weight=700 color="var(--ink-primary)"
                       text sstComfortLabel(pt.sst_c) font-size=12 font-weight=600 color="var(--accent-primary)"
 
                     column flex=1 min-width=130 padding="10px" gap=4 border-radius=10 background-color="var(--surface-canvas)" border="1px solid var(--border-subtle)" testId="inspector-chlorophyll"
@@ -538,16 +433,16 @@ component OceanMapView
                           path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"
                         text "Pakan Alami" font-size=12 font-weight=600 color="var(--ink-muted)"
                       text chlRichnessLabel(pt.chlorophyll_mg_m3) font-size=15 font-weight=700 color="var(--ink-primary)"
-                      div width="100%" height=6 border-radius=999 background-color="var(--border-subtle)" overflow="hidden"
-                        div width=chlMeterPercent(pt.chlorophyll_mg_m3) height="100%" border-radius=999 background-color="var(--status-healthy)"
-                      text formatOptNumber(pt.chlorophyll_mg_m3, 2, "mg/m3") class="tabular-nums" font-family="var(--font-mono)" font-size=11 color="var(--ink-muted)"
+                      box width="100%" height=6 border-radius=999 background-color="var(--border-subtle)" overflow="hidden"
+                        box width=chlMeterPercent(pt.chlorophyll_mg_m3) height="100%" border-radius=999 background-color="var(--status-healthy)"
+                      text formatOptNumber(pt.chlorophyll_mg_m3, 2, "mg/m3") font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=11 color="var(--ink-muted)"
 
                   row width="100%" align-items="center" justify-content="space-between" padding="10px" gap=10 border-radius=10 background-color="var(--surface-canvas)" border="1px solid var(--border-subtle)" testId="inspector-current"
                     column gap=3
                       text "Arah & Kuat Arus" font-size=12 font-weight=600 color="var(--ink-muted)"
-                      text (useMs ? formatOptNumber(pt.current_speed_ms, 2, "m/s") : formatOptNumber(pt.current_speed_knots, 2, "knot")) class="tabular-nums" font-family="var(--font-mono)" font-size=16 font-weight=700 color="var(--ink-primary)"
+                      text (useMs ? formatOptNumber(pt.current_speed_ms, 2, "m/s") : formatOptNumber(pt.current_speed_knots, 2, "knot")) font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=16 font-weight=700 color="var(--ink-primary)"
                       text `${currentStrengthLabel(pt.current_speed_knots)} ke ${compassDirId(pt.current_compass)}` font-size=12 font-weight=600 color="var(--accent-primary)"
-                    div width=42 height=42 border-radius=999 background-color="var(--surface-elevated)" border="1px solid var(--border-subtle)" display="flex" align-items="center" justify-content="center" transform=`rotate(${compassDeg(pt.current_direction_deg)}deg)` aria-hidden="true"
+                    box width=42 height=42 border-radius=999 background-color="var(--surface-elevated)" border="1px solid var(--border-subtle)" display="flex" align-items="center" justify-content="center" rotate=`${compassDeg(pt.current_direction_deg)}deg` aria-hidden="true"
                       svg width=22 height=22 viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width=2.5 stroke-linecap="round" stroke-linejoin="round"
                         line x1=12 y1=19 x2=12 y2=5
                         polyline points="6 11 12 5 18 11"
@@ -563,16 +458,16 @@ component OceanMapView
 
                   if techDetailsOpen
                     column width="100%" gap=4 padding="10px" border-radius=8 background-color="var(--surface-canvas)" border="1px solid var(--border-subtle)" testId="tech-details-panel"
-                      text `Koordinat: ${pt.lat.toFixed(4)}, ${pt.lon.toFixed(4)}` class="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--ink-primary)" testId="inspector-coords"
-                      text `Arah Kompas: ${formatOptNumber(pt.current_direction_deg, 0, "deg")} (${formatOptText(pt.current_compass, "N/A")})` class="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--ink-muted)"
+                      text `Koordinat: ${pt.lat.toFixed(4)}, ${pt.lon.toFixed(4)}` font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--ink-primary)" testId="inspector-coords"
+                      text `Arah Kompas: ${formatOptNumber(pt.current_direction_deg, 0, "deg")} (${formatOptText(pt.current_compass, "N/A")})` font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--ink-muted)"
                       match pt.salinity_psu
-                        case some(sal) => text `Salinitas: ${sal.toFixed(2)} PSU` class="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--ink-muted)" testId="inspector-salinity"
-                        case none => div display="none"
+                        case some(sal) => text `Salinitas: ${sal.toFixed(2)} PSU` font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--ink-muted)" testId="inspector-salinity"
+                        case none => box display="none"
                       match pt.wave_height_m
-                        case some(wh) => text `Tinggi Gelombang: ${wh.toFixed(2)} m` class="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--ink-muted)" testId="inspector-wave"
-                        case none => div display="none"
-                      text `Interpolasi: ${pt.interpolation_method} | Res: ${formatOptNumber(pt.spatial_resolution_km, 1, "km")}` class="tabular-nums" font-family="var(--font-mono)" font-size=11 color="var(--ink-muted)"
-                      text `Waktu Data (WIB): ${formatWibOpt(pt.acquired_at_utc, "Basis data lokal")}` class="tabular-nums" font-family="var(--font-mono)" font-size=11 color="var(--ink-muted)"
+                        case some(wh) => text `Tinggi Gelombang: ${wh.toFixed(2)} m` font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--ink-muted)" testId="inspector-wave"
+                        case none => box display="none"
+                      text `Interpolasi: ${pt.interpolation_method} | Res: ${formatOptNumber(pt.spatial_resolution_km, 1, "km")}` font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=11 color="var(--ink-muted)"
+                      text `Waktu Data (WIB): ${formatWibOpt(pt.acquired_at_utc, "Basis data lokal")}` font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=11 color="var(--ink-muted)"
                       text `Sumber: ${pt.attribution}` font-size=11 color="var(--ink-primary)"
 
               case none =>
@@ -585,5 +480,5 @@ component OceanMapView
             circle cx=12 cy=12 r=10
             polyline points="12 6 12 12 16 14"
           text `Sumber: ${freshnessSource}` font-size=12 font-weight=700 color="var(--ink-primary)" testId="badge-data-source"
-          text `Data: ${freshnessTimestamp}` class="tabular-nums" font-family="var(--font-mono)" font-size=11 color="var(--ink-muted)" testId="badge-acquired-at"
+          text `Data: ${freshnessTimestamp}` font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=11 color="var(--ink-muted)" testId="badge-acquired-at"
         text "Data satelit & riwayat untuk referensi. Keselamatan pelayaran wajib mengikuti informasi BMKG, Pushidrosal, dan Basarnas." font-size=11 color="var(--ink-muted)" testId="badge-disclaimer-text"

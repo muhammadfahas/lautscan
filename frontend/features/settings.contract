@@ -2,17 +2,13 @@
 
 use HealthStatus, UserPreferences from "../shapes.contract"
 
-fn tempLabel(unit: string): string =
-  unit == "F" ? "Fahrenheit (°F)" : "Celsius (°C)"
+fn tempLabel(unit: string): string = unit == "F" ? "Fahrenheit (°F)" : "Celsius (°C)"
 
-fn speedLabel(unit: string): string =
-  unit == "ms" ? "Meters per second (m/s)" : "Knots (knot)"
+fn speedLabel(unit: string): string = unit == "ms" ? "Meters per second (m/s)" : "Knots (knot)"
 
-fn themeLabel(mode: string): string =
-  mode == "daylight" ? "Daylight Maritime" : (mode == "night" ? "Night Maritime" : "System Default")
+fn themeLabel(mode: string): string = mode == "daylight" ? "Daylight Maritime" : (mode == "night" ? "Night Maritime" : "System Default")
 
-fn tileModeLabel(lowBandwidth: bool): string =
-  lowBandwidth ? "WebP (Low-Bandwidth Maritime)" : "PNG (Standard Lossless RGBA)"
+fn tileModeLabel(lowBandwidth: bool): string = lowBandwidth ? "WebP (Low-Bandwidth Maritime)" : "PNG (Standard Lossless RGBA)"
 
 component SettingsView
   props
@@ -37,6 +33,10 @@ component SettingsView
 
   action selectThemeMode(mode: string)
     onSavePrefs(prefs.temp_unit, prefs.speed_unit, mode, prefs.low_bandwidth)
+    savedNotice = true
+
+  action setLowBandwidth(checked: bool)
+    onSavePrefs(prefs.temp_unit, prefs.speed_unit, prefs.theme_mode, checked)
     savedNotice = true
 
   action toggleLowBandwidth()
@@ -150,16 +150,16 @@ component SettingsView
                 line x1=12 y1=20 x2=12.01 y2=20
               text "Low-Bandwidth Maritime Tile Mode (WebP)" role="heading" font-size=18 font-weight=600 color="var(--ink-primary)"
             text "Prefer compressed 256x256 WebP oceanographic tiles (?format=webp) and lightweight table fallbacks when operating on limited coastal cellular or satellite links." font-size=14 color="var(--ink-muted)"
-            text `Current tile format: ${tileFormatLabel}` class="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-primary)" testId="settings-tile-format-status"
+            text `Current tile format: ${tileFormatLabel}` font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-primary)" testId="settings-tile-format-status"
 
           row align-items="center" gap=10
-            input type="checkbox" checked=prefs.low_bandwidth change=toggleLowBandwidth min-height=44 min-width=44 cursor="pointer" aria-label="Enable low-bandwidth WebP raster tiles" testId="toggle-low-bandwidth"
+            input type="checkbox" checked=prefs.low_bandwidth change=setLowBandwidth min-height=44 min-width=44 cursor="pointer" aria-label="Enable low-bandwidth WebP raster tiles" testId="toggle-low-bandwidth"
             button press=toggleLowBandwidth min-height=44 min-width=140 padding="10px 14px" border-radius=8 border="1px solid var(--border-subtle)" background-color="var(--surface-canvas)" color="var(--ink-primary)" cursor="pointer" aria-label="Toggle low-bandwidth WebP tile preference" testId="btn-toggle-low-bandwidth"
               text (prefs.low_bandwidth ? "WebP Enabled" : "Enable WebP") font-size=14 font-weight=600
 
         row align-items="center" gap=12 flex-wrap="wrap" padding="10px 12px" border-radius=8 background-color="var(--surface-canvas)" border="1px solid var(--border-subtle)"
-          text `Server Tile Cache Status: ${health.tile_cache_ok ? "Ready" : "Degraded / Offline Fallback"}` class="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-muted)"
-          text `API Service: ${health.service} v${health.version} (${health.environment})` class="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-muted)"
+          text `Server Tile Cache Status: ${health.tile_cache_ok ? "Ready" : "Degraded / Offline Fallback"}` font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-muted)"
+          text `API Service: ${health.service} v${health.version} (${health.environment})` font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-muted)"
 
       // GFW Non-Commercial Compliance & Safety Disclosure Card
       column width="100%" padding="16px" gap=12 border-radius=12 background-color="var(--surface-elevated)" border="1px solid var(--border-subtle)" testId="settings-gfw-compliance"

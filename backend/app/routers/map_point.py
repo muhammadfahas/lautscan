@@ -42,9 +42,7 @@ router = APIRouter(prefix="/v1", tags=["map"])
 )
 async def inspect_point(
     lat: float = Query(..., ge=-90.0, le=90.0, description="WGS84 latitude in decimal degrees."),
-    lon: float = Query(
-        ..., ge=-180.0, le=180.0, description="WGS84 longitude in decimal degrees."
-    ),
+    lon: float = Query(..., ge=-180.0, le=180.0, description="WGS84 longitude in decimal degrees."),
     date: str = Query(
         default="latest",
         pattern=r"^(\d{4}-\d{2}-\d{2}|latest)$",

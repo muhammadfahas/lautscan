@@ -264,15 +264,13 @@ def _parse_pdpi_json(
             for feat in payload["features"]:
                 if not isinstance(feat, dict):
                     continue
-                props = feat.get("properties") if isinstance(feat.get("properties"), dict) else {}
-                geom = feat.get("geometry") if isinstance(feat.get("geometry"), dict) else {}
+                raw_props = feat.get("properties")
+                props: dict[str, Any] = raw_props if isinstance(raw_props, dict) else {}
+                raw_geom = feat.get("geometry")
+                geom: dict[str, Any] = raw_geom if isinstance(raw_geom, dict) else {}
                 coords = geom.get("coordinates")
-                merged = dict(props)
-                if (
-                    geom.get("type") == "Point"
-                    and isinstance(coords, list)
-                    and len(coords) >= 2
-                ):
+                merged: dict[str, Any] = dict(props)
+                if geom.get("type") == "Point" and isinstance(coords, list) and len(coords) >= 2:
                     merged.setdefault("lon", coords[0])
                     merged.setdefault("lat", coords[1])
                 if "id" in feat and "zone_id" not in merged:
@@ -299,9 +297,7 @@ def _parse_pdpi_json(
                     str(item["confidence_level"]) if item.get("confidence_level") else None
                 ),
                 target_species_group=(
-                    str(item["target_species_group"])
-                    if item.get("target_species_group")
-                    else None
+                    str(item["target_species_group"]) if item.get("target_species_group") else None
                 ),
                 source_url=source_url,
                 attribution=attribution,

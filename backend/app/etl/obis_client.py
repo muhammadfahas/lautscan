@@ -107,9 +107,13 @@ class ObisClient(ProviderAdapter):
         client: httpx.AsyncClient | None = None,
         wpp_locator: WppLocator | None = None,
     ) -> None:
-        resolved = base_url if base_url is not None else resolve_setting(
-            "OBIS_API_BASE_URL",
-            DEFAULT_OBIS_API_BASE_URL,
+        resolved = (
+            base_url
+            if base_url is not None
+            else resolve_setting(
+                "OBIS_API_BASE_URL",
+                DEFAULT_OBIS_API_BASE_URL,
+            )
         )
         self.base_url: str = resolved.rstrip("/")
         self.timeout_s = timeout_s

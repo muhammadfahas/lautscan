@@ -160,18 +160,18 @@ def _synthesize_layer_arrays(
     phase = 2.0 * math.pi * (day_of_year / 365.0)
 
     if layer == "sst":
-        sst = (
+        sst_raw = (
             29.1
             - 0.085 * np.abs(lat_2d + 1.5)
             + 0.75 * np.cos(0.14 * (lon_2d - 122.0) + phase)
             + 0.65 * np.sin(0.22 * (lat_2d + 4.0) - phase)
             + 0.45 * np.cos(0.35 * (lon_2d - 105.0)) * np.sin(0.30 * lat_2d)
         )
-        sst = np.clip(sst, 22.0, 32.8).astype(np.float32)
-        sst[land_mask] = np.float32(np.nan)
+        sst_out: NDArray[np.float32] = np.asarray(np.clip(sst_raw, 22.0, 32.8), dtype=np.float32)
+        sst_out[land_mask] = np.float32(np.nan)
         return {
             "sst": (
-                sst,
+                sst_out,
                 {
                     "standard_name": "sea_surface_temperature",
                     "long_name": "Sea Surface Temperature",
@@ -189,8 +189,11 @@ def _synthesize_layer_arrays(
         upwelling = np.exp(-((lat_2d + 9.5) ** 2) / 8.0) * (
             0.5 + 0.5 * np.sin(0.18 * (lon_2d - 118.0) + phase)
         )
-        log_chl = -0.85 + 0.75 * shelf_boost + 0.65 * upwelling + 0.20 * np.sin(
-            0.25 * lon_2d + 0.30 * lat_2d + phase
+        log_chl = (
+            -0.85
+            + 0.75 * shelf_boost
+            + 0.65 * upwelling
+            + 0.20 * np.sin(0.25 * lon_2d + 0.30 * lat_2d + phase)
         )
         chl = np.clip(np.power(10.0, log_chl), 0.03, 5.5).astype(np.float32)
         chl[land_mask] = np.float32(np.nan)

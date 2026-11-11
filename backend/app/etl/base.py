@@ -21,9 +21,7 @@ AdapterSyncStatus = Literal["success", "partial", "failed", "skipped", "unconfig
 SyncLogStatus = Literal["success", "partial", "failed", "skipped"]
 
 RETRYABLE_STATUS_CODES: Final[frozenset[int]] = frozenset({429, 500, 502, 503, 504})
-_URL_CREDENTIAL_PATTERN: Final[re.Pattern[str]] = re.compile(
-    r"(https?://)([^/@\s:]+):([^/@\s]+)@"
-)
+_URL_CREDENTIAL_PATTERN: Final[re.Pattern[str]] = re.compile(r"(https?://)([^/@\s:]+):([^/@\s]+)@")
 
 
 @dataclass(frozen=True, slots=True)
@@ -279,8 +277,7 @@ async def request_with_retry(
             last_status = response.status_code
             snippet = response.text[:240].strip() if response.text else ""
             last_error = redact_secrets(
-                f"HTTP {response.status_code} from upstream"
-                + (f": {snippet}" if snippet else ""),
+                f"HTTP {response.status_code} from upstream" + (f": {snippet}" if snippet else ""),
                 secrets_to_redact,
             )
 
@@ -320,4 +317,4 @@ def _compute_retry_delay(response: httpx.Response, backoff_s: float, attempt: in
             pass
     if backoff_s <= 0:
         return 0.0
-    return backoff_s * (2 ** (attempt - 1))
+    return float(backoff_s * (2 ** (attempt - 1)))

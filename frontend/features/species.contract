@@ -2,15 +2,9 @@
 
 use WppZoneRecord, SpeciesOccurrenceRecord from "../shapes.contract"
 
-fn formatDepth(depth: option<number>): string =
-  match depth
-    case some(d) => `${d.toFixed(1)} m`
-    case none => "Surface / N/A"
+fn formatDepth(depth: option<number>): string = match depth { case some(d) => `${d.toFixed(1)} m`, case none => "Surface / N/A" }
 
-fn formatOptionalText(val: option<string>, fallback: string): string =
-  match val
-    case some(s) => s
-    case none => fallback
+fn formatOptionalText(val: option<string>, fallback: string): string = match val { case some(s) => s, case none => fallback }
 
 component SpeciesView
   props
@@ -72,20 +66,20 @@ component SpeciesView
             text "Open biodiversity observations across Indonesian waters. Historical OBIS records do not indicate real-time fish presence." font-size=15 color="var(--ink-muted)"
 
         row padding="8px 12px" border-radius=8 background-color="var(--surface-elevated)" border="1px solid var(--border-subtle)"
-          text `Total Records: ${total}` class="tabular-nums" font-family="var(--font-mono)" font-size=14 font-weight=700 color="var(--ink-primary)" testId="species-total-count"
+          text `Total Records: ${total}` font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=14 font-weight=700 color="var(--ink-primary)" testId="species-total-count"
 
       // Filter Toolbar
       row width="100%" padding="14px 16px" gap=12 flex-wrap="wrap" align-items="center" border-radius=12 background-color="var(--surface-elevated)" border="1px solid var(--border-subtle)" testId="species-filter-bar"
         column flex="2 1 220px" min-width=0 gap=4
-          label "Taxon / Species Name" font-size=13 font-weight=600 color="var(--ink-muted)"
+          text "Taxon / Species Name" font-size=13 font-weight=600 color="var(--ink-muted)"
           input value=taxonDraft input=editTaxon submit=applyFilter placeholder="e.g. Thunnus, Cakalang, Scombridae" width="100%" max-width="100%" min-height=44 min-width=44 padding="10px 12px" border-radius=8 border="1px solid var(--border-subtle)" background-color="var(--surface-canvas)" color="var(--ink-primary)" font-size=16 cursor="pointer" aria-label="Filter species by scientific name, common name, or family" testId="species-taxon-input"
 
         column flex="1 1 200px" min-width=0 gap=4
-          label "WPP-NRI Zone" font-size=13 font-weight=600 color="var(--ink-muted)"
+          text "WPP-NRI Zone" font-size=13 font-weight=600 color="var(--ink-muted)"
           select value=selectedWpp change=selectWpp width="100%" max-width="100%" min-height=44 min-width=44 padding="10px 12px" border-radius=8 border="1px solid var(--border-subtle)" background-color="var(--surface-canvas)" color="var(--ink-primary)" font-size=16 cursor="pointer" aria-label="Filter species by WPP-NRI fisheries management zone" testId="species-wpp-select"
-            option value="" "All WPP-NRI Zones (571-718)"
+            option "All WPP-NRI Zones (571-718)" value=""
             for z in wppZones key=z.wpp_code
-              option value=z.wpp_code `${z.name}: ${z.waters_en}`
+              option `${z.name}: ${z.waters_en}` value=z.wpp_code
 
         row gap=10 align-items="flex-end" flex-wrap="wrap"
           button press=applyFilter min-height=44 min-width=110 padding="10px 16px" border-radius=8 border="1px solid var(--accent-primary)" background-color="var(--accent-primary)" color="#FFFFFF" cursor="pointer" aria-label="Apply species filters" testId="species-search-btn"
@@ -112,13 +106,13 @@ component SpeciesView
                   text sp.scientific_name font-size=16 font-weight=700 font-style="italic" color="var(--ink-primary)"
                   text formatOptionalText(sp.common_name, "Common name unlisted") font-size=14 font-weight=600 color="var(--accent-primary)"
                 row padding="4px 8px" border-radius=6 background-color="var(--surface-canvas)" border="1px solid var(--border-subtle)"
-                  text `WPP ${formatOptionalText(sp.wpp_code, "N/A")}` class="tabular-nums" font-family="var(--font-mono)" font-size=12 font-weight=700 color="var(--ink-primary)"
+                  text `WPP ${formatOptionalText(sp.wpp_code, "N/A")}` font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=12 font-weight=700 color="var(--ink-primary)"
 
               row gap=12 flex-wrap="wrap"
                 text `Family: ${formatOptionalText(sp.family, "Unclassified")}` font-size=13 color="var(--ink-muted)"
-                text `Depth: ${formatDepth(sp.depth_m)}` class="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-primary)"
+                text `Depth: ${formatDepth(sp.depth_m)}` font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-primary)"
 
-              text `Coord: ${sp.lat.toFixed(4)}, ${sp.lon.toFixed(4)}` class="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-muted)"
+              text `Coord: ${sp.lat.toFixed(4)}, ${sp.lon.toFixed(4)}` font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-muted)"
               text formatOptionalText(sp.habitat_note, "No habitat summary provided by OBIS contributor.") font-size=14 line-height=1.5 color="var(--ink-primary)"
               text `Attribution: ${sp.attribution}` font-size=12 color="var(--ink-muted)"
 
@@ -126,27 +120,39 @@ component SpeciesView
       column width="100%" padding="16px" gap=12 border-radius=12 background-color="var(--surface-elevated)" border="1px solid var(--border-subtle)"
         row width="100%" align-items="center" justify-content="space-between" flex-wrap="wrap" gap=8
           text "Accessible Species Observation Table" role="heading" font-size=18 font-weight=600 color="var(--ink-primary)"
-          text `Showing ${items.length > 0 ? offset + 1 : 0} to ${pageEnd} of ${total}` class="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-muted)"
+          text `Showing ${items.length > 0 ? offset + 1 : 0} to ${pageEnd} of ${total}` font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-muted)"
 
-        div width="100%" overflow-x="auto" testId="species-table-wrap"
-          table width="100%" border-collapse="collapse" testId="species-table"
+        box width="100%" overflow-x="auto" testId="species-table-wrap"
+          table width="100%" testId="species-table"
             thead
               tr
-                th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "Scientific Name"
-                th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "Common Name"
-                th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "WPP Code"
-                th scope="col" text-align="right" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "Depth (m)"
-                th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "Habitat Note"
-                th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "Attribution"
+                th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)"
+                  text "Scientific Name"
+                th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)"
+                  text "Common Name"
+                th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)"
+                  text "WPP Code"
+                th scope="col" text-align="right" padding="10px 8px" border-bottom="2px solid var(--border-subtle)"
+                  text "Depth (m)"
+                th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)"
+                  text "Habitat Note"
+                th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)"
+                  text "Attribution"
             tbody
               for sp in items key=sp.id
                 tr testId=`species-row-${sp.id}`
-                  td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" font-style="italic" font-weight=600 sp.scientific_name
-                  td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" formatOptionalText(sp.common_name, "N/A")
-                  td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" class="tabular-nums" font-family="var(--font-mono)" formatOptionalText(sp.wpp_code, "N/A")
-                  td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" text-align="right" class="tabular-nums" font-family="var(--font-mono)" formatDepth(sp.depth_m)
-                  td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" formatOptionalText(sp.habitat_note, "N/A")
-                  td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" sp.attribution
+                  td padding="10px 8px" border-bottom="1px solid var(--border-subtle)"
+                    text sp.scientific_name font-style="italic" font-weight=600
+                  td padding="10px 8px" border-bottom="1px solid var(--border-subtle)"
+                    text formatOptionalText(sp.common_name, "N/A")
+                  td padding="10px 8px" border-bottom="1px solid var(--border-subtle)"
+                    text formatOptionalText(sp.wpp_code, "N/A") font-variant-numeric="tabular-nums" font-family="var(--font-mono)"
+                  td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" text-align="right"
+                    text formatDepth(sp.depth_m) font-variant-numeric="tabular-nums" font-family="var(--font-mono)"
+                  td padding="10px 8px" border-bottom="1px solid var(--border-subtle)"
+                    text formatOptionalText(sp.habitat_note, "N/A")
+                  td padding="10px 8px" border-bottom="1px solid var(--border-subtle)"
+                    text sp.attribution
 
         // Pagination Controls
         row width="100%" justify-content="space-between" align-items="center" gap=12 flex-wrap="wrap"

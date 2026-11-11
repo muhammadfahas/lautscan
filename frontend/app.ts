@@ -23,6 +23,8 @@ export function getApiBaseUrl(): string {
 
 export type Option<T> = T | undefined;
 
+const FALLBACK_UTC_ISO = '2026-11-11T09:00:00Z';
+
 export interface HealthStatus {
   status: string;
   service: string;
@@ -456,7 +458,7 @@ function normalizeHealth(raw: Record<string, unknown>): HealthStatus {
     postgis_version: optString(raw.postgis_version),
     redis_ok: reqBool(raw.redis_ok, false),
     tile_cache_ok: reqBool(raw.tile_cache_ok, false),
-    timestamp_utc: reqString(raw.timestamp_utc, new Date().toISOString()),
+    timestamp_utc: reqString(raw.timestamp_utc, FALLBACK_UTC_ISO),
   };
 }
 
@@ -556,7 +558,7 @@ function normalizeSyncLog(raw: Record<string, unknown>): SourceSyncLogRecord {
     dataset_type: reqString(raw.dataset_type),
     status: reqString(raw.status, 'skipped'),
     records_ingested: reqNumber(raw.records_ingested, 0),
-    started_at_utc: reqString(raw.started_at_utc, new Date().toISOString()),
+    started_at_utc: reqString(raw.started_at_utc, FALLBACK_UTC_ISO),
     finished_at_utc: optString(raw.finished_at_utc),
     duration_ms: optNumber(raw.duration_ms),
     error_message: optString(raw.error_message),
@@ -658,7 +660,7 @@ export function fallbackHealth(): HealthStatus {
       postgis_version: undefined,
       redis_ok: false,
       tile_cache_ok: false,
-      timestamp_utc: new Date().toISOString(),
+      timestamp_utc: FALLBACK_UTC_ISO,
     }
   );
 }
@@ -695,7 +697,7 @@ export function fallbackSources(): DataSourcesResponse {
   if (cachedSources) {
     return cachedSources;
   }
-  const nowIso = new Date().toISOString();
+  const nowIso = FALLBACK_UTC_ISO;
   return {
     sources: [
       {
@@ -981,7 +983,7 @@ export async function loadSources(_refreshNonce = 0): Promise<DataSourcesRespons
     const response: DataSourcesResponse = {
       sources: rawSources.map((s) => normalizeDataSource(s as Record<string, unknown>)),
       recent_logs: rawLogs.map((l) => normalizeSyncLog(l as Record<string, unknown>)),
-      checked_at_utc: reqString(data.checked_at_utc, new Date().toISOString()),
+      checked_at_utc: reqString(data.checked_at_utc, FALLBACK_UTC_ISO),
     };
     cachedSources = response;
     return response;

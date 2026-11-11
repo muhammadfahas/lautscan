@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Literal
 from uuid import uuid4
 
 from fastapi import APIRouter
@@ -91,7 +92,9 @@ async def get_health() -> HealthStatus | JSONResponse:
             message="Primary PostGIS spatial database is unavailable.",
         )
 
-    overall_status = "ok" if (db_ok and redis_ok and tile_cache_ok) else "degraded"
+    overall_status: Literal["ok", "degraded", "error"] = (
+        "ok" if (db_ok and redis_ok and tile_cache_ok) else "degraded"
+    )
     return HealthStatus(
         status=overall_status,
         service=SERVICE_NAME,

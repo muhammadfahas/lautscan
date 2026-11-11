@@ -1,94 +1,17 @@
-/* app.tamber: LAUT SCAN Maritime Dual Theme Tokens (Daylight & Night Maritime) */
-:root {
-  color-scheme: light dark;
+// app.tamber: LAUT SCAN Maritime Dual Theme Tokens (Daylight and Night Maritime)
+tamber lautscan
 
-  --surface-canvas:   light-dark(#F8FAFC, #0A0E27);
-  --surface-elevated: light-dark(#FFFFFF, #0D1117);
-  --ink-primary:      light-dark(#1E293B, #E6EDF3);
-  --ink-muted:        light-dark(#475569, #94A3B8);
-  --border-subtle:    light-dark(#E2E8F0, #30363D);
-  --accent-primary:   light-dark(#3B82F6, #60A5FA);
-  --accent-cta:       light-dark(#F97316, #F97316);
-  --status-healthy:   light-dark(#16A34A, #22C55E);
-  --status-degraded:  light-dark(#D97706, #F59E0B);
-  --status-error:     light-dark(#DC2626, #EF4444);
-
-  --font-sans: "Fira Sans", system-ui, -apple-system, sans-serif;
-  --font-mono: "Fira Code", ui-monospace, SFMono-Regular, Menlo, monospace;
-  --touch-target-min: 44px;
-
-  --z-map:     10;
-  --z-overlay: 20;
-  --z-drawer:  30;
-  --z-nav:     40;
-  --z-modal:   50;
-
-  --transition-fast: 150ms ease;
-  --transition-base: 200ms ease;
-}
-
-:root[data-theme="daylight"] {
-  color-scheme: light;
-}
-
-:root[data-theme="night"] {
-  color-scheme: dark;
-}
-
-:root[data-theme="system"] {
-  color-scheme: light dark;
-}
-
-html,
-body {
-  margin: 0;
-  padding: 0;
-  max-width: 100%;
-  overflow-x: hidden;
-  background-color: var(--surface-canvas);
-  color: var(--ink-primary);
-  font-family: var(--font-sans);
-  font-size: 16px;
-  line-height: 1.5;
-  -webkit-font-smoothing: antialiased;
-}
-
-.tabular-nums,
-code,
-pre,
-[data-mono="true"] {
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
-}
-
-button,
-a,
-select,
-input[type="checkbox"],
-input[type="radio"],
-[role="button"] {
-  min-height: var(--touch-target-min);
-  min-width: var(--touch-target-min);
-  cursor: pointer;
-  transition:
-    background-color var(--transition-base),
-    border-color var(--transition-base),
-    color var(--transition-base),
-    opacity var(--transition-fast);
-}
-
-:focus-visible {
-  outline: 2px solid var(--accent-primary);
-  outline-offset: 2px;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
-}
+theme
+  AccentColor = light-dark(#3B82F6, #60A5FA)
+  surface-canvas = light-dark(#F8FAFC, #0A0E27)
+  surface-elevated = light-dark(#FFFFFF, #0D1117)
+  ink-primary = light-dark(#1E293B, #E6EDF3)
+  ink-muted = light-dark(#475569, #94A3B8)
+  border-subtle = light-dark(#E2E8F0, #30363D)
+  accent-primary = light-dark(#3B82F6, #60A5FA)
+  accent-cta = #F97316  scheme=fixed
+  status-healthy = light-dark(#16A34A, #22C55E)
+  status-degraded = light-dark(#D97706, #F59E0B)
+  status-error = light-dark(#DC2626, #EF4444)
+  font-sans: family = Fira Sans, system-ui, -apple-system, sans-serif
+  font-mono: family = Fira Code, ui-monospace, SFMono-Regular, Menlo, monospace

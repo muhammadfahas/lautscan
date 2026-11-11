@@ -2,41 +2,35 @@
 
 use HealthStatus, WppZoneRecord, DataSourceStatusRecord, SourceSyncLogRecord, UserPreferences from "../shapes.contract"
 
-fn formatSstCell(sst: number, useF: bool): string =
-  useF ? `${((sst * 9 / 5) + 32).toFixed(1)} °F` : `${sst.toFixed(1)} °C`
+fn formatSstCell(sst: number, useF: bool): string = useF ? `${((sst * 9 / 5) + 32).toFixed(1)} °F` : `${sst.toFixed(1)} °C`
 
-fn sourceStatusColor(status: string): string =
-  status == "healthy" ? "var(--status-healthy)" : (status == "degraded" ? "var(--status-degraded)" : "var(--ink-muted)")
+fn sourceStatusColor(status: string): string = status == "healthy" ? "var(--status-healthy)" : (status == "degraded" ? "var(--status-degraded)" : "var(--ink-muted)")
 
-fn wibMonthName(m: number): string =
-  m == 1 ? "Jan" : (m == 2 ? "Feb" : (m == 3 ? "Mar" : (m == 4 ? "Apr" : (m == 5 ? "Mei" : (m == 6 ? "Jun" : (m == 7 ? "Jul" : (m == 8 ? "Agu" : (m == 9 ? "Sep" : (m == 10 ? "Okt" : (m == 11 ? "Nov" : "Des"))))))))))
+fn wibMonthName(m: number): string = m == 1 ? "Jan" : (m == 2 ? "Feb" : (m == 3 ? "Mar" : (m == 4 ? "Apr" : (m == 5 ? "Mei" : (m == 6 ? "Jun" : (m == 7 ? "Jul" : (m == 8 ? "Agu" : (m == 9 ? "Sep" : (m == 10 ? "Okt" : (m == 11 ? "Nov" : "Des"))))))))))
 
-fn pad2Num(n: number): string =
-  n < 10 ? `0${n}` : `${n}`
+fn pad2Num(n: number): string = n < 10 ? `0${n}` : `${n}`
 
-fn formatDayMonthWib(baseY: number, doy: number, mp: number, hh: number, mm: number): string =
-  `${pad2Num(doy - Math.floor((153 * mp + 2) / 5) + 1)} ${wibMonthName(mp + (mp < 10 ? 3 : -9))} ${baseY + ((mp + (mp < 10 ? 3 : -9)) <= 2 ? 1 : 0)}, ${pad2Num(hh)}:${pad2Num(mm)} WIB`
+fn civilToDays(y: number, m: number, d: number): number = (((y - (m <= 2 ? 1 : 0)) - floor((y - (m <= 2 ? 1 : 0)) / 400) * 400) * 365 + floor(((y - (m <= 2 ? 1 : 0)) - floor((y - (m <= 2 ? 1 : 0)) / 400) * 400) / 4) - floor(((y - (m <= 2 ? 1 : 0)) - floor((y - (m <= 2 ? 1 : 0)) / 400) * 400) / 100) + floor((153 * (m + (m > 2 ? -3 : 9)) + 2) / 5) + d - 1) + floor((y - (m <= 2 ? 1 : 0)) / 400) * 146097 - 719468
 
-fn formatMpDoyWib(baseY: number, doy: number, hh: number, mm: number): string =
-  formatDayMonthWib(baseY, doy, Math.floor((5 * doy + 2) / 153), hh, mm)
+fn formatDayMonthWib(baseY: number, doy: number, mp: number, hh: number, mm: number): string = `${pad2Num(doy - floor((153 * mp + 2) / 5) + 1)} ${wibMonthName(mp + (mp < 10 ? 3 : -9))} ${baseY + ((mp + (mp < 10 ? 3 : -9)) <= 2 ? 1 : 0)}, ${pad2Num(hh)}:${pad2Num(mm)} WIB`
 
-fn formatYoeDoyWib(era: number, doe: number, yoe: number, hh: number, mm: number): string =
-  formatMpDoyWib(yoe + era * 400, doe - (365 * yoe + Math.floor(yoe / 4) - Math.floor(yoe / 100)), hh, mm)
+fn formatMpDoyWib(baseY: number, doy: number, hh: number, mm: number): string = formatDayMonthWib(baseY, doy, floor((5 * doy + 2) / 153), hh, mm)
 
-fn formatEraDoeWib(era: number, doe: number, hh: number, mm: number): string =
-  formatYoeDoyWib(era, doe, Math.floor((doe - Math.floor(doe / 1460) + Math.floor(doe / 36524) - Math.floor(doe / 146096)) / 365), hh, mm)
+fn formatYoeDoyWib(era: number, doe: number, yoe: number, hh: number, mm: number): string = formatMpDoyWib(yoe + era * 400, doe - (365 * yoe + floor(yoe / 4) - floor(yoe / 100)), hh, mm)
 
-fn formatDaysClockWib(z: number, hh: number, mm: number): string =
-  formatEraDoeWib(Math.floor(z / 146097), z - Math.floor(z / 146097) * 146097, hh, mm)
+fn formatEraDoeWib(era: number, doe: number, hh: number, mm: number): string = formatYoeDoyWib(era, doe, floor((doe - floor(doe / 1460) + floor(doe / 36524) - floor(doe / 146096)) / 365), hh, mm)
 
-fn formatWibFromMs(wibMs: number): string =
-  formatDaysClockWib(Math.floor(wibMs / 86400000) + 719468, Math.floor((wibMs - Math.floor(wibMs / 86400000) * 86400000) / 3600000), Math.floor(((wibMs - Math.floor(wibMs / 86400000) * 86400000) % 3600000) / 60000))
+fn formatDaysClockWib(z: number, hh: number, mm: number): string = formatEraDoeWib(floor(z / 146097), z - floor(z / 146097) * 146097, hh, mm)
 
-fn parseUtcMs(raw: string): number =
-  Date.parse((raw.indexOf("Z") >= 0 or raw.indexOf("+") >= 0 or (raw.length > 10 and raw.slice(10).indexOf("-") >= 0)) ? raw.replace(" ", "T") : `${raw.replace(" ", "T")}Z`)
+fn formatWibTotalMins(totalMins: number): string = formatDaysClockWib(floor(totalMins / 1440) + 719468, floor((totalMins - floor(totalMins / 1440) * 1440) / 60), (totalMins - floor(totalMins / 1440) * 1440) % 60)
 
-fn formatWibTimestamp(raw: string): string =
-  raw == "latest" ? "Terbaru (Hari Ini · WIB)" : ((raw.length == 10 and raw.indexOf("-") == 4) ? `${pad2Num(Number(raw.slice(8, 10)))} ${wibMonthName(Number(raw.slice(5, 7)))} ${raw.slice(0, 4)} (WIB)` : (Number.isFinite(parseUtcMs(raw)) ? formatWibFromMs(parseUtcMs(raw) + 25200000) : raw))
+fn tzOffsetShift(raw: string): number = (raw.length >= 25 and (raw.slice(19, 20) == "+" or raw.slice(19, 20) == "-")) ? (match parseNumber(raw.slice(19, 22)) { case some(oh) => match parseNumber(raw.slice(23, 25)) { case some(om) => 420 - (oh < 0 ? oh * 60 - om : oh * 60 + om), case none => 420 }, case none => 420 }) : 420
+
+fn formatDateOnlyWib(raw: string): string = match parseNumber(raw.slice(5, 7)) { case some(m) => match parseNumber(raw.slice(8, 10)) { case some(d) => `${pad2Num(d)} ${wibMonthName(m)} ${raw.slice(0, 4)} (WIB)`, case none => raw }, case none => raw }
+
+fn formatIsoUtcWib(raw: string): string = match parseNumber(raw.slice(0, 4)) { case some(y) => match parseNumber(raw.slice(5, 7)) { case some(m) => match parseNumber(raw.slice(8, 10)) { case some(d) => match parseNumber(raw.slice(11, 13)) { case some(hh) => match parseNumber(raw.slice(14, 16)) { case some(mm) => formatWibTotalMins(civilToDays(y, m, d) * 1440 + hh * 60 + mm + tzOffsetShift(raw)), case none => raw }, case none => raw }, case none => raw }, case none => raw }, case none => raw }
+
+fn formatWibTimestamp(raw: string): string = raw == "latest" ? "Terbaru (Hari Ini · WIB)" : ((raw.length == 10 and raw.indexOf("-") == 4) ? formatDateOnlyWib(raw) : ((raw.length >= 16 and raw.slice(4, 5) == "-" and raw.slice(7, 8) == "-") ? formatIsoUtcWib(raw) : raw))
 
 component OverviewSourcesView
   props
@@ -64,7 +58,7 @@ component OverviewSourcesView
             text "WPP-NRI 571 to 718 oceanographic summary, satellite/biodiversity provider health, licensing attribution, and ETL ingestion telemetry." font-size=15 color="var(--ink-muted)"
 
         row align-items="center" gap=12 flex-wrap="wrap"
-          text `Dicek: ${formatWibTimestamp(checkedAtUtc)}` class="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-muted)" testId="sources-checked-at"
+          text `Dicek: ${formatWibTimestamp(checkedAtUtc)}` font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-muted)" testId="sources-checked-at"
           button press=onRefresh min-height=44 min-width=120 padding="10px 16px" border-radius=8 border="1px solid var(--accent-primary)" background-color="var(--accent-primary)" color="#FFFFFF" cursor="pointer" aria-label="Refresh overview and data source status" testId="sources-refresh-btn"
             row align-items="center" gap=8
               svg width=16 height=16 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width=2 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
@@ -79,17 +73,17 @@ component OverviewSourcesView
         row align-items="center" gap=10
           svg width=18 height=18 viewBox="0 0 24 24" fill="none" stroke=(health.status == "ok" ? "var(--status-healthy)" : "var(--status-degraded)") stroke-width=2 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
             polyline points="22 12 18 12 15 21 9 3 6 12 2 12"
-          text `API Status: ${health.status}` class="tabular-nums" font-family="var(--font-mono)" font-size=14 font-weight=700 color=(health.status == "ok" ? "var(--status-healthy)" : "var(--status-degraded)")
+          text `API Status: ${health.status}` font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=14 font-weight=700 color=(health.status == "ok" ? "var(--status-healthy)" : "var(--status-degraded)")
         row align-items="center" gap=16 flex-wrap="wrap"
-          text `PostGIS: ${health.db_ok ? "Connected" : "Fallback"}` class="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-primary)"
+          text `PostGIS: ${health.db_ok ? "Connected" : "Fallback"}` font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-primary)"
           match health.postgis_version
-            case some(pg) => text `Engine: ${pg}` class="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-muted)"
-            case none => text "Engine: Offline Seed" class="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-muted)"
-          text `Redis: ${health.redis_ok ? "Online" : "Bypassed"}` class="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-primary)"
-          text `Tile Cache: ${health.tile_cache_ok ? "Writable" : "Unavailable"}` class="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-primary)"
-          text `Status WIB: ${formatWibTimestamp(health.timestamp_utc)}` class="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-muted)"
+            case some(pg) => text `Engine: ${pg}` font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-muted)"
+            case none => text "Engine: Offline Seed" font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-muted)"
+          text `Redis: ${health.redis_ok ? "Online" : "Bypassed"}` font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-primary)"
+          text `Tile Cache: ${health.tile_cache_ok ? "Writable" : "Unavailable"}` font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-primary)"
+          text `Status WIB: ${formatWibTimestamp(health.timestamp_utc)}` font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-muted)"
 
-      // Data Provider Health Cards (noaa_erddap, obis, copernicus_marine, kkp_pdpi, gfw)
+      // Data Provider Health Cards
       column width="100%" gap=12
         text "Marine Data Provider Health & Attribution" role="heading" font-size=18 font-weight=600 color="var(--ink-primary)"
         row width="100%" gap=14 flex-wrap="wrap" testId="provider-health-cards"
@@ -98,9 +92,9 @@ component OverviewSourcesView
               row width="100%" align-items="flex-start" justify-content="space-between" gap=8
                 column flex=1 min-width=0 gap=2
                   text src.display_name font-size=16 font-weight=700 color="var(--ink-primary)"
-                  text `${src.source_key} (${src.priority})` class="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--ink-muted)"
-                row align-items="center" gap=6 padding="4px 10px" border-radius=999 border="1px solid var(--border-subtle)" background-color="var(--surface-canvas)"
-                  svg width=14 height=14 viewBox="0 0 24 24" fill="none" stroke=sourceStatusColor(src.status) stroke-width=2 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+                  text `${src.source_key} (${src.priority})` font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--ink-muted)"
+                row align-items="center" gap=6 padding="4px 10px" border-radius=999 border="1px solid var(--border-subtle)" background-color="var(--surface-canvas)" color=sourceStatusColor(src.status)
+                  svg width=14 height=14 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width=2 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
                     circle cx=12 cy=12 r=10
                     if src.status == "healthy"
                       polyline points="9 12 11 14 15 10"
@@ -115,19 +109,19 @@ component OverviewSourcesView
 
               column gap=4
                 match src.last_sync_utc
-                  case some(ts) => text `Sinkron WIB: ${formatWibTimestamp(ts)}` class="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--ink-primary)"
-                  case none => text "Sinkron WIB: Menunggu" class="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--ink-muted)"
+                  case some(ts) => text `Sinkron WIB: ${formatWibTimestamp(ts)}` font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--ink-primary)"
+                  case none => text "Sinkron WIB: Menunggu" font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--ink-muted)"
                 match src.latest_data_timestamp_utc
-                  case some(ds) => text `Dataset WIB: ${formatWibTimestamp(ds)}` class="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--ink-muted)"
-                  case none => text "Dataset WIB: Data dasar" class="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--ink-muted)"
+                  case some(ds) => text `Dataset WIB: ${formatWibTimestamp(ds)}` font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--ink-muted)"
+                  case none => text "Dataset WIB: Data dasar" font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--ink-muted)"
 
               text `Attribution: ${src.attribution}` font-size=13 color="var(--ink-primary)"
               text `License: ${src.license_summary}` font-size=13 color="var(--ink-muted)"
-              text src.official_url class="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--accent-primary)"
+              text src.official_url font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--accent-primary)"
 
               match src.last_error
                 case some(err) => text `Note: ${err}` font-size=12 color="var(--status-degraded)"
-                case none => div display="none"
+                case none => box display="none"
 
       // National WPP-NRI Overview Table (WPP 571-718)
       column width="100%" padding="16px" gap=12 border-radius=12 background-color="var(--surface-elevated)" border="1px solid var(--border-subtle)"
@@ -135,39 +129,49 @@ component OverviewSourcesView
           text "WPP-NRI National Overview (Zones 571 to 718)" role="heading" font-size=18 font-weight=600 color="var(--ink-primary)"
           text "Accessible summary table for low-bandwidth marine connections and screen readers." font-size=13 color="var(--ink-muted)"
 
-        div width="100%" overflow-x="auto" testId="overview-wpp-table-wrap"
-          table width="100%" border-collapse="collapse" testId="overview-wpp-table"
+        box width="100%" overflow-x="auto" testId="overview-wpp-table-wrap"
+          table width="100%" testId="overview-wpp-table"
             thead
               tr
-                th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "WPP Code"
-                th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "Waters (Indonesia)"
-                th scope="col" text-align="right" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" (useFahrenheit ? "Mean SST (°F)" : "Mean SST (°C)")
-                th scope="col" text-align="right" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "Chlorophyll-a (mg/m3)"
-                th scope="col" text-align="right" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "Area (km2)"
-                th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "Geometry Source"
-                th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "Latest Observation WIB"
+                th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)"
+                  text "WPP Code"
+                th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)"
+                  text "Waters (Indonesia)"
+                th scope="col" text-align="right" padding="10px 8px" border-bottom="2px solid var(--border-subtle)"
+                  text (useFahrenheit ? "Mean SST (°F)" : "Mean SST (°C)")
+                th scope="col" text-align="right" padding="10px 8px" border-bottom="2px solid var(--border-subtle)"
+                  text "Chlorophyll-a (mg/m3)"
+                th scope="col" text-align="right" padding="10px 8px" border-bottom="2px solid var(--border-subtle)"
+                  text "Area (km2)"
+                th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)"
+                  text "Geometry Source"
+                th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)"
+                  text "Latest Observation WIB"
             tbody
               for z in wppZones key=z.wpp_code
                 tr testId=`overview-wpp-row-${z.wpp_code}`
-                  td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" class="tabular-nums" font-family="var(--font-mono)" font-weight=600 z.name
-                  td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" z.waters_id
-                  td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" text-align="right" class="tabular-nums" font-family="var(--font-mono)"
+                  td padding="10px 8px" border-bottom="1px solid var(--border-subtle)"
+                    text z.name font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-weight=600
+                  td padding="10px 8px" border-bottom="1px solid var(--border-subtle)"
+                    text z.waters_id
+                  td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" text-align="right"
                     match z.sst_mean_c
-                      case some(sst) => text formatSstCell(sst, useFahrenheit)
-                      case none => text "N/A"
-                  td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" text-align="right" class="tabular-nums" font-family="var(--font-mono)"
+                      case some(sst) => text formatSstCell(sst, useFahrenheit) font-variant-numeric="tabular-nums" font-family="var(--font-mono)"
+                      case none => text "N/A" font-variant-numeric="tabular-nums" font-family="var(--font-mono)"
+                  td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" text-align="right"
                     match z.chlorophyll_mean_mg_m3
-                      case some(chl) => text `${chl.toFixed(2)}`
-                      case none => text "N/A"
-                  td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" text-align="right" class="tabular-nums" font-family="var(--font-mono)"
+                      case some(chl) => text `${chl.toFixed(2)}` font-variant-numeric="tabular-nums" font-family="var(--font-mono)"
+                      case none => text "N/A" font-variant-numeric="tabular-nums" font-family="var(--font-mono)"
+                  td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" text-align="right"
                     match z.area_km2
-                      case some(area) => text `${Math.round(area)}`
-                      case none => text "N/A"
-                  td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" class="tabular-nums" font-family="var(--font-mono)" z.geometry_source
-                  td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" class="tabular-nums" font-family="var(--font-mono)"
+                      case some(area) => text `${round(area)}` font-variant-numeric="tabular-nums" font-family="var(--font-mono)"
+                      case none => text "N/A" font-variant-numeric="tabular-nums" font-family="var(--font-mono)"
+                  td padding="10px 8px" border-bottom="1px solid var(--border-subtle)"
+                    text z.geometry_source font-variant-numeric="tabular-nums" font-family="var(--font-mono)"
+                  td padding="10px 8px" border-bottom="1px solid var(--border-subtle)"
                     match z.latest_observation_utc
-                      case some(ts) => text formatWibTimestamp(ts)
-                      case none => text "Baseline seed"
+                      case some(ts) => text formatWibTimestamp(ts) font-variant-numeric="tabular-nums" font-family="var(--font-mono)"
+                      case none => text "Baseline seed" font-variant-numeric="tabular-nums" font-family="var(--font-mono)"
 
       // Recent SourceSyncLogRecord Table
       column width="100%" padding="16px" gap=12 border-radius=12 background-color="var(--surface-elevated)" border="1px solid var(--border-subtle)"
@@ -175,29 +179,41 @@ component OverviewSourcesView
         if recentLogs.length == 0
           text "No ETL sync runs recorded yet in this session (showing offline/seed status until worker sync runs)." font-size=14 color="var(--ink-muted)" testId="sync-logs-empty"
         else
-          div width="100%" overflow-x="auto" testId="sync-logs-table-wrap"
-            table width="100%" border-collapse="collapse" testId="sync-logs-table"
+          box width="100%" overflow-x="auto" testId="sync-logs-table-wrap"
+            table width="100%" testId="sync-logs-table"
               thead
                 tr
-                  th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "Source Key"
-                  th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "Dataset Type"
-                  th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "Status"
-                  th scope="col" text-align="right" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "Records"
-                  th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "Started WIB"
-                  th scope="col" text-align="right" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "Duration (ms)"
-                  th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "Message"
+                  th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)"
+                    text "Source Key"
+                  th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)"
+                    text "Dataset Type"
+                  th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)"
+                    text "Status"
+                  th scope="col" text-align="right" padding="10px 8px" border-bottom="2px solid var(--border-subtle)"
+                    text "Records"
+                  th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)"
+                    text "Started WIB"
+                  th scope="col" text-align="right" padding="10px 8px" border-bottom="2px solid var(--border-subtle)"
+                    text "Duration (ms)"
+                  th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)"
+                    text "Message"
               tbody
                 for log in recentLogs key=log.id
                   tr testId=`sync-log-row-${log.id}`
-                    td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" class="tabular-nums" font-family="var(--font-mono)" log.source_key
-                    td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" log.dataset_type
-                    td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" class="tabular-nums" font-family="var(--font-mono)" log.status
-                    td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" text-align="right" class="tabular-nums" font-family="var(--font-mono)" `${log.records_ingested}`
-                    td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" class="tabular-nums" font-family="var(--font-mono)" formatWibTimestamp(log.started_at_utc)
-                    td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" text-align="right" class="tabular-nums" font-family="var(--font-mono)"
+                    td padding="10px 8px" border-bottom="1px solid var(--border-subtle)"
+                      text log.source_key font-variant-numeric="tabular-nums" font-family="var(--font-mono)"
+                    td padding="10px 8px" border-bottom="1px solid var(--border-subtle)"
+                      text log.dataset_type
+                    td padding="10px 8px" border-bottom="1px solid var(--border-subtle)"
+                      text log.status font-variant-numeric="tabular-nums" font-family="var(--font-mono)"
+                    td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" text-align="right"
+                      text `${log.records_ingested}` font-variant-numeric="tabular-nums" font-family="var(--font-mono)"
+                    td padding="10px 8px" border-bottom="1px solid var(--border-subtle)"
+                      text formatWibTimestamp(log.started_at_utc) font-variant-numeric="tabular-nums" font-family="var(--font-mono)"
+                    td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" text-align="right"
                       match log.duration_ms
-                        case some(ms) => text `${ms}`
-                        case none => text "N/A"
+                        case some(ms) => text `${ms}` font-variant-numeric="tabular-nums" font-family="var(--font-mono)"
+                        case none => text "N/A" font-variant-numeric="tabular-nums" font-family="var(--font-mono)"
                     td padding="10px 8px" border-bottom="1px solid var(--border-subtle)"
                       match log.error_message
                         case some(err) => text err

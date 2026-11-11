@@ -6,6 +6,7 @@ import asyncio
 import time
 from collections.abc import AsyncIterator
 from contextlib import suppress
+from typing import cast
 
 from redis.asyncio import Redis, from_url
 
@@ -18,12 +19,15 @@ _redis_unavailable_until = 0.0
 def create_redis_client(socket_timeout: float = 0.4) -> Redis:
     """Create an async Redis client bound to `settings.REDIS_URL`."""
     settings = get_settings()
-    return from_url(
-        settings.REDIS_URL,
-        encoding="utf-8",
-        decode_responses=True,
-        socket_connect_timeout=socket_timeout,
-        socket_timeout=socket_timeout,
+    return cast(
+        Redis,
+        from_url(
+            settings.REDIS_URL,
+            encoding="utf-8",
+            decode_responses=True,
+            socket_connect_timeout=socket_timeout,
+            socket_timeout=socket_timeout,
+        ),
     )
 
 

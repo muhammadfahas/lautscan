@@ -64,8 +64,7 @@ def _has_module(name: str) -> bool:
 
 def _all_backend_deps_available() -> bool:
     return all(
-        _has_module(pkg)
-        for pkg in ("sqlalchemy", "geoalchemy2", "redis", "pydantic_settings")
+        _has_module(pkg) for pkg in ("sqlalchemy", "geoalchemy2", "redis", "pydantic_settings")
     )
 
 

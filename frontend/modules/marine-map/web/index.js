@@ -1190,10 +1190,12 @@ export class MarineMap {
 
   emitMoveEnd() {
     const payload = JSON.stringify(this.cameraBbox());
-    if (typeof this.events?.emit === 'function') {
-      this.events.emit('moveend', payload);
-    } else if (typeof this.events?.moveend === 'function') {
+    if (typeof this.events?.moveend === 'function') {
       this.events.moveend(payload);
+    } else if (typeof this.events?.message === 'function') {
+      this.events.message(payload);
+    } else if (typeof this.events?.emit === 'function') {
+      this.events.emit('moveend', payload);
     }
   }
 

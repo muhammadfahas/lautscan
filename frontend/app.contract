@@ -7,12 +7,14 @@ use TrendsView from "./features/trends.contract"
 use OverviewSourcesView from "./features/overview_sources.contract"
 use SettingsView from "./features/settings.contract"
 
-routes
+routes nav
   tab ocean_map "/"
   tab species   "/species"
   tab trends    "/trends"
   tab sources   "/sources"
   tab settings  "/settings"
+
+fn resolvePointInspection(hasSel: bool, insp: option<MapPointInspection>, fallbackPt: MapPointInspection): option<MapPointInspection> = hasSel ? (match insp { case some(pt) => some(pt), case none => some(fallbackPt) }) : none
 
 component LautScanApp
   state selectedLat = -5.1233
@@ -39,13 +41,13 @@ component LautScanApp
   derive apiBaseUrl = getApiBaseUrl()
   derive wppGeoJsonCollection = buildWppGeoJsonCollection(wppZones.items)
   derive speciesMarkersJson = buildSpeciesMarkersJson(speciesData.items)
-  derive activePointInspection =
-    if hasPointSelection
-      match inspectPoint
-        case some(pt) => some(pt)
-        case none => some(pointData)
-    else
-      none
+  derive activePointInspection = resolvePointInspection(hasPointSelection, inspectPoint, pointData)
+
+  action selectTab(tabName: string)
+    nav = select(nav, tabName)
+
+  action followRoute(url: string)
+    nav = go(nav, url)
 
   action inspectPointAt(lat: number, lon: number, date: string)
     selectedLat = lat
@@ -77,17 +79,23 @@ component LautScanApp
     selectedDate = date
     hasPointSelection = true
     send inspectPoint = fetchPointInspection(lat, lon, date)
-    open("ocean_map")
+    nav = select(nav, "ocean_map")
 
   action refreshAllData()
     refreshNonce = refreshNonce + 1
 
   action saveUserPrefs(tempUnit: string, speedUnit: string, themeMode: string, lowBandwidth: bool)
     send savePrefs = savePreferences(tempUnit, speedUnit, themeMode, lowBandwidth)
+    if themeMode == "daylight"
+      setScheme("light")
+    else if themeMode == "night"
+      setScheme("dark")
+    else
+      setScheme("system")
 
   view
-    column width="100%" height="100%" min-height="100vh" background="var(--surface-canvas)" color="var(--ink-primary)" font-family="var(--font-sans)" overflow-x="hidden" data-theme=prefs.theme_mode testId="app-root"
-      row width="100%" padding="8px 16px" gap=12 align-items="center" justify-content="space-between" flex-wrap="wrap" background="var(--surface-elevated)" border-bottom="1px solid var(--border-subtle)" z-index=40 testId="nav-bar"
+    main navigationKey=`${top(nav).id}` navigationBack="back" navigate=followRoute width="100%" height="100%" min-height="100vh" display="flex" flex-direction="column" background-color="var(--surface-canvas)" color="var(--ink-primary)" font-family="var(--font-sans)" overflow-x="hidden" testId="app-root"
+      row width="100%" padding="8px 16px" gap=12 align-items="center" justify-content="space-between" flex-wrap="wrap" background-color="var(--surface-elevated)" border-bottom="1px solid var(--border-subtle)" z-index=40 testId="nav-bar"
         row gap=10 align-items="center"
           svg width=24 height=24 viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width=2 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
             circle cx=12 cy=12 r=10
@@ -96,15 +104,15 @@ component LautScanApp
             text "LAUT SCAN" font-size=16 font-weight=700 letter-spacing="0.04em" color="var(--ink-primary)"
             text "Peta Kondisi Laut Nusantara" font-size=12 color="var(--ink-muted)"
 
-        row gap=6 align-items="center" flex-wrap="wrap" role="navigation" aria-label="Navigasi Utama"
-          link href=path("ocean_map") min-height=44 min-width=44 padding="8px 12px" border-radius=8 display="flex" align-items="center" gap=8 cursor="pointer" color="var(--ink-primary)" text-decoration="none" aria-label="Peta Laut" testId="nav-ocean-map"
+        row gap=6 align-items="center" flex-wrap="wrap" role="tablist" aria-label="Navigasi Utama"
+          button role="tab" aria-selected=(nav.tab == "ocean_map") press=selectTab("ocean_map") appearance="none" min-height=44 min-width=44 padding="8px 12px" border-radius=8 display="flex" align-items="center" gap=8 cursor="pointer" background-color=(nav.tab == "ocean_map" ? "var(--surface-canvas)" : "transparent") color="var(--ink-primary)" aria-label="Peta Laut" testId="nav-ocean-map"
             svg width=18 height=18 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width=2 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
               polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"
               line x1=9 y1=3 x2=9 y2=18
               line x1=15 y1=6 x2=15 y2=21
             text "Peta Laut" font-size=14 font-weight=600
 
-          link href=path("species") min-height=44 min-width=44 padding="8px 12px" border-radius=8 display="flex" align-items="center" gap=8 cursor="pointer" color="var(--ink-primary)" text-decoration="none" aria-label="Jenis Ikan" testId="nav-species"
+          button role="tab" aria-selected=(nav.tab == "species") press=selectTab("species") appearance="none" min-height=44 min-width=44 padding="8px 12px" border-radius=8 display="flex" align-items="center" gap=8 cursor="pointer" background-color=(nav.tab == "species" ? "var(--surface-canvas)" : "transparent") color="var(--ink-primary)" aria-label="Jenis Ikan" testId="nav-species"
             svg width=18 height=18 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width=2 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
               path d="M6.5 12c.94-3.46 4.94-6 8.5-6 3.56 0 6.06 2.54 7 6-.94 3.46-3.44 6-7 6-3.56 0-7.56-2.54-8.5-6Z"
               path d="M18 12v.5"
@@ -112,20 +120,20 @@ component LautScanApp
               path d="M7 10.67C7 8 5.58 5.97 2.73 5.5c-1 1.5-1 5 .23 6.5-1.24 1.5-1.24 5-.23 6.5C5.58 18.03 7 16 7 13.33"
             text "Jenis Ikan" font-size=14 font-weight=600
 
-          link href=path("trends") min-height=44 min-width=44 padding="8px 12px" border-radius=8 display="flex" align-items="center" gap=8 cursor="pointer" color="var(--ink-primary)" text-decoration="none" aria-label="Tren Bulanan" testId="nav-trends"
+          button role="tab" aria-selected=(nav.tab == "trends") press=selectTab("trends") appearance="none" min-height=44 min-width=44 padding="8px 12px" border-radius=8 display="flex" align-items="center" gap=8 cursor="pointer" background-color=(nav.tab == "trends" ? "var(--surface-canvas)" : "transparent") color="var(--ink-primary)" aria-label="Tren Bulanan" testId="nav-trends"
             svg width=18 height=18 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width=2 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
               polyline points="22 7 13.5 15.5 8.5 10.5 2 17"
               polyline points="16 7 22 7 22 13"
             text "Tren" font-size=14 font-weight=600
 
-          link href=path("sources") min-height=44 min-width=44 padding="8px 12px" border-radius=8 display="flex" align-items="center" gap=8 cursor="pointer" color="var(--ink-primary)" text-decoration="none" aria-label="Sumber Data" testId="nav-sources"
+          button role="tab" aria-selected=(nav.tab == "sources") press=selectTab("sources") appearance="none" min-height=44 min-width=44 padding="8px 12px" border-radius=8 display="flex" align-items="center" gap=8 cursor="pointer" background-color=(nav.tab == "sources" ? "var(--surface-canvas)" : "transparent") color="var(--ink-primary)" aria-label="Sumber Data" testId="nav-sources"
             svg width=18 height=18 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width=2 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
               ellipse cx=12 cy=5 rx=9 ry=3
               path d="M3 5v14a9 3 0 0 0 18 0V5"
               path d="M3 12a9 3 0 0 0 18 0"
             text "Sumber Data" font-size=14 font-weight=600
 
-          link href=path("settings") min-height=44 min-width=44 padding="8px 12px" border-radius=8 display="flex" align-items="center" gap=8 cursor="pointer" color="var(--ink-primary)" text-decoration="none" aria-label="Pengaturan" testId="nav-settings"
+          button role="tab" aria-selected=(nav.tab == "settings") press=selectTab("settings") appearance="none" min-height=44 min-width=44 padding="8px 12px" border-radius=8 display="flex" align-items="center" gap=8 cursor="pointer" background-color=(nav.tab == "settings" ? "var(--surface-canvas)" : "transparent") color="var(--ink-primary)" aria-label="Pengaturan" testId="nav-settings"
             svg width=18 height=18 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width=2 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
               line x1=21 y1=4 x2=14 y2=4
               line x1=10 y1=4 x2=3 y2=4
@@ -139,52 +147,20 @@ component LautScanApp
             text "Pengaturan" font-size=14 font-weight=600
 
       column flex=1 min-height=0 width="100%"
-        for e in stack(ocean_map)
-          column key=e.id navigationKey=`${e.id}` flex=1 min-height=0 width="100%" testId="view-ocean-map"
-            OceanMapView
-              wppZones=wppZones.items
-              wppGeoJsonCollection=wppGeoJsonCollection
-              speciesMarkers=speciesMarkersJson
-              pointInspection=activePointInspection
-              sources=sourcesData.sources
-              prefs=prefs
-              apiBaseUrl=apiBaseUrl
-              onInspectPoint=inspectPointAt
-              onClearInspection=clearInspection
-              onBoundsChange=updateSpeciesBbox
-              onWppSelected=selectWppZone
-
-        for e in stack(species)
-          column key=e.id navigationKey=`${e.id}` flex=1 min-height=0 width="100%" testId="view-species"
-            SpeciesView
-              items=speciesData.items
-              total=speciesData.total
-              hasMore=speciesData.has_more
-              wppZones=wppZones.items
-              onFilterSpecies=filterSpecies
-
-        for e in stack(trends)
-          column key=e.id navigationKey=`${e.id}` flex=1 min-height=0 width="100%" testId="view-trends"
-            TrendsView
-              wppZones=wppZones.items
-              prefs=prefs
-              pointInspection=activePointInspection
-              onInspectZone=inspectZoneAndOpenMap
-
-        for e in stack(sources)
-          column key=e.id navigationKey=`${e.id}` flex=1 min-height=0 width="100%" testId="view-sources"
-            OverviewSourcesView
-              health=health
-              wppZones=wppZones.items
-              sources=sourcesData.sources
-              recentLogs=sourcesData.recent_logs
-              checkedAtUtc=sourcesData.checked_at_utc
-              prefs=prefs
-              onRefresh=refreshAllData
-
-        for e in stack(settings)
-          column key=e.id navigationKey=`${e.id}` flex=1 min-height=0 width="100%" testId="view-settings"
-            SettingsView
-              prefs=prefs
-              health=health
-              onSavePrefs=saveUserPrefs
+        for e in stack(nav) key=e.id
+          column navigationKey=`${e.id}` flex=1 min-height=0 width="100%"
+            if e.name == "ocean_map"
+              column flex=1 min-height=0 width="100%" testId="view-ocean-map"
+                OceanMapView(wppZones=wppZones.items, wppGeoJsonCollection=wppGeoJsonCollection, speciesMarkers=speciesMarkersJson, pointInspection=activePointInspection, sources=sourcesData.sources, prefs=prefs, apiBaseUrl=apiBaseUrl, onInspectPoint=inspectPointAt, onClearInspection=clearInspection, onBoundsChange=updateSpeciesBbox, onWppSelected=selectWppZone)
+            else if e.name == "species"
+              column flex=1 min-height=0 width="100%" testId="view-species"
+                SpeciesView(items=speciesData.items, total=speciesData.total, hasMore=speciesData.has_more, wppZones=wppZones.items, onFilterSpecies=filterSpecies)
+            else if e.name == "trends"
+              column flex=1 min-height=0 width="100%" testId="view-trends"
+                TrendsView(wppZones=wppZones.items, prefs=prefs, pointInspection=activePointInspection, onInspectZone=inspectZoneAndOpenMap)
+            else if e.name == "sources"
+              column flex=1 min-height=0 width="100%" testId="view-sources"
+                OverviewSourcesView(health=health, wppZones=wppZones.items, sources=sourcesData.sources, recentLogs=sourcesData.recent_logs, checkedAtUtc=sourcesData.checked_at_utc, prefs=prefs, onRefresh=refreshAllData)
+            else if e.name == "settings"
+              column flex=1 min-height=0 width="100%" testId="view-settings"
+                SettingsView(prefs=prefs, health=health, onSavePrefs=saveUserPrefs)

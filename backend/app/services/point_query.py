@@ -122,9 +122,12 @@ def point_in_geojson_geometry(lon: float, lat: float, geometry: dict[str, Any]) 
 
     if geom_type == "MultiPolygon":
         for poly in coords:
-            if poly and _point_in_ring(lon, lat, poly[0]):
-                if not any(_point_in_ring(lon, lat, hole) for hole in poly[1:]):
-                    return True
+            if (
+                poly
+                and _point_in_ring(lon, lat, poly[0])
+                and not any(_point_in_ring(lon, lat, hole) for hole in poly[1:])
+            ):
+                return True
         return False
 
     return False
@@ -155,8 +158,7 @@ def _find_wpp_in_seed(lat: float, lon: float) -> tuple[str | None, str | None, s
             and min_lat is not None
             and max_lat is not None
             and not (
-                float(min_lon) <= lon <= float(max_lon)
-                and float(min_lat) <= lat <= float(max_lat)
+                float(min_lon) <= lon <= float(max_lon) and float(min_lat) <= lat <= float(max_lat)
             )
         ):
             continue
@@ -202,6 +204,10 @@ async def _find_wpp_zone(
     return await asyncio.to_thread(_find_wpp_in_seed, lat, lon)
 
 
+def _is_file_sync(path: Path) -> bool:
+    return path.is_file()
+
+
 async def _resolve_layer_dataset(
     db: Any | None,
     tile_cache_dir: Path,
@@ -220,7 +226,7 @@ async def _resolve_layer_dataset(
                 stmt = stmt.where(RasterDataset.acquisition_date <= target_d)
             stmt = stmt.order_by(RasterDataset.acquisition_date.desc()).limit(1)
             row = (await db.execute(stmt)).scalar_one_or_none()
-            if row is not None and Path(str(row.file_path)).is_file():
+            if row is not None and await asyncio.to_thread(_is_file_sync, Path(str(row.file_path))):
                 resolved = row.acquisition_date.isoformat()
                 acq_dt: datetime = row.acquired_at_utc
                 if acq_dt.tzinfo is None:
@@ -239,7 +245,7 @@ async def _resolve_layer_dataset(
 
     if requested_date == "latest":
         global_nc = tile_cache_dir / "global" / f"noaa_{layer}.nc"
-        if global_nc.is_file():
+        if await asyncio.to_thread(_is_file_sync, global_nc):
             grid_meta = await asyncio.to_thread(_load_layer_grid, global_nc, layer)
             parsed_dt = _parse_iso_utc(grid_meta.acquired_at_utc) or datetime.now(UTC)
             resolved_d = parsed_dt.date().isoformat()
@@ -253,9 +259,7 @@ async def _resolve_layer_dataset(
             )
 
     fallback_date = (
-        datetime.now(UTC).date().isoformat()
-        if requested_date == "latest"
-        else requested_date
+        datetime.now(UTC).date().isoformat() if requested_date == "latest" else requested_date
     )
     dataset_path = await asyncio.to_thread(
         ensure_sample_netcdf, tile_cache_dir, layer, fallback_date
@@ -397,9 +401,7 @@ async def inspect_map_point(
     current_speed_ms = round(speed_ms, 3) if speed_ms is not None else None
     current_speed_knots = round(speed_ms * MPS_TO_KNOTS, 3) if speed_ms is not None else None
     current_direction_deg = round(direction_deg, 1) if direction_deg is not None else None
-    current_compass = (
-        degrees_to_compass_16(direction_deg) if direction_deg is not None else None
-    )
+    current_compass = degrees_to_compass_16(direction_deg) if direction_deg is not None else None
 
     salinity_psu = _as_float(sst_sample.get("salinity_psu") or cur_sample.get("salinity_psu"))
     wave_height_m = _as_float(cur_sample.get("wave_height_m") or sst_sample.get("wave_height_m"))
@@ -408,9 +410,7 @@ async def inspect_map_point(
         str(sample.get("interpolation_method") or "unavailable")
         for sample in (sst_sample, chl_sample, cur_sample)
     ]
-    has_any_value = any(
-        v is not None for v in (sst_c, chlorophyll_mg_m3, current_speed_ms)
-    )
+    has_any_value = any(v is not None for v in (sst_c, chlorophyll_mg_m3, current_speed_ms))
     interp_method: Literal["bilinear", "nearest", "unavailable"]
     if not has_any_value:
         interp_method = "unavailable"

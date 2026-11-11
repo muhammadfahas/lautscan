@@ -541,8 +541,10 @@ def _load_layer_grid(dataset_path: Path, layer: str) -> _LoadedGrid:
         )
         units = (_decode_attr(vattrs.get("units")) or "").lower()
         finite_vals = primary[np.isfinite(primary)]
-        if "kelvin" in units or units == "k" or (
-            finite_vals.size > 0 and float(np.nanmedian(finite_vals)) > 150.0
+        if (
+            "kelvin" in units
+            or units == "k"
+            or (finite_vals.size > 0 and float(np.nanmedian(finite_vals)) > 150.0)
         ):
             primary = primary - 273.15
     elif layer == "chlorophyll":
@@ -601,9 +603,7 @@ def _load_layer_grid(dataset_path: Path, layer: str) -> _LoadedGrid:
     acquired_at = _decode_attr(
         global_attrs.get("acquired_at_utc") or global_attrs.get("time_coverage_start")
     )
-    primary_source = _decode_attr(
-        global_attrs.get("primary_source") or global_attrs.get("source")
-    )
+    primary_source = _decode_attr(global_attrs.get("primary_source") or global_attrs.get("source"))
 
     return _LoadedGrid(
         lat=lat_arr,
@@ -653,13 +653,7 @@ def _bilinear_sample_grid(
     v10 = values[iy0 + 1, ix0]
     v11 = values[iy0 + 1, ix0 + 1]
 
-    valid = (
-        in_bounds
-        & np.isfinite(v00)
-        & np.isfinite(v01)
-        & np.isfinite(v10)
-        & np.isfinite(v11)
-    )
+    valid = in_bounds & np.isfinite(v00) & np.isfinite(v01) & np.isfinite(v10) & np.isfinite(v11)
     out = np.full(q_lat_b.shape, np.nan, dtype=np.float64)
     out[valid] = (
         (1.0 - wy[valid]) * (1.0 - wx[valid]) * v00[valid]
@@ -897,6 +891,7 @@ def _project_sst_ocean_mask(
     dlon_s = float(np.median(np.abs(np.diff(sst_grid.lon))))
     ratio = max(dlat_t / max(dlat_s, 1e-6), dlon_t / max(dlon_s, 1e-6))
 
+    sub_offsets: tuple[float, ...]
     if ratio >= 2.2:
         sub_offsets = (-0.4, -0.2, 0.0, 0.2, 0.4)
         min_frac = 0.16
@@ -955,7 +950,9 @@ def _equatorial_corridor_mask(
     has_north = np.any(raw_finite[north_ok, :], axis=0)
     has_south = np.any(raw_finite[south_ok, :], axis=0)
     eq_rows = np.abs(lat) <= 1.15
-    return eq_rows[:, np.newaxis] & (has_north & has_south)[np.newaxis, :]
+    return np.asarray(
+        eq_rows[:, np.newaxis] & (has_north & has_south)[np.newaxis, :], dtype=np.bool_
+    )
 
 
 def _build_processed_layer_grid(
@@ -1637,9 +1634,7 @@ def render_potential_tile_bytes(
     score_pad = np.clip(0.40 * sst_score_pad + 0.56 * chl_score_pad + front_bonus_pad, 0.0, 1.0)
     score = score_pad[1:-1, 1:-1]
     pot_ramp = _smoothstep(0.28, 0.46, score) * (0.45 + 0.55 * _smoothstep(0.46, 0.92, score))
-    alpha_u8 = np.clip(
-        np.round(228.0 * pot_ramp * ocean_alpha), 0, 255
-    ).astype(np.uint8)
+    alpha_u8 = np.clip(np.round(228.0 * pot_ramp * ocean_alpha), 0, 255).astype(np.uint8)
     active = valid_ocean & (alpha_u8 > 0)
     if not np.any(active):
         return _encode_rgba_image(rgba, fmt_lower), True

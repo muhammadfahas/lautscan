@@ -392,9 +392,7 @@ class CopernicusAndPdpiAdapterTests(unittest.IsolatedAsyncioTestCase):
         live_adapter = KkpPdpiAdapter(
             base_url="https://pdpi.test/feed",
             backoff_s=0.0,
-            transport=httpx.MockTransport(
-                lambda req: httpx.Response(200, json=geojson_payload)
-            ),
+            transport=httpx.MockTransport(lambda req: httpx.Response(200, json=geojson_payload)),
         )
         res_live = await live_adapter.sync(target_date="2026-11-10")
         self.assertEqual(res_live.status, "success")

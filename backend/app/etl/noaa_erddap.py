@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import re
@@ -96,6 +97,14 @@ class ErddapFetchResult:
     error: str | None = None
 
 
+def _atomic_write_nc_sync(
+    output_dir: Path, tmp_path: Path, target_path: Path, payload: bytes
+) -> None:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    tmp_path.write_bytes(payload)
+    os.replace(tmp_path, target_path)
+
+
 class NOAAErddapAdapter(ProviderAdapter):
     """Async httpx adapter for NOAA CoastWatch ERDDAP griddap subsets."""
 
@@ -112,9 +121,13 @@ class NOAAErddapAdapter(ProviderAdapter):
         transport: httpx.AsyncBaseTransport | None = None,
         client: httpx.AsyncClient | None = None,
     ) -> None:
-        resolved = base_url if base_url is not None else resolve_setting(
-            "NOAA_ERDDAP_BASE_URL",
-            DEFAULT_NOAA_ERDDAP_BASE_URL,
+        resolved = (
+            base_url
+            if base_url is not None
+            else resolve_setting(
+                "NOAA_ERDDAP_BASE_URL",
+                DEFAULT_NOAA_ERDDAP_BASE_URL,
+            )
         )
         self.base_url: str = resolved.rstrip("/")
         self.datasets: dict[str, ErddapDatasetSpec] = dict(datasets or DEFAULT_ERDDAP_DATASETS)
@@ -239,10 +252,10 @@ class NOAAErddapAdapter(ProviderAdapter):
         )
         target_path = output_dir / f"noaa_{layer}_{date_label}.nc"
         try:
-            output_dir.mkdir(parents=True, exist_ok=True)
             tmp_path = output_dir / f".tmp_noaa_{layer}_{date_label}_{os.getpid()}.nc"
-            tmp_path.write_bytes(payload)
-            os.replace(tmp_path, target_path)
+            await asyncio.to_thread(
+                _atomic_write_nc_sync, output_dir, tmp_path, target_path, payload
+            )
         except OSError as exc:
             return ErddapFetchResult(
                 ok=False,

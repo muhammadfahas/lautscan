@@ -15,12 +15,16 @@ from app.etl.copernicus import CopernicusMarineAdapter
 from app.etl.noaa_erddap import NOAAErddapAdapter
 from app.etl.obis_client import NormalizedSpeciesRecord, ObisClient
 
+_arq_cron: Any = None
+_ArqRedisSettings: Any = None
 try:
-    from arq import cron as _arq_cron
-    from arq.connections import RedisSettings as _ArqRedisSettings
+    from arq import cron as _imported_cron
+    from arq.connections import RedisSettings as _imported_redis_settings
+
+    _arq_cron = _imported_cron
+    _ArqRedisSettings = _imported_redis_settings
 except ImportError:  # pragma: no cover - allows offline test imports without arq installed
-    _arq_cron = None
-    _ArqRedisSettings = None
+    pass
 
 logger = logging.getLogger(__name__)
 
@@ -132,11 +136,7 @@ async def sync_obis_task(
     persisted_rows = 0
     raw_records = result.metadata.get("records")
     if result.status == "success" and isinstance(raw_records, list):
-        records = [
-            NormalizedSpeciesRecord(**rec)
-            for rec in raw_records
-            if isinstance(rec, dict)
-        ]
+        records = [NormalizedSpeciesRecord(**rec) for rec in raw_records if isinstance(rec, dict)]
         persisted_rows = await _persist_obis_occurrences(records)
 
     await _persist_sync_log(result)
@@ -306,11 +306,7 @@ async def _persist_sync_log(result: ProviderSyncResult) -> bool:
     except ImportError:
         return False
 
-    compact_meta = {
-        k: v
-        for k, v in result.metadata.items()
-        if k not in ("records", "zones")
-    }
+    compact_meta = {k: v for k, v in result.metadata.items() if k not in ("records", "zones")}
     try:
         async with async_session_maker() as session:
             entry = SourceSyncLog(
@@ -352,9 +348,7 @@ async def _persist_obis_occurrences(records: list[NormalizedSpeciesRecord]) -> i
                 event_dt: datetime | None = None
                 if rec.event_date_utc:
                     try:
-                        event_dt = datetime.fromisoformat(
-                            rec.event_date_utc.replace("Z", "+00:00")
-                        )
+                        event_dt = datetime.fromisoformat(rec.event_date_utc.replace("Z", "+00:00"))
                     except ValueError:
                         event_dt = None
 
@@ -381,8 +375,9 @@ async def _persist_obis_occurrences(records: list[NormalizedSpeciesRecord]) -> i
                 else:
                     stmt = stmt.on_conflict_do_nothing(index_elements=["id"])
                 res = await session.execute(stmt)
-                if getattr(res, "rowcount", 0):
-                    inserted += int(res.rowcount)
+                rowcount = getattr(res, "rowcount", 0)
+                if rowcount:
+                    inserted += int(rowcount)
             await session.commit()
     except Exception as exc:  # noqa: BLE001 (graceful offline fallback)
         logger.debug("Skipping OBIS occurrence DB upsert: %s", exc)

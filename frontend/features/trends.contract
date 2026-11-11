@@ -2,90 +2,57 @@
 
 use WppZoneRecord, MapPointInspection, UserPreferences from "../shapes.contract"
 
-fn periodFactor(period: string): number =
-  period == "7d" ? 0.35 : (period == "90d" ? 0.85 : (period == "monsoon" ? 1.15 : 0.6))
+fn periodFactor(period: string): number = period == "7d" ? 0.35 : (period == "90d" ? 0.85 : (period == "monsoon" ? 1.15 : 0.6))
 
-fn sstY(sstC: number): number =
-  Math.max(20, Math.min(148, Math.round(148 - ((sstC - 25.0) / 7.0) * 124)))
+fn sstY(sstC: number): number = max(20, min(148, round(148 - ((sstC - 25.0) / 7.0) * 124)))
 
-fn sstSeriesPoints(baseSst: number, period: string): string =
-  `${40},${sstY(baseSst - 0.5 * periodFactor(period))} ${140},${sstY(baseSst - 0.2 * periodFactor(period))} ${240},${sstY(baseSst + 0.1 * periodFactor(period))} ${340},${sstY(baseSst + 0.4 * periodFactor(period))} ${440},${sstY(baseSst + 0.2 * periodFactor(period))} ${540},${sstY(baseSst)}`
+fn sstSeriesPoints(baseSst: number, period: string): string = `${40},${sstY(baseSst - 0.5 * periodFactor(period))} ${140},${sstY(baseSst - 0.2 * periodFactor(period))} ${240},${sstY(baseSst + 0.1 * periodFactor(period))} ${340},${sstY(baseSst + 0.4 * periodFactor(period))} ${440},${sstY(baseSst + 0.2 * periodFactor(period))} ${540},${sstY(baseSst)}`
 
-fn sstSeriesArea(baseSst: number, period: string): string =
-  `40,152 ${sstSeriesPoints(baseSst, period)} 540,152`
+fn sstSeriesArea(baseSst: number, period: string): string = `40,152 ${sstSeriesPoints(baseSst, period)} 540,152`
 
-fn chlY(chl: number): number =
-  Math.max(20, Math.min(148, Math.round(148 - (Math.min(chl, 1.4) / 1.4) * 124)))
+fn chlY(chl: number): number = max(20, min(148, round(148 - (min(chl, 1.4) / 1.4) * 124)))
 
-fn chlSeriesPoints(baseChl: number, period: string): string =
-  `${40},${chlY(baseChl * (1.0 - 0.14 * periodFactor(period)))} ${140},${chlY(baseChl * (1.0 - 0.05 * periodFactor(period)))} ${240},${chlY(baseChl * (1.0 + 0.12 * periodFactor(period)))} ${340},${chlY(baseChl * (1.0 + 0.22 * periodFactor(period)))} ${440},${chlY(baseChl * (1.0 + 0.08 * periodFactor(period)))} ${540},${chlY(baseChl)}`
+fn chlSeriesPoints(baseChl: number, period: string): string = `${40},${chlY(baseChl * (1.0 - 0.14 * periodFactor(period)))} ${140},${chlY(baseChl * (1.0 - 0.05 * periodFactor(period)))} ${240},${chlY(baseChl * (1.0 + 0.12 * periodFactor(period)))} ${340},${chlY(baseChl * (1.0 + 0.22 * periodFactor(period)))} ${440},${chlY(baseChl * (1.0 + 0.08 * periodFactor(period)))} ${540},${chlY(baseChl)}`
 
-fn chlSeriesArea(baseChl: number, period: string): string =
-  `40,152 ${chlSeriesPoints(baseChl, period)} 540,152`
+fn chlSeriesArea(baseChl: number, period: string): string = `40,152 ${chlSeriesPoints(baseChl, period)} 540,152`
 
-fn formatSstValue(sstC: number, useF: bool): string =
-  useF ? `${((sstC * 9 / 5) + 32).toFixed(1)} °F` : `${sstC.toFixed(1)} °C`
+fn formatSstValue(sstC: number, useF: bool): string = useF ? `${((sstC * 9 / 5) + 32).toFixed(1)} °F` : `${sstC.toFixed(1)} °C`
 
-fn wibMonthName(m: number): string =
-  m == 1 ? "Jan" : (m == 2 ? "Feb" : (m == 3 ? "Mar" : (m == 4 ? "Apr" : (m == 5 ? "Mei" : (m == 6 ? "Jun" : (m == 7 ? "Jul" : (m == 8 ? "Agu" : (m == 9 ? "Sep" : (m == 10 ? "Okt" : (m == 11 ? "Nov" : "Des"))))))))))
+fn wibMonthName(m: number): string = m == 1 ? "Jan" : (m == 2 ? "Feb" : (m == 3 ? "Mar" : (m == 4 ? "Apr" : (m == 5 ? "Mei" : (m == 6 ? "Jun" : (m == 7 ? "Jul" : (m == 8 ? "Agu" : (m == 9 ? "Sep" : (m == 10 ? "Okt" : (m == 11 ? "Nov" : "Des"))))))))))
 
-fn pad2Num(n: number): string =
-  n < 10 ? `0${n}` : `${n}`
+fn pad2Num(n: number): string = n < 10 ? `0${n}` : `${n}`
 
-fn formatDayMonthWib(baseY: number, doy: number, mp: number, hh: number, mm: number): string =
-  `${pad2Num(doy - Math.floor((153 * mp + 2) / 5) + 1)} ${wibMonthName(mp + (mp < 10 ? 3 : -9))} ${baseY + ((mp + (mp < 10 ? 3 : -9)) <= 2 ? 1 : 0)}, ${pad2Num(hh)}:${pad2Num(mm)} WIB`
+fn civilToDays(y: number, m: number, d: number): number = (((y - (m <= 2 ? 1 : 0)) - floor((y - (m <= 2 ? 1 : 0)) / 400) * 400) * 365 + floor(((y - (m <= 2 ? 1 : 0)) - floor((y - (m <= 2 ? 1 : 0)) / 400) * 400) / 4) - floor(((y - (m <= 2 ? 1 : 0)) - floor((y - (m <= 2 ? 1 : 0)) / 400) * 400) / 100) + floor((153 * (m + (m > 2 ? -3 : 9)) + 2) / 5) + d - 1) + floor((y - (m <= 2 ? 1 : 0)) / 400) * 146097 - 719468
 
-fn formatMpDoyWib(baseY: number, doy: number, hh: number, mm: number): string =
-  formatDayMonthWib(baseY, doy, Math.floor((5 * doy + 2) / 153), hh, mm)
+fn formatDayMonthWib(baseY: number, doy: number, mp: number, hh: number, mm: number): string = `${pad2Num(doy - floor((153 * mp + 2) / 5) + 1)} ${wibMonthName(mp + (mp < 10 ? 3 : -9))} ${baseY + ((mp + (mp < 10 ? 3 : -9)) <= 2 ? 1 : 0)}, ${pad2Num(hh)}:${pad2Num(mm)} WIB`
 
-fn formatYoeDoyWib(era: number, doe: number, yoe: number, hh: number, mm: number): string =
-  formatMpDoyWib(yoe + era * 400, doe - (365 * yoe + Math.floor(yoe / 4) - Math.floor(yoe / 100)), hh, mm)
+fn formatMpDoyWib(baseY: number, doy: number, hh: number, mm: number): string = formatDayMonthWib(baseY, doy, floor((5 * doy + 2) / 153), hh, mm)
 
-fn formatEraDoeWib(era: number, doe: number, hh: number, mm: number): string =
-  formatYoeDoyWib(era, doe, Math.floor((doe - Math.floor(doe / 1460) + Math.floor(doe / 36524) - Math.floor(doe / 146096)) / 365), hh, mm)
+fn formatYoeDoyWib(era: number, doe: number, yoe: number, hh: number, mm: number): string = formatMpDoyWib(yoe + era * 400, doe - (365 * yoe + floor(yoe / 4) - floor(yoe / 100)), hh, mm)
 
-fn formatDaysClockWib(z: number, hh: number, mm: number): string =
-  formatEraDoeWib(Math.floor(z / 146097), z - Math.floor(z / 146097) * 146097, hh, mm)
+fn formatEraDoeWib(era: number, doe: number, hh: number, mm: number): string = formatYoeDoyWib(era, doe, floor((doe - floor(doe / 1460) + floor(doe / 36524) - floor(doe / 146096)) / 365), hh, mm)
 
-fn formatWibFromMs(wibMs: number): string =
-  formatDaysClockWib(Math.floor(wibMs / 86400000) + 719468, Math.floor((wibMs - Math.floor(wibMs / 86400000) * 86400000) / 3600000), Math.floor(((wibMs - Math.floor(wibMs / 86400000) * 86400000) % 3600000) / 60000))
+fn formatDaysClockWib(z: number, hh: number, mm: number): string = formatEraDoeWib(floor(z / 146097), z - floor(z / 146097) * 146097, hh, mm)
 
-fn parseUtcMs(raw: string): number =
-  Date.parse((raw.indexOf("Z") >= 0 or raw.indexOf("+") >= 0 or (raw.length > 10 and raw.slice(10).indexOf("-") >= 0)) ? raw.replace(" ", "T") : `${raw.replace(" ", "T")}Z`)
+fn formatWibTotalMins(totalMins: number): string = formatDaysClockWib(floor(totalMins / 1440) + 719468, floor((totalMins - floor(totalMins / 1440) * 1440) / 60), (totalMins - floor(totalMins / 1440) * 1440) % 60)
 
-fn formatWibTimestamp(raw: string): string =
-  raw == "latest" ? "Terbaru (Hari Ini · WIB)" : ((raw.length == 10 and raw.indexOf("-") == 4) ? `${pad2Num(Number(raw.slice(8, 10)))} ${wibMonthName(Number(raw.slice(5, 7)))} ${raw.slice(0, 4)} (WIB)` : (Number.isFinite(parseUtcMs(raw)) ? formatWibFromMs(parseUtcMs(raw) + 25200000) : raw))
+fn tzOffsetShift(raw: string): number = (raw.length >= 25 and (raw.slice(19, 20) == "+" or raw.slice(19, 20) == "-")) ? (match parseNumber(raw.slice(19, 22)) { case some(oh) => match parseNumber(raw.slice(23, 25)) { case some(om) => 420 - (oh < 0 ? oh * 60 - om : oh * 60 + om), case none => 420 }, case none => 420 }) : 420
 
-fn findZoneSst(zones: WppZoneRecord[], code: string): number =
-  match zones.find(z => z.wpp_code == code)
-    case some(z) =>
-      match z.sst_mean_c
-        case some(v) => v
-        case none => 29.0
-    case none => 29.0
+fn formatDateOnlyWib(raw: string): string = match parseNumber(raw.slice(5, 7)) { case some(m) => match parseNumber(raw.slice(8, 10)) { case some(d) => `${pad2Num(d)} ${wibMonthName(m)} ${raw.slice(0, 4)} (WIB)`, case none => raw }, case none => raw }
 
-fn findZoneChl(zones: WppZoneRecord[], code: string): number =
-  match zones.find(z => z.wpp_code == code)
-    case some(z) =>
-      match z.chlorophyll_mean_mg_m3
-        case some(v) => v
-        case none => 0.5
-    case none => 0.5
+fn formatIsoUtcWib(raw: string): string = match parseNumber(raw.slice(0, 4)) { case some(y) => match parseNumber(raw.slice(5, 7)) { case some(m) => match parseNumber(raw.slice(8, 10)) { case some(d) => match parseNumber(raw.slice(11, 13)) { case some(hh) => match parseNumber(raw.slice(14, 16)) { case some(mm) => formatWibTotalMins(civilToDays(y, m, d) * 1440 + hh * 60 + mm + tzOffsetShift(raw)), case none => raw }, case none => raw }, case none => raw }, case none => raw }, case none => raw }
 
-fn findZoneLat(zones: WppZoneRecord[], code: string): number =
-  match zones.find(z => z.wpp_code == code)
-    case some(z) => z.centroid_lat
-    case none => -5.1233
+fn formatWibTimestamp(raw: string): string = raw == "latest" ? "Terbaru (Hari Ini · WIB)" : ((raw.length == 10 and raw.indexOf("-") == 4) ? formatDateOnlyWib(raw) : ((raw.length >= 16 and raw.slice(4, 5) == "-" and raw.slice(7, 8) == "-") ? formatIsoUtcWib(raw) : raw))
 
-fn findZoneLon(zones: WppZoneRecord[], code: string): number =
-  match zones.find(z => z.wpp_code == code)
-    case some(z) => z.centroid_lon
-    case none => 111.3205
+fn findZoneSst(zones: WppZoneRecord[], code: string): number = match first(zones.filter(z => z.wpp_code == code)) { case some(z) => match z.sst_mean_c { case some(v) => v, case none => 29.0 }, case none => 29.0 }
 
-fn findZoneTitle(zones: WppZoneRecord[], code: string): string =
-  match zones.find(z => z.wpp_code == code)
-    case some(z) => `${z.name} (${z.waters_id})`
-    case none => `WPP-NRI ${code}`
+fn findZoneChl(zones: WppZoneRecord[], code: string): number = match first(zones.filter(z => z.wpp_code == code)) { case some(z) => match z.chlorophyll_mean_mg_m3 { case some(v) => v, case none => 0.5 }, case none => 0.5 }
+
+fn findZoneLat(zones: WppZoneRecord[], code: string): number = match first(zones.filter(z => z.wpp_code == code)) { case some(z) => z.centroid_lat, case none => -5.1233 }
+
+fn findZoneLon(zones: WppZoneRecord[], code: string): number = match first(zones.filter(z => z.wpp_code == code)) { case some(z) => z.centroid_lon, case none => 111.3205 }
+
+fn findZoneTitle(zones: WppZoneRecord[], code: string): string = match first(zones.filter(z => z.wpp_code == code)) { case some(z) => `${z.name} (${z.waters_id})`, case none => `WPP-NRI ${code}` }
 
 component TrendsView
   props
@@ -148,18 +115,18 @@ component TrendsView
       // Zone & Date Synchronization Controls
       row width="100%" padding="14px 16px" gap=12 flex-wrap="wrap" align-items="flex-end" border-radius=12 background-color="var(--surface-elevated)" border="1px solid var(--border-subtle)" testId="trends-controls"
         column flex="2 1 220px" min-width=0 gap=4
-          label "Target WPP-NRI Zone" font-size=13 font-weight=600 color="var(--ink-muted)"
+          text "Target WPP-NRI Zone" font-size=13 font-weight=600 color="var(--ink-muted)"
           select value=selectedWppCode change=selectZone width="100%" max-width="100%" min-height=44 min-width=44 padding="10px 12px" border-radius=8 border="1px solid var(--border-subtle)" background-color="var(--surface-canvas)" color="var(--ink-primary)" font-size=16 cursor="pointer" aria-label="Select WPP-NRI zone for historical trends" testId="trends-wpp-select"
             for z in wppZones key=z.wpp_code
-              option value=z.wpp_code `${z.name}: ${z.waters_en}`
+              option `${z.name}: ${z.waters_en}` value=z.wpp_code
 
         column flex="1 1 180px" min-width=0 gap=4
-          label "Tanggal Referensi (WIB)" font-size=13 font-weight=600 color="var(--ink-muted)"
+          text "Tanggal Referensi (WIB)" font-size=13 font-weight=600 color="var(--ink-muted)"
           select value=selectedDate change=selectDate width="100%" max-width="100%" min-height=44 min-width=44 padding="10px 12px" border-radius=8 border="1px solid var(--border-subtle)" background-color="var(--surface-canvas)" color="var(--ink-primary)" font-size=16 cursor="pointer" aria-label="Select reference observation date" testId="trends-date-select"
-            option value="latest" "Terbaru (Satelit Terkini · WIB)"
-            option value="2026-11-01" "01 Nov 2026 (WIB · Peralihan Barat)"
-            option value="2026-08-15" "15 Agu 2026 (WIB · Puncak Muson Timur)"
-            option value="2026-02-15" "15 Feb 2026 (WIB · Puncak Muson Barat)"
+            option "Terbaru (Satelit Terkini · WIB)" value="latest"
+            option "01 Nov 2026 (WIB · Peralihan Barat)" value="2026-11-01"
+            option "15 Agu 2026 (WIB · Puncak Muson Timur)" value="2026-08-15"
+            option "15 Feb 2026 (WIB · Puncak Muson Barat)" value="2026-02-15"
 
         button press=inspectSelectedZone min-height=44 min-width=180 padding="10px 16px" border-radius=8 border="1px solid var(--accent-cta)" background-color="var(--accent-cta)" color="#FFFFFF" cursor="pointer" aria-label="Inspect selected WPP zone on Ocean Map" testId="trends-inspect-btn"
           text "Inspect Zone on Map" font-size=14 font-weight=700
@@ -172,7 +139,7 @@ component TrendsView
             column gap=2
               text "Sea Surface Temperature (SST) Trend" role="heading" font-size=17 font-weight=600 color="var(--ink-primary)"
               text activeTitle font-size=13 color="var(--ink-muted)"
-            text `Mean: ${formatSstValue(activeSst, useFahrenheit)}` class="tabular-nums" font-family="var(--font-mono)" font-size=16 font-weight=700 color="var(--accent-primary)" testId="trends-sst-mean"
+            text `Mean: ${formatSstValue(activeSst, useFahrenheit)}` font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=16 font-weight=700 color="var(--accent-primary)" testId="trends-sst-mean"
 
           svg width="100%" height=180 viewBox="0 0 580 180" role="img" aria-label=`SST trend chart for ${activeTitle} over ${selectedPeriod}` testId="trends-sst-chart"
             line x1=36 y1=24 x2=550 y2=24 stroke="var(--border-subtle)" stroke-width=1
@@ -187,7 +154,7 @@ component TrendsView
             circle cx=540 cy=sstY(activeSst) r=5 fill="var(--accent-cta)"
 
           row width="100%" justify-content="space-between" align-items="center"
-            text (useFahrenheit ? "Range: 77.0 to 89.6 °F" : "Range: 25.0 to 32.0 °C") class="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--ink-muted)"
+            text (useFahrenheit ? "Range: 77.0 to 89.6 °F" : "Range: 25.0 to 32.0 °C") font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--ink-muted)"
             text `Period: ${selectedPeriod} (solid) vs Zone Mean (dashed)` font-size=12 color="var(--ink-muted)"
 
         // Chlorophyll-a Time-Series Card
@@ -196,7 +163,7 @@ component TrendsView
             column gap=2
               text "Chlorophyll-a Concentration Trend" role="heading" font-size=17 font-weight=600 color="var(--ink-primary)"
               text activeTitle font-size=13 color="var(--ink-muted)"
-            text `Mean: ${activeChl.toFixed(2)} mg/m3` class="tabular-nums" font-family="var(--font-mono)" font-size=16 font-weight=700 color="var(--status-healthy)" testId="trends-chl-mean"
+            text `Mean: ${activeChl.toFixed(2)} mg/m3` font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=16 font-weight=700 color="var(--status-healthy)" testId="trends-chl-mean"
 
           svg width="100%" height=180 viewBox="0 0 580 180" role="img" aria-label=`Chlorophyll-a trend chart for ${activeTitle} over ${selectedPeriod}` testId="trends-chl-chart"
             line x1=36 y1=24 x2=550 y2=24 stroke="var(--border-subtle)" stroke-width=1
@@ -211,14 +178,14 @@ component TrendsView
             circle cx=540 cy=chlY(activeChl) r=5 fill="var(--accent-cta)"
 
           row width="100%" justify-content="space-between" align-items="center"
-            text "Range: 0.00 to 1.40 mg/m3" class="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--ink-muted)"
+            text "Range: 0.00 to 1.40 mg/m3" font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--ink-muted)"
             text `Period: ${selectedPeriod} (solid) vs Zone Mean (dashed)` font-size=12 color="var(--ink-muted)"
 
       // Active Point Telemetry Summary if inspected
       match pointInspection
         case some(pt) =>
           row width="100%" padding="12px 16px" gap=12 flex-wrap="wrap" align-items="center" justify-content="space-between" border-radius=10 background-color="var(--surface-elevated)" border="1px solid var(--border-subtle)" testId="trends-point-summary"
-            text `Last Inspected Coordinate: ${pt.lat.toFixed(4)}, ${pt.lon.toFixed(4)} (${formatWibTimestamp(pt.requested_date)})` class="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-primary)"
+            text `Last Inspected Coordinate: ${pt.lat.toFixed(4)}, ${pt.lon.toFixed(4)} (${formatWibTimestamp(pt.requested_date)})` font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-primary)"
             text `Attribution: ${pt.attribution}` font-size=13 color="var(--ink-muted)"
         case none =>
           text "Select a WPP-NRI zone above or click any point on Ocean Map to synchronize historical coordinates." font-size=13 color="var(--ink-muted)"
@@ -229,31 +196,40 @@ component TrendsView
           text "WPP-NRI Historical Baseline Table (Zones 571 to 718)" role="heading" font-size=18 font-weight=600 color="var(--ink-primary)"
           text "Screen-reader and low-bandwidth fallback summary for chart data." font-size=13 color="var(--ink-muted)"
 
-        div width="100%" overflow-x="auto" testId="trends-table-wrap"
-          table width="100%" border-collapse="collapse" testId="trends-wpp-table"
+        box width="100%" overflow-x="auto" testId="trends-table-wrap"
+          table width="100%" testId="trends-wpp-table"
             thead
               tr
-                th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "WPP Code"
-                th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "Zone Name"
-                th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "Indonesian Waters"
-                th scope="col" text-align="right" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" (useFahrenheit ? "Mean SST (°F)" : "Mean SST (°C)")
-                th scope="col" text-align="right" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "Mean Chlorophyll-a (mg/m3)"
-                th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "Latest Observation WIB"
+                th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)"
+                  text "WPP Code"
+                th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)"
+                  text "Zone Name"
+                th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)"
+                  text "Indonesian Waters"
+                th scope="col" text-align="right" padding="10px 8px" border-bottom="2px solid var(--border-subtle)"
+                  text (useFahrenheit ? "Mean SST (°F)" : "Mean SST (°C)")
+                th scope="col" text-align="right" padding="10px 8px" border-bottom="2px solid var(--border-subtle)"
+                  text "Mean Chlorophyll-a (mg/m3)"
+                th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)"
+                  text "Latest Observation WIB"
             tbody
               for z in wppZones key=z.wpp_code
                 tr testId=`trends-row-${z.wpp_code}`
-                  td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" class="tabular-nums" font-family="var(--font-mono)" font-weight=700 z.wpp_code
-                  td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" z.name
-                  td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" z.waters_id
-                  td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" text-align="right" class="tabular-nums" font-family="var(--font-mono)"
+                  td padding="10px 8px" border-bottom="1px solid var(--border-subtle)"
+                    text z.wpp_code font-variant-numeric="tabular-nums" font-family="var(--font-mono)" font-weight=700
+                  td padding="10px 8px" border-bottom="1px solid var(--border-subtle)"
+                    text z.name
+                  td padding="10px 8px" border-bottom="1px solid var(--border-subtle)"
+                    text z.waters_id
+                  td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" text-align="right"
                     match z.sst_mean_c
-                      case some(sst) => text formatSstValue(sst, useFahrenheit)
-                      case none => text "N/A"
-                  td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" text-align="right" class="tabular-nums" font-family="var(--font-mono)"
+                      case some(sst) => text formatSstValue(sst, useFahrenheit) font-variant-numeric="tabular-nums" font-family="var(--font-mono)"
+                      case none => text "N/A" font-variant-numeric="tabular-nums" font-family="var(--font-mono)"
+                  td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" text-align="right"
                     match z.chlorophyll_mean_mg_m3
-                      case some(chl) => text `${chl.toFixed(2)}`
-                      case none => text "N/A"
-                  td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" class="tabular-nums" font-family="var(--font-mono)"
+                      case some(chl) => text `${chl.toFixed(2)}` font-variant-numeric="tabular-nums" font-family="var(--font-mono)"
+                      case none => text "N/A" font-variant-numeric="tabular-nums" font-family="var(--font-mono)"
+                  td padding="10px 8px" border-bottom="1px solid var(--border-subtle)"
                     match z.latest_observation_utc
-                      case some(ts) => text formatWibTimestamp(ts)
-                      case none => text "Baseline seed"
+                      case some(ts) => text formatWibTimestamp(ts) font-variant-numeric="tabular-nums" font-family="var(--font-mono)"
+                      case none => text "Baseline seed" font-variant-numeric="tabular-nums" font-family="var(--font-mono)"

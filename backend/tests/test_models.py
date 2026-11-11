@@ -129,9 +129,7 @@ class CoreArchitectureStaticTests(unittest.TestCase):
 
         redis_src = (BACKEND_DIR / "app" / "core" / "redis.py").read_text(encoding="utf-8")
         redis_tree = ast.parse(redis_src)
-        redis_async_funcs = {
-            n.name for n in redis_tree.body if isinstance(n, ast.AsyncFunctionDef)
-        }
+        redis_async_funcs = {n.name for n in redis_tree.body if isinstance(n, ast.AsyncFunctionDef)}
         self.assertTrue({"get_redis", "check_redis_health"}.issubset(redis_async_funcs))
 
     def test_models_ast_classes_and_tables(self) -> None:

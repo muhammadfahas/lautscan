@@ -4,6 +4,9 @@
   "slug": "laut-scan",
   "version": "1.2.0",
   "description": "Open-Source Marine Intelligence Platform: Know the Ocean. Find the Fish.",
+  "modules": [
+    "marine-map"
+  ],
   "packages": {
     "@lautscan/marine-map": {
       "path": "./modules/marine-map"

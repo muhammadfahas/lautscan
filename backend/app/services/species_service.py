@@ -443,10 +443,7 @@ def _load_active_species_records() -> list[SpeciesOccurrenceRecord]:
             if _GLOBAL_CACHE_ITEMS is not None and mtime == _GLOBAL_CACHE_MTIME:
                 return _GLOBAL_CACHE_ITEMS
             raw = json.loads(cache_path.read_text(encoding="utf-8"))
-            items = [
-                SpeciesOccurrenceRecord.model_validate(item)
-                for item in raw.get("items", [])
-            ]
+            items = [SpeciesOccurrenceRecord.model_validate(item) for item in raw.get("items", [])]
             items = _filter_open_ocean_by_mur_mask(items, global_dir / "noaa_landmask.nc")
             if items:
                 _GLOBAL_CACHE_MTIME = mtime
@@ -479,9 +476,7 @@ def _filter_fixtures(
     if bbox_tuple is not None:
         min_lon, min_lat, max_lon, max_lat = bbox_tuple
         items = [
-            rec
-            for rec in items
-            if min_lon <= rec.lon <= max_lon and min_lat <= rec.lat <= max_lat
+            rec for rec in items if min_lon <= rec.lon <= max_lon and min_lat <= rec.lat <= max_lat
         ]
 
     items.sort(

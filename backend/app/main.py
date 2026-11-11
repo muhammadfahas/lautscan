@@ -88,8 +88,7 @@ def create_app() -> FastAPI:
         title="LAUT SCAN Marine Intelligence API",
         version="1.2.0",
         summary=(
-            "Open-source geospatial REST & XYZ raster tile API "
-            "for Indonesian marine intelligence."
+            "Open-source geospatial REST & XYZ raster tile API for Indonesian marine intelligence."
         ),
     )
 
