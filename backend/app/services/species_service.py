@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
+from app.core.config import get_settings
 from app.schemas.common import SpeciesOccurrenceListResponse, SpeciesOccurrenceRecord
 
 try:
@@ -392,6 +395,32 @@ def _build_baseline_obis_fixtures() -> list[SpeciesOccurrenceRecord]:
 
 BASELINE_OBIS_FIXTURES: list[SpeciesOccurrenceRecord] = _build_baseline_obis_fixtures()
 
+_GLOBAL_CACHE_MTIME: float | None = None
+_GLOBAL_CACHE_ITEMS: list[SpeciesOccurrenceRecord] | None = None
+
+
+def _load_active_species_records() -> list[SpeciesOccurrenceRecord]:
+    """Return synced global OBIS records if cached on disk, else deterministic fixtures."""
+    global _GLOBAL_CACHE_MTIME, _GLOBAL_CACHE_ITEMS
+    try:
+        cache_path = Path(get_settings().TILE_CACHE_DIR) / "global" / "obis_species.json"
+        if cache_path.is_file():
+            mtime = cache_path.stat().st_mtime
+            if _GLOBAL_CACHE_ITEMS is not None and mtime == _GLOBAL_CACHE_MTIME:
+                return _GLOBAL_CACHE_ITEMS
+            raw = json.loads(cache_path.read_text(encoding="utf-8"))
+            items = [
+                SpeciesOccurrenceRecord.model_validate(item)
+                for item in raw.get("items", [])
+            ]
+            if items:
+                _GLOBAL_CACHE_MTIME = mtime
+                _GLOBAL_CACHE_ITEMS = items
+                return items
+    except Exception as exc:
+        logger.debug("Global OBIS disk cache unavailable, using baseline fixtures: %s", exc)
+    return list(BASELINE_OBIS_FIXTURES)
+
 
 def _filter_fixtures(
     taxon: str | None,
@@ -400,7 +429,7 @@ def _filter_fixtures(
     limit: int,
     offset: int,
 ) -> SpeciesOccurrenceListResponse:
-    items = list(BASELINE_OBIS_FIXTURES)
+    items = list(_load_active_species_records())
     if taxon:
         needle = taxon.strip().lower()
         items = [

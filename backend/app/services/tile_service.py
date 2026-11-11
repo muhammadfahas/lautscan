@@ -16,7 +16,7 @@ from PIL import Image
 
 from app.core.config import get_settings
 from app.etl.fixtures import ensure_sample_netcdf
-from app.etl.tiler import render_potential_tile_to_cache, render_tile_to_cache
+from app.etl.tiler import _load_layer_grid, render_potential_tile_to_cache, render_tile_to_cache
 
 try:
     from sqlalchemy import select
@@ -160,6 +160,15 @@ async def _resolve_dataset_metadata(
                     timestamp_utc = _format_utc_iso(row.acquired_at_utc)
         except Exception as exc:
             logger.debug("Falling back to fixture tile source after DB lookup failure: %s", exc)
+
+    if dataset_path is None and requested_date == "latest":
+        global_nc = tile_cache_dir / "global" / f"noaa_{lookup_layer}.nc"
+        if global_nc.is_file():
+            dataset_path = global_nc
+            grid_meta = _load_layer_grid(global_nc, lookup_layer)
+            fallback_now = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+            timestamp_utc = grid_meta.acquired_at_utc or fallback_now
+            resolved_date = str(timestamp_utc)[:10]
 
     if dataset_path is None:
         resolved_date = (

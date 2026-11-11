@@ -465,8 +465,43 @@ function buildSpeciesSvg() {
 }
 
 function shortFishLabel(commonName, sciName) {
+  const sci = parseStr(sciName, '').toLowerCase();
+  if (sci.includes('thunnus')) return 'Tuna';
+  if (sci.includes('katsuwonus')) return 'Cakalang';
+  if (sci.includes('euthynnus')) return 'Tongkol';
+  if (sci.includes('rastrelliger')) return 'Kembung';
+  if (sci.includes('decapterus')) return 'Layang';
+  if (sci.includes('scomberomorus')) return 'Tenggiri';
+  if (sci.includes('lutjanus')) return 'Kakap';
+  if (sci.includes('epinephelus') || sci.includes('plectropomus')) return 'Kerapu';
+  if (sci.includes('sardinella')) return 'Lemuru';
+  if (sci.includes('coryphaena')) return 'Lemadang';
+  if (sci.includes('cheilinus')) return 'Napoleon';
+  if (sci.includes('penaeus')) return 'Udang';
+
   const raw = parseStr(commonName, '').trim();
-  const idPart = raw.includes('/') ? raw.split('/').pop().trim() : (raw || parseStr(sciName, 'Ikan').trim());
+  const parenMatch = raw.match(/\(([^)]+)\)/);
+  let idPart = raw;
+  if (raw.includes('/')) {
+    idPart = raw.split('/').pop().trim();
+  } else if (parenMatch) {
+    idPart = parenMatch[1].trim();
+  } else if (!raw) {
+    idPart = parseStr(sciName, 'Ikan').trim();
+  }
+  const lower = idPart.toLowerCase();
+  if (lower.includes('madidihang') || lower.includes('tuna')) return 'Tuna';
+  if (lower.includes('kembung')) return 'Kembung';
+  if (lower.includes('cakalang')) return 'Cakalang';
+  if (lower.includes('tongkol') || lower.includes('bonito')) return 'Tongkol';
+  if (lower.includes('layang')) return 'Layang';
+  if (lower.includes('kakap')) return 'Kakap';
+  if (lower.includes('kerapu') || lower.includes('grouper')) return 'Kerapu';
+  if (lower.includes('lemuru') || lower.includes('sardinella')) return 'Lemuru';
+  if (lower.includes('lemadang') || lower.includes('dolphin') || lower.includes('mahi')) return 'Lemadang';
+  if (lower.includes('tenggiri')) return 'Tenggiri';
+  if (lower.includes('udang') || lower.includes('prawn')) return 'Udang';
+  if (lower.includes('napoleon')) return 'Napoleon';
   const cleaned = idPart.replace(/^ikan\s+/i, '').trim();
   if (!cleaned) return 'Ikan';
   const firstWord = cleaned.split(/\s+/)[0];
@@ -639,6 +674,7 @@ function normalizeMarkers(text) {
     );
     const sciName = parseStr(item.scientific_name ?? item.scientificName ?? item.title, label);
     const depthM = parseNum(item.depth_m ?? item.depthM, NaN);
+    const countNum = parseNum(item.individual_count ?? item.individualCount, NaN);
     out.push({
       id,
       lat,
@@ -646,8 +682,12 @@ function normalizeMarkers(text) {
       label,
       shortName: shortFishLabel(label, sciName),
       scientificName: sciName,
+      family: parseStr(item.family, ''),
       wppCode: parseStr(item.wpp_code ?? item.wppCode, ''),
       depthM: Number.isFinite(depthM) ? depthM : null,
+      individualCount: Number.isFinite(countNum) ? countNum : null,
+      eventDateUtc: parseStr(item.event_date_utc ?? item.eventDateUtc, ''),
+      datasetName: parseStr(item.dataset_name ?? item.datasetName, ''),
       habitatNote: parseStr(item.habitat_note ?? item.habitatNote, ''),
     });
   }
@@ -1487,11 +1527,11 @@ export class MarineMap {
       }
     }
 
-    if (validCount < 3 || wSum <= 0.35) return null;
+    if (validCount < 2 || wSum <= 0.22) return null;
     const u = uSum / wSum;
     const v = vSum / wSum;
     const speedMs = Math.hypot(u, v);
-    if (speedMs < 0.01) return null;
+    if (speedMs < 0.005) return null;
     return { u, v, speedMs, speedKnots: speedMs * 1.94384 };
   }
 
@@ -1583,13 +1623,16 @@ export class MarineMap {
     }
     const pxPerDeg = (TILE_SIZE * 2 ** this.zoom) / 360.0;
     const degScale = 86.0 / Math.max(8.0, pxPerDeg);
+    const visGain = (vec) => clamp(0.42 + Math.pow(vec.speedMs, 0.65) * 0.78, 0.44, 1.35) / Math.max(0.008, vec.speedMs);
+    const g1 = degScale * dt * visGain(v1);
     const cosLat1 = Math.max(0.35, Math.cos((p.lat * Math.PI) / 180));
-    const midLat = p.lat + v1.v * degScale * dt * 0.5;
-    const midLon = p.lon + (v1.u / cosLat1) * degScale * dt * 0.5;
+    const midLat = p.lat + v1.v * g1 * 0.5;
+    const midLon = p.lon + (v1.u / cosLat1) * g1 * 0.5;
     const v2 = this.sampleCurrentVelocity(midLat, midLon) || v1;
+    const g2 = degScale * dt * visGain(v2);
     const cosLat2 = Math.max(0.35, Math.cos((midLat * Math.PI) / 180));
-    const nextLat = p.lat + v2.v * degScale * dt;
-    const nextLon = p.lon + (v2.u / cosLat2) * degScale * dt;
+    const nextLat = p.lat + v2.v * g2;
+    const nextLon = p.lon + (v2.u / cosLat2) * g2;
 
     if (!this.sampleCurrentVelocity(nextLat, nextLon)) {
       if (wrapAge) this.seedStreamParticle(p, false);
@@ -1756,9 +1799,9 @@ export class MarineMap {
       if (headPt[0] < -60 || headPt[0] > w + 60 || headPt[1] < -60 || headPt[1] > h + 60) continue;
 
       const totalLen = Math.hypot(headPt[0] - tailPt[0], headPt[1] - tailPt[1]);
-      if (totalLen < 14) continue;
+      if (totalLen < 6) continue;
 
-      const tier = p.speedKnots >= 1.2 ? 2 : p.speedKnots >= 0.5 ? 1 : 0;
+      const tier = p.speedKnots >= 0.9 ? 2 : p.speedKnots >= 0.28 ? 1 : 0;
       const [r, g, b] = rgbTiers[tier];
       const peakAlpha = clamp(life * (night ? 0.9 : 0.84), 0.12, 0.92);
 
@@ -1891,41 +1934,52 @@ export class MarineMap {
 
     const wppPts = this._renderedWppScreenPts ?? [];
     const placedPts = [];
-    const offsets = [
-      [0, 0],
-      [0, -30],
-      [0, 30],
-      [78, 0],
-      [-78, 0],
-      [60, -28],
-      [-60, -28],
-      [60, 28],
-      [-60, 28],
-    ];
+    const zoomWide = this.zoom < 5.75;
+    const offsets = zoomWide
+      ? [[0, 0]]
+      : [
+          [0, 0],
+          [0, -22],
+          [0, 22],
+          [26, 0],
+          [-26, 0],
+        ];
     const rendered = [];
-    for (const marker of this.markers) {
+    const orderedMarkers = [...this.markers].sort((a, b) => {
+      if (a.id === this.selectedMarkerId) return -1;
+      if (b.id === this.selectedMarkerId) return 1;
+      return (b.individualCount || 0) - (a.individualCount || 0);
+    });
+    for (const marker of orderedMarkers) {
       if (rendered.length >= MAX_RENDERED_MARKERS) break;
       const [baseX, baseY] = this.projectPointToViewport(marker.lat, marker.lon, z, k, left, top, n);
       if (baseX < -44 || baseX > w + 44 || baseY < -44 || baseY > h + 44) continue;
 
+      const wppDx = zoomWide ? 68 : 58;
+      const wppDy = zoomWide ? 28 : 24;
+      const pinDx = zoomWide ? 116 : 78;
+      const pinDy = zoomWide ? 42 : 28;
+      const selected = marker.id === this.selectedMarkerId;
       let sx = baseX;
       let sy = baseY;
+      let placed = false;
       for (const [ox, oy] of offsets) {
         const cx = baseX + ox;
         const cy = baseY + oy;
         if (cx < 24 || cx > w - 24 || cy < 20 || cy > h - 20) continue;
-        const hitsWpp = wppPts.some(([wx, wy]) => Math.abs(cx - wx) < 60 && Math.abs(cy - wy) < 24);
-        const hitsPin = placedPts.some(([px, py]) => Math.abs(cx - px) < 74 && Math.abs(cy - py) < 26);
+        const hitsWpp = wppPts.some(([wx, wy]) => Math.abs(cx - wx) < wppDx && Math.abs(cy - wy) < wppDy);
+        const hitsPin = placedPts.some(([px, py]) => Math.abs(cx - px) < pinDx && Math.abs(cy - py) < pinDy);
         if (!hitsWpp && !hitsPin) {
           sx = cx;
           sy = cy;
+          placed = true;
           break;
         }
       }
+      if (!placed && !selected) continue;
       placedPts.push([sx, sy]);
 
       let btn = oldParts.get(marker.id);
-      const selected = marker.id === this.selectedMarkerId;
       if (!btn) {
         btn = this.doc.createElement('button');
         btn.type = 'button';

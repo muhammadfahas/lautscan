@@ -324,6 +324,7 @@ class ApiFeatureEndpointsTests(unittest.TestCase):
     _sys_patcher: Any = None
     _saved_modules: dict[str, Any] = {}
     currents_service_mod: Any = None
+    species_service_mod: Any = None
     app_mod: Any = None
     config_mod: Any = None
     db_mod: Any = None
@@ -350,6 +351,7 @@ class ApiFeatureEndpointsTests(unittest.TestCase):
         cls.point_query_mod = importlib.import_module("app.services.point_query")
         cls.sources_service_mod = importlib.import_module("app.services.sources_service")
         cls.currents_service_mod = importlib.import_module("app.services.currents_service")
+        cls.species_service_mod = importlib.import_module("app.services.species_service")
         cls.app_mod = importlib.import_module("app.main")
 
     @classmethod
@@ -845,6 +847,81 @@ class ApiFeatureEndpointsTests(unittest.TestCase):
             self.assertEqual(r_bad_bbox.status_code, 400)
             err = ErrorResponse.model_validate(r_bad_bbox.json())
             self.assertEqual(err.error_code, "INVALID_BBOX")
+
+    def test_global_disk_cache_resolution_for_obis_noaa_and_sources(self) -> None:
+        from app.etl.fixtures import ensure_sample_netcdf
+
+        global_dir = self.tile_dir / "global"
+        global_dir.mkdir(parents=True, exist_ok=True)
+        sst_src = ensure_sample_netcdf(self.tile_dir, "sst", "2026-11-09")
+        chl_src = ensure_sample_netcdf(self.tile_dir, "chlorophyll", "2026-11-09")
+        cur_src = ensure_sample_netcdf(self.tile_dir, "currents", "2026-11-09")
+        (global_dir / "noaa_sst.nc").write_bytes(sst_src.read_bytes())
+        (global_dir / "noaa_chlorophyll.nc").write_bytes(chl_src.read_bytes())
+        (global_dir / "noaa_currents.nc").write_bytes(cur_src.read_bytes())
+        (global_dir / "noaa_manifest.json").write_text(
+            json.dumps(
+                {
+                    "synced_at_utc": "2026-11-11T03:00:00Z",
+                    "layers": {"sst": {"ok": True, "acquired_at_utc": "2026-11-09T09:00:00Z"}},
+                }
+            ),
+            encoding="utf-8",
+        )
+        (global_dir / "obis_species.json").write_text(
+            json.dumps(
+                {
+                    "synced_at_utc": "2026-11-11T03:00:00Z",
+                    "items": [
+                        {
+                            "id": "90000000-0000-4000-8000-000000000001",
+                            "obis_id": "obis-global-1",
+                            "scientific_name": "Thunnus albacares",
+                            "common_name": "Yellowfin tuna (Madidihang)",
+                            "taxon_rank": "Species",
+                            "family": "Scombridae",
+                            "lat": -5.5,
+                            "lon": 110.5,
+                            "wpp_code": "712",
+                            "depth_m": 45.0,
+                            "event_date_utc": "2026-10-12T06:00:00Z",
+                            "individual_count": 25,
+                            "habitat_note": "Java Sea pelagic observation",
+                            "dataset_name": "OBIS Live Global",
+                            "attribution": "OBIS v3",
+                            "license": "CC-BY-4.0",
+                        }
+                    ],
+                }
+            ),
+            encoding="utf-8",
+        )
+        self.species_service_mod._GLOBAL_CACHE_ITEMS = None
+        self.species_service_mod._GLOBAL_CACHE_MTIME = None
+        with (
+            patch.object(self.species_service_mod, "get_settings", return_value=self.settings),
+            patch.object(self.point_query_mod, "get_settings", return_value=self.settings),
+            patch.object(self.sources_service_mod, "get_settings", return_value=self.settings),
+            TestClient(self.app) as client,
+        ):
+            r_sp = client.get("/v1/species")
+            self.assertEqual(r_sp.status_code, 200)
+            sp_list = SpeciesOccurrenceListResponse.model_validate(r_sp.json())
+            self.assertEqual(sp_list.total, 1)
+            self.assertEqual(sp_list.items[0].obis_id, "obis-global-1")
+
+            r_pt = client.get("/v1/map/point?lat=-5.5&lon=110.5&date=latest")
+            self.assertEqual(r_pt.status_code, 200)
+            pt = MapPointInspection.model_validate(r_pt.json())
+            self.assertIsNotNone(pt.sst_c)
+            self.assertFalse(pt.is_cached_fallback)
+
+            r_src = client.get("/v1/sources")
+            self.assertEqual(r_src.status_code, 200)
+            src_data = DataSourcesResponse.model_validate(r_src.json())
+            by_key = {s.source_key: s for s in src_data.sources}
+            self.assertIsNotNone(by_key["noaa_erddap"].latest_data_timestamp_utc)
+            self.assertIsNotNone(by_key["obis"].latest_data_timestamp_utc)
 
 
 if __name__ == "__main__":

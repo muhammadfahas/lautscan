@@ -847,28 +847,29 @@ def render_potential_tile_bytes(
         & (q_lon >= INDONESIA_LON_MIN)
         & (q_lon <= INDONESIA_LON_MAX)
     )
-    valid = in_indonesia & np.isfinite(sst_vals) & np.isfinite(chl_vals) & (chl_vals > 0.0)
+    valid = in_indonesia & np.isfinite(sst_vals)
     rgba = np.zeros((TILE_SIZE, TILE_SIZE, 4), dtype=np.uint8)
     if not np.any(valid):
         return _encode_rgba_image(rgba, fmt_lower), True
 
     sst_v = sst_vals[valid]
-    chl_v = chl_vals[valid]
-    sst_score = np.exp(-(((sst_v - 28.5) / 2.2) ** 2))
-    chl_log_min = math.log10(0.18)
-    chl_log_max = math.log10(1.8)
+    chl_raw = chl_vals[valid]
+    chl_v = np.where(np.isfinite(chl_raw) & (chl_raw > 0.0), chl_raw, 0.24)
+    sst_score = np.exp(-(((sst_v - 28.5) / 3.0) ** 2))
+    chl_log_min = math.log10(0.08)
+    chl_log_max = math.log10(1.6)
     chl_score = np.clip(
         (np.log10(np.maximum(chl_v, 0.01)) - chl_log_min) / (chl_log_max - chl_log_min),
         0.0,
         1.0,
     )
-    score = 0.45 * sst_score + 0.55 * chl_score
+    score = 0.42 * sst_score + 0.58 * chl_score
 
-    hotspot = score >= 0.48
+    hotspot = score >= 0.42
     if not np.any(hotspot):
         return _encode_rgba_image(rgba, fmt_lower), True
 
-    t = np.clip((score[hotspot] - 0.48) / 0.52, 0.0, 1.0)
+    t = np.clip((score[hotspot] - 0.42) / 0.58, 0.0, 1.0)
     # Sea-teal (#14B8A6) -> Emerald (#22C55E) -> Warm Gold (#F59E0B)
     r_lo = 20.0 + (34.0 - 20.0) * (t / 0.55)
     r_hi = 34.0 + (245.0 - 34.0) * ((t - 0.55) / 0.45)

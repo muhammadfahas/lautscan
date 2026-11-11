@@ -43,6 +43,9 @@ _INDONESIAN_COMMON_NAMES: Final[dict[str, str]] = {
     "sardinella lemuru": "Bali sardinella (Lemuru)",
     "coryphaena hippurus": "Mahi-mahi (Lemadang)",
     "xiphias gladius": "Swordfish (Ikan todak)",
+    "scomberomorus commerson": "Spanish mackerel (Tenggiri)",
+    "penaeus monodon": "Giant tiger prawn (Udang windu)",
+    "cheilinus undulatus": "Humphead wrasse (Napoleon)",
 }
 
 WppLocator = Callable[[float, float], str | None]

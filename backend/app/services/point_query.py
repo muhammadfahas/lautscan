@@ -15,7 +15,7 @@ from app.core.config import get_settings
 from app.db_seed import load_wpp_seed_records
 from app.etl.base import CATALOG
 from app.etl.fixtures import ensure_sample_netcdf
-from app.etl.tiler import sample_point_from_netcdf
+from app.etl.tiler import _load_layer_grid, sample_point_from_netcdf
 from app.schemas.common import MapPointInspection
 
 try:
@@ -236,6 +236,21 @@ async def _resolve_layer_dataset(
                 )
         except Exception as exc:
             logger.debug("DB raster dataset lookup failed for %s: %s", layer, exc)
+
+    if requested_date == "latest":
+        global_nc = tile_cache_dir / "global" / f"noaa_{layer}.nc"
+        if global_nc.is_file():
+            grid_meta = await asyncio.to_thread(_load_layer_grid, global_nc, layer)
+            parsed_dt = _parse_iso_utc(grid_meta.acquired_at_utc) or datetime.now(UTC)
+            resolved_d = parsed_dt.date().isoformat()
+            return (
+                global_nc,
+                resolved_d,
+                parsed_dt,
+                "noaa_erddap",
+                None,
+                False,
+            )
 
     fallback_date = (
         datetime.now(UTC).date().isoformat()

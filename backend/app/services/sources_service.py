@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any, Literal
 
 from app.core.config import get_settings
@@ -150,6 +152,30 @@ async def list_data_sources(
                     latest_data_ts["obis"] = obis_ts
         except Exception as exc:
             logger.debug("DB source telemetry unavailable, reporting catalog defaults: %s", exc)
+
+    # Also inspect local global cache manifests (used when Postgres is unavailable locally)
+    try:
+        global_dir = Path(str(getattr(settings, "TILE_CACHE_DIR", "") or "")) / "global"
+        obis_manifest = global_dir / "obis_species.json"
+        if obis_manifest.is_file() and "obis" not in latest_data_ts:
+            obis_raw = json.loads(obis_manifest.read_text(encoding="utf-8"))
+            ts_str = str(obis_raw.get("synced_at_utc") or "").replace("Z", "+00:00")
+            if ts_str:
+                parsed_ts = datetime.fromisoformat(ts_str).astimezone(UTC)
+                latest_data_ts["obis"] = parsed_ts
+        noaa_manifest = global_dir / "noaa_manifest.json"
+        if noaa_manifest.is_file() and "noaa_erddap" not in latest_data_ts:
+            noaa_raw = json.loads(noaa_manifest.read_text(encoding="utf-8"))
+            sst_ts = (
+                noaa_raw.get("layers", {}).get("sst", {}).get("acquired_at_utc")
+                or noaa_raw.get("synced_at_utc")
+                or ""
+            )
+            if sst_ts:
+                parsed_sst = datetime.fromisoformat(str(sst_ts).replace("Z", "+00:00"))
+                latest_data_ts["noaa_erddap"] = parsed_sst.astimezone(UTC)
+    except Exception:
+        pass
 
     ordered_keys = [k for k in SOURCE_ORDER if k in CATALOG] + [
         k for k in CATALOG if k not in SOURCE_ORDER
