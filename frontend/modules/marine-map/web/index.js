@@ -96,8 +96,20 @@ const STYLE = `
 .lautscan-marine-map .overlay-chlorophyll {
   z-index: 3;
 }
+.lautscan-marine-map .overlay-potential {
+  z-index: 4;
+}
 .lautscan-marine-map .overlay-currents {
   z-index: 4;
+}
+.lautscan-marine-map .currents-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 5;
+  transition: opacity 200ms ease;
 }
 .lautscan-marine-map .tile {
   position: absolute;
@@ -125,6 +137,9 @@ const STYLE = `
 .lautscan-marine-map .tile.plain-chlorophyll {
   background: rgba(34, 197, 94, 0.20);
 }
+.lautscan-marine-map .tile.plain-potential {
+  background: rgba(20, 184, 166, 0.24);
+}
 .lautscan-marine-map .tile.plain-currents {
   background: rgba(59, 130, 246, 0.20);
 }
@@ -134,7 +149,7 @@ const STYLE = `
   width: 100%;
   height: 100%;
   pointer-events: none;
-  z-index: 5;
+  z-index: 6;
 }
 .lautscan-marine-map .wpp-path {
   fill: rgba(59, 130, 246, 0.06);
@@ -156,7 +171,7 @@ const STYLE = `
   position: absolute;
   inset: 0;
   pointer-events: none;
-  z-index: 6;
+  z-index: 8;
 }
 .lautscan-marine-map .wpp-chip {
   position: absolute;
@@ -240,7 +255,7 @@ const STYLE = `
   position: absolute;
   inset: 0;
   pointer-events: none;
-  z-index: 8;
+  z-index: 9;
 }
 .lautscan-marine-map .inspect-pin {
   position: absolute;
@@ -253,7 +268,7 @@ const STYLE = `
   position: absolute;
   left: 12px;
   bottom: 12px;
-  z-index: 9;
+  z-index: 10;
   display: flex;
   flex-direction: column;
   border-radius: 10px;
@@ -295,7 +310,7 @@ const STYLE = `
   position: absolute;
   right: 8px;
   bottom: 8px;
-  z-index: 9;
+  z-index: 10;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -654,9 +669,17 @@ export class MarineMap {
     this.chlorophyllLayer.className = 'tile-layer overlay-layer overlay-chlorophyll';
     this.chlorophyllLayer.setAttribute('aria-hidden', 'true');
 
+    this.potentialLayer = doc.createElement('div');
+    this.potentialLayer.className = 'tile-layer overlay-layer overlay-potential';
+    this.potentialLayer.setAttribute('aria-hidden', 'true');
+
     this.currentsLayer = doc.createElement('div');
     this.currentsLayer.className = 'tile-layer overlay-layer overlay-currents';
     this.currentsLayer.setAttribute('aria-hidden', 'true');
+
+    this.currentsCanvas = doc.createElement('canvas');
+    this.currentsCanvas.className = 'currents-canvas';
+    this.currentsCanvas.setAttribute('aria-hidden', 'true');
 
     this.wppSvg = doc.createElementNS('http://www.w3.org/2000/svg', 'svg');
     this.wppSvg.setAttribute('class', 'wpp-svg');
@@ -704,7 +727,9 @@ export class MarineMap {
       this.baseLayer,
       this.sstLayer,
       this.chlorophyllLayer,
+      this.potentialLayer,
       this.currentsLayer,
+      this.currentsCanvas,
       this.wppSvg,
       this.wppLabelsLayer,
       this.markersLayer,
@@ -723,10 +748,13 @@ export class MarineMap {
     this.zoom = DEFAULT_ZOOM;
     this.baseStyle = 'daylight';
     this.layers = {
-      sst: { visible: false, opacity: 0.72, container: this.sstLayer, tiles: new Map() },
+      sst: { visible: false, opacity: 0.62, container: this.sstLayer, tiles: new Map() },
       chlorophyll: { visible: false, opacity: 0.65, container: this.chlorophyllLayer, tiles: new Map() },
-      currents: { visible: false, opacity: 0.65, container: this.currentsLayer, tiles: new Map() },
+      potential: { visible: false, opacity: 0.88, container: this.potentialLayer, tiles: new Map() },
+      currents: { visible: false, opacity: 0.88, container: this.currentsLayer, tiles: new Map() },
     };
+    this.currentsRasterVisible = false;
+    this.showSpeciesPins = false;
     this.baseTiles = new Map();
     this.selectedDate = 'latest';
     this.tileBaseUrl = '';
@@ -740,6 +768,14 @@ export class MarineMap {
     this.resting = null;
     this.tileFetchTimer = null;
     this.skipTileFetch = false;
+    this.currentsVectors = [];
+    this.currentsFetchKey = '';
+    this.currentsFetchTimer = null;
+    this.currentsAbort = null;
+    this.currentsRaf = null;
+    this.currentsPhase = 0;
+    this.currentsLastFrameTs = 0;
+    this._renderedWppScreenPts = [];
 
     if (typeof ResizeObserver === 'function') {
       this.resize = new ResizeObserver(() => {
@@ -796,12 +832,16 @@ export class MarineMap {
       this.map.classList.toggle('theme-daylight', style !== 'night');
     }
 
+    if (changed('potentialVisible')) this.layers.potential.visible = parseBool(safeProps.potentialVisible, false);
+    if (changed('potentialOpacity')) this.layers.potential.opacity = clamp(parseNum(safeProps.potentialOpacity, 0.88), 0, 1);
     if (changed('sstVisible')) this.layers.sst.visible = parseBool(safeProps.sstVisible, false);
-    if (changed('sstOpacity')) this.layers.sst.opacity = clamp(parseNum(safeProps.sstOpacity, 0.72), 0, 1);
+    if (changed('sstOpacity')) this.layers.sst.opacity = clamp(parseNum(safeProps.sstOpacity, 0.62), 0, 1);
     if (changed('chlorophyllVisible')) this.layers.chlorophyll.visible = parseBool(safeProps.chlorophyllVisible, false);
     if (changed('chlorophyllOpacity')) this.layers.chlorophyll.opacity = clamp(parseNum(safeProps.chlorophyllOpacity, 0.65), 0, 1);
     if (changed('currentsVisible')) this.layers.currents.visible = parseBool(safeProps.currentsVisible, false);
-    if (changed('currentsOpacity')) this.layers.currents.opacity = clamp(parseNum(safeProps.currentsOpacity, 0.65), 0, 1);
+    if (changed('currentsOpacity')) this.layers.currents.opacity = clamp(parseNum(safeProps.currentsOpacity, 0.88), 0, 1);
+    if (changed('currentsRasterVisible')) this.currentsRasterVisible = parseBool(safeProps.currentsRasterVisible, false);
+    if (changed('showSpeciesPins')) this.showSpeciesPins = parseBool(safeProps.showSpeciesPins, false);
 
     const dateChanged = changed('selectedDate');
     const baseUrlChanged = changed('tileBaseUrl');
@@ -809,6 +849,8 @@ export class MarineMap {
     if (baseUrlChanged) this.tileBaseUrl = normalizeBaseUrl(safeProps.tileBaseUrl);
     if (!first && (dateChanged || baseUrlChanged)) {
       this.clearOverlayTiles();
+      this.currentsFetchKey = '';
+      this.currentsVectors = [];
     }
 
     if (changed('wppGeoJsonCollection')) {
@@ -865,12 +907,54 @@ export class MarineMap {
   }
 
   syncLayerStyles() {
-    for (const layerState of Object.values(this.layers)) {
-      layerState.container.style.display = layerState.visible ? 'block' : 'none';
+    for (const [layerName, layerState] of Object.entries(this.layers)) {
+      const showRaster = layerName === 'currents' ? layerState.visible && this.currentsRasterVisible : layerState.visible;
+      layerState.container.style.display = showRaster ? 'block' : 'none';
       layerState.container.style.opacity = String(layerState.opacity);
     }
+    this.currentsCanvas.style.display = this.layers.currents.visible ? 'block' : 'none';
+    this.currentsCanvas.style.opacity = String(this.layers.currents.opacity);
+    this.markersLayer.style.display = this.showSpeciesPins ? 'block' : 'none';
     this.zoomInBtn.disabled = this.zoom >= this.maxZoom;
     this.zoomOutBtn.disabled = this.zoom <= MIN_ZOOM;
+    this.syncCurrentsAnimation();
+  }
+
+  prefersReducedMotion() {
+    return typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches === true;
+  }
+
+  syncCurrentsAnimation() {
+    const active = this.layers.currents.visible && this.layers.currents.opacity > 0 && !this.plain && !this.prefersReducedMotion();
+    if (!active) {
+      if (this.currentsRaf !== null) {
+        cancelAnimationFrame(this.currentsRaf);
+        this.currentsRaf = null;
+      }
+      return;
+    }
+    if (this.currentsRaf !== null || typeof requestAnimationFrame !== 'function') return;
+    this.currentsLastFrameTs = 0;
+    const stepFrame = (ts) => {
+      if (!this.layers.currents.visible || !this.map.isConnected) {
+        this.currentsRaf = null;
+        return;
+      }
+      if (!this.currentsLastFrameTs || ts - this.currentsLastFrameTs >= 42) {
+        const dt = this.currentsLastFrameTs ? Math.min(0.1, (ts - this.currentsLastFrameTs) / 1000) : 0.04;
+        this.currentsPhase = (this.currentsPhase + dt * 0.75) % 1;
+        this.currentsLastFrameTs = ts;
+        const { w, h } = this.size;
+        if (w && h && this.currentsVectors.length > 0) {
+          const z = Math.min(this.maxZoom, Math.max(0, Math.round(this.zoom)));
+          const k = 2 ** (this.zoom - z);
+          const [cx, cy] = project(this.center[0], this.center[1], z);
+          this.renderCurrentsArrows(w, h, z, k, cx - w / 2 / k, cy - h / 2 / k, 2 ** z);
+        }
+      }
+      this.currentsRaf = requestAnimationFrame(stepFrame);
+    };
+    this.currentsRaf = requestAnimationFrame(stepFrame);
   }
 
   cameraBbox() {
@@ -899,10 +983,12 @@ export class MarineMap {
       camera: this.cameraBbox(),
       baseStyle: this.baseStyle,
       layers: {
+        potential: { visible: this.layers.potential.visible, opacity: this.layers.potential.opacity },
         sst: { visible: this.layers.sst.visible, opacity: this.layers.sst.opacity },
         chlorophyll: { visible: this.layers.chlorophyll.visible, opacity: this.layers.chlorophyll.opacity },
         currents: { visible: this.layers.currents.visible, opacity: this.layers.currents.opacity },
       },
+      showSpeciesPins: this.showSpeciesPins,
       selectedDate: this.selectedDate,
       selectedWppCode: this.selectedWppCode,
       selectedMarkerId: this.selectedMarkerId,
@@ -1008,6 +1094,7 @@ export class MarineMap {
     this.drawGraticule(w, h, z, k, left, top);
     this.drawBaseTiles(w, h, z, k, left, top, n);
     this.drawOverlayTiles(w, h, z, k, left, top, n);
+    this.drawCurrentsVectors(w, h, z, k, left, top, n);
     this.drawWppGeoJson(w, h, z, k, left, top, n);
     this.drawMarkers(w, h, z, k, left, top, n);
     this.drawPin(z, k, left, top);
@@ -1223,7 +1310,8 @@ export class MarineMap {
 
   drawOverlayTiles(w, h, z, k, left, top, n) {
     for (const [layerName, layerState] of Object.entries(this.layers)) {
-      if (!layerState.visible || layerState.opacity <= 0) {
+      const renderRaster = layerName === 'currents' ? layerState.visible && this.currentsRasterVisible : layerState.visible;
+      if (!renderRaster || layerState.opacity <= 0) {
         if (layerState.tiles.size > 0) {
           for (const node of layerState.tiles.values()) node.remove();
           layerState.tiles.clear();
@@ -1247,6 +1335,173 @@ export class MarineMap {
         urlFor: (tz, wx, ty) => this.overlayTileUrl(layerName, tz, wx, ty),
         filterFn: (tz, wx, ty) => intersectsIndonesia(tz, wx, ty),
       });
+    }
+  }
+
+  currentsGridUrl(minLon, minLat, maxLon, maxLat) {
+    const safeDate = encodeURIComponent(this.selectedDate || 'latest');
+    const bbox = `${round(minLon, 3)},${round(minLat, 3)},${round(maxLon, 3)},${round(maxLat, 3)}`;
+    const path = `/v1/currents/grid?bbox=${encodeURIComponent(bbox)}&date=${safeDate}&max_vectors=144`;
+    return this.tileBaseUrl ? `${this.tileBaseUrl}${path}` : path;
+  }
+
+  drawCurrentsVectors(w, h, z, k, left, top, n) {
+    const curState = this.layers.currents;
+    const canvas = this.currentsCanvas;
+    if (!curState.visible || curState.opacity <= 0) {
+      const ctx = canvas.getContext?.('2d');
+      if (ctx && canvas.width > 0 && canvas.height > 0) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
+      return;
+    }
+
+    const cam = this.cameraBbox();
+    const minLon = Math.max(INDONESIA_BOUNDS.minLon, cam.minLon);
+    const maxLon = Math.min(INDONESIA_BOUNDS.maxLon, cam.maxLon);
+    const minLat = Math.max(INDONESIA_BOUNDS.minLat, cam.minLat);
+    const maxLat = Math.min(INDONESIA_BOUNDS.maxLat, cam.maxLat);
+
+    if (minLon >= maxLon || minLat >= maxLat) {
+      this.currentsVectors = [];
+      this.renderCurrentsArrows(w, h, z, k, left, top, n);
+      return;
+    }
+
+    if (this.plain) {
+      const synthetic = [];
+      for (let lat = Math.ceil(minLat); lat <= maxLat; lat += 2) {
+        for (let lon = Math.ceil(minLon); lon <= maxLon; lon += 2) {
+          const speed = 0.35 + 0.35 * Math.abs(Math.sin(lat * 0.4 + lon * 0.15));
+          const dir = ((lat * 19 + lon * 13) % 360 + 360) % 360;
+          synthetic.push({ lat, lon, speed_ms: speed, speed_knots: speed * 1.94384, direction_deg: dir });
+        }
+      }
+      this.currentsVectors = synthetic;
+      this.renderCurrentsArrows(w, h, z, k, left, top, n);
+      return;
+    }
+
+    const fetchKey = `${this.selectedDate}:${this.tileBaseUrl}:${round(minLon, 1)},${round(minLat, 1)},${round(maxLon, 1)},${round(maxLat, 1)},z${Math.round(this.zoom)}`;
+    if (fetchKey !== this.currentsFetchKey && typeof fetch === 'function' && !this.skipTileFetch) {
+      this.currentsFetchKey = fetchKey;
+      clearTimeout(this.currentsFetchTimer);
+      const delay = this.currentsVectors.length === 0 ? 0 : 140;
+      this.currentsFetchTimer = setTimeout(async () => {
+        this.currentsAbort?.abort?.();
+        const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
+        this.currentsAbort = ctrl;
+        try {
+          const resp = await fetch(this.currentsGridUrl(minLon, minLat, maxLon, maxLat), ctrl ? { signal: ctrl.signal } : undefined);
+          if (!resp.ok) return;
+          const data = await resp.json();
+          if (this.currentsFetchKey !== fetchKey || !Array.isArray(data?.vectors)) return;
+          this.currentsVectors = data.vectors;
+          const { w: cw, h: ch } = this.size;
+          if (cw && ch) {
+            const cz = Math.min(this.maxZoom, Math.max(0, Math.round(this.zoom)));
+            const ck = 2 ** (this.zoom - cz);
+            const [cx, cy] = project(this.center[0], this.center[1], cz);
+            this.renderCurrentsArrows(cw, ch, cz, ck, cx - cw / 2 / ck, cy - ch / 2 / ck, 2 ** cz);
+          }
+        } catch {
+          // Ignore aborted/transient network errors during rapid pan/zoom
+        }
+      }, delay);
+    }
+
+    this.renderCurrentsArrows(w, h, z, k, left, top, n);
+  }
+
+  renderCurrentsArrows(w, h, z, k, left, top, n) {
+    const canvas = this.currentsCanvas;
+    const dpr = typeof window !== 'undefined' && window.devicePixelRatio ? Math.min(window.devicePixelRatio, 2) : 1;
+    const pw = Math.max(1, Math.round(w * dpr));
+    const ph = Math.max(1, Math.round(h * dpr));
+    if (canvas.width !== pw || canvas.height !== ph) {
+      canvas.width = pw;
+      canvas.height = ph;
+    }
+    const ctx = canvas.getContext?.('2d');
+    if (!ctx) return;
+
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+    if (!this.layers.currents.visible || this.currentsVectors.length === 0) return;
+
+    const night = this.baseStyle === 'night';
+    const haloColor = night ? 'rgba(10, 14, 39, 0.78)' : 'rgba(255, 255, 255, 0.84)';
+    const animatePulse = !this.plain && !this.prefersReducedMotion();
+
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    for (const vec of this.currentsVectors) {
+      const [sx, sy] = this.projectPointToViewport(vec.lat, vec.lon, z, k, left, top, n);
+      if (sx < -28 || sx > w + 28 || sy < -28 || sy > h + 28) continue;
+
+      const rad = ((Number(vec.direction_deg) || 0) * Math.PI) / 180;
+      const dx = Math.sin(rad);
+      const dy = -Math.cos(rad);
+      const speedKnots = Number(vec.speed_knots ?? (Number(vec.speed_ms) || 0) * 1.94384);
+      const len = clamp(14 + speedKnots * 12, 14, 30);
+      const half = len * 0.5;
+      const x1 = sx - dx * half;
+      const y1 = sy - dy * half;
+      const x2 = sx + dx * half;
+      const y2 = sy + dy * half;
+
+      let strokeColor = night ? '#38BDF8' : '#0284C7';
+      if (speedKnots >= 1.2) {
+        strokeColor = night ? '#FBBF24' : '#D97706';
+      } else if (speedKnots >= 0.5) {
+        strokeColor = night ? '#2DD4BF' : '#0D9488';
+      }
+
+      const headLen = 6.5;
+      const px = -dy;
+      const py = dx;
+      const bx = x2 - dx * headLen;
+      const by = y2 - dy * headLen;
+      const hx1 = bx + px * 4.2;
+      const hy1 = by + py * 4.2;
+      const hx2 = bx - px * 4.2;
+      const hy2 = by - py * 4.2;
+
+      ctx.strokeStyle = haloColor;
+      ctx.lineWidth = 4.2;
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.moveTo(hx1, hy1);
+      ctx.lineTo(x2, y2);
+      ctx.lineTo(hx2, hy2);
+      ctx.stroke();
+
+      ctx.strokeStyle = strokeColor;
+      ctx.lineWidth = 2.1;
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.moveTo(hx1, hy1);
+      ctx.lineTo(x2, y2);
+      ctx.lineTo(hx2, hy2);
+      ctx.stroke();
+
+      if (animatePulse) {
+        const offset = Math.abs(Math.sin(vec.lat * 12.9898 + vec.lon * 78.233)) % 1;
+        const t = (this.currentsPhase + offset) % 1;
+        const dotX = x1 + (x2 - x1) * t;
+        const dotY = y1 + (y2 - y1) * t;
+        ctx.fillStyle = haloColor;
+        ctx.beginPath();
+        ctx.arc(dotX, dotY, 2.7, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = strokeColor;
+        ctx.beginPath();
+        ctx.arc(dotX, dotY, 1.7, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
   }
 
@@ -1284,6 +1539,7 @@ export class MarineMap {
       return d ? `${d}Z` : '';
     };
 
+    const chipCoords = [];
     for (const feature of this.wppFeatures) {
       let d = '';
       if (feature.geometry.type === 'Polygon') {
@@ -1310,6 +1566,7 @@ export class MarineMap {
       if (feature.code) {
         const [cx, cy] = this.projectPointToViewport(feature.centroidLat, feature.centroidLon, z, k, left, top, n);
         if (cx >= -60 && cx <= w + 60 && cy >= -40 && cy <= h + 40) {
+          chipCoords.push([cx, cy]);
           const partId = `wpp:${feature.code}`;
           let btn = oldParts.get(partId);
           if (!btn) {
@@ -1336,6 +1593,7 @@ export class MarineMap {
       }
     }
 
+    this._renderedWppScreenPts = chipCoords;
     this.parts = nextParts;
     svg.replaceChildren(...pathNodes);
     this.wppLabelsLayer.replaceChildren(...chipNodes);
@@ -1348,11 +1606,24 @@ export class MarineMap {
       if (id.startsWith('wpp:')) nextParts.set(id, el);
     }
 
+    if (!this.showSpeciesPins) {
+      this.parts = nextParts;
+      this.markersLayer.replaceChildren();
+      return;
+    }
+
+    const wppPts = this._renderedWppScreenPts ?? [];
     const rendered = [];
     for (const marker of this.markers) {
       if (rendered.length >= MAX_RENDERED_MARKERS) break;
-      const [sx, sy] = this.projectPointToViewport(marker.lat, marker.lon, z, k, left, top, n);
+      let [sx, sy] = this.projectPointToViewport(marker.lat, marker.lon, z, k, left, top, n);
       if (sx < -44 || sx > w + 44 || sy < -44 || sy > h + 44) continue;
+      for (const [wx, wy] of wppPts) {
+        if (Math.abs(sx - wx) < 34 && Math.abs(sy - wy) < 20) {
+          sy += 24;
+          break;
+        }
+      }
 
       let btn = oldParts.get(marker.id);
       const selected = marker.id === this.selectedMarkerId;
@@ -1582,6 +1853,12 @@ export class MarineMap {
   destroy() {
     clearTimeout(this.resting);
     clearTimeout(this.tileFetchTimer);
+    clearTimeout(this.currentsFetchTimer);
+    if (this.currentsRaf !== null) {
+      cancelAnimationFrame(this.currentsRaf);
+      this.currentsRaf = null;
+    }
+    this.currentsAbort?.abort?.();
     this.resize?.disconnect?.();
     this.implementation?.gone?.(this.view);
     this.map.remove();

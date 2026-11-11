@@ -31,6 +31,8 @@ tags:
     description: Marine biodiversity and fish occurrence observations (OBIS)
   - name: sources
     description: Data provider freshness, sync logs, attribution, and license compliance
+  - name: currents
+    description: Decimated ocean current velocity vector fields for directional map arrows
 
 paths:
   /v1/health:
@@ -100,7 +102,8 @@ paths:
       description: >
         Serves cached or on-demand rendered 256x256 XYZ Web Mercator (EPSG:3857)
         raster tiles using colorblind-safe perceptually uniform colormaps:
-        `plasma` for SST, `viridis` for Chlorophyll-a, and `cividis` for Ocean Current speed.
+        `plasma` for SST, `viridis` for Chlorophyll-a, `cividis` for Ocean Current speed,
+        and a sea-teal/emerald/gold composite hotspot overlay for `potential` fishing zones.
         Out-of-bounds, land, or cloud-masked pixels are rendered transparent (alpha = 0).
       parameters:
         - name: layer
@@ -109,7 +112,7 @@ paths:
           description: Oceanographic raster layer key.
           schema:
             type: string
-            enum: ["sst", "chlorophyll", "currents"]
+            enum: ["sst", "chlorophyll", "currents", "potential"]
         - name: date
           in: path
           required: true
@@ -241,6 +244,59 @@ paths:
                 $ref: "#/components/schemas/MapPointInspection"
         "422":
           description: Coordinate or date validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /v1/currents/grid:
+    get:
+      tags: [currents]
+      operationId: getCurrentsGrid
+      summary: Query decimated ocean current velocity vectors for map arrows
+      description: >
+        Returns a decimated grid of ocean current velocity vectors (`u_ms`, `v_ms`,
+        speed in m/s and knots, and compass direction in degrees) for rendering
+        directional flow arrows on the map canvas.
+      parameters:
+        - name: bbox
+          in: query
+          required: false
+          description: Bounding box `min_lon,min_lat,max_lon,max_lat` in EPSG:4326.
+          schema:
+            type: string
+        - name: date
+          in: query
+          required: false
+          description: Target date in YYYY-MM-DD (UTC) or `latest`.
+          schema:
+            type: string
+            pattern: '^(\d{4}-\d{2}-\d{2}|latest)$'
+            default: "latest"
+        - name: max_vectors
+          in: query
+          required: false
+          description: Maximum number of decimated velocity vectors returned.
+          schema:
+            type: integer
+            minimum: 16
+            maximum: 320
+            default: 144
+      responses:
+        "200":
+          description: Decimated ocean current vector grid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CurrentGridResponse"
+        "400":
+          description: Malformed bounding box coordinates
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Query parameter validation error
           content:
             application/json:
               schema:
@@ -764,5 +820,75 @@ components:
         detail:
           type: ["string", "null"]
         timestamp_utc:
+          type: string
+          format: date-time
+
+    CurrentVectorCell:
+      type: object
+      additionalProperties: false
+      required:
+        - lat
+        - lon
+        - u_ms
+        - v_ms
+        - speed_ms
+        - speed_knots
+        - direction_deg
+      properties:
+        lat:
+          type: number
+          format: double
+          minimum: -90
+          maximum: 90
+        lon:
+          type: number
+          format: double
+          minimum: -180
+          maximum: 180
+        u_ms:
+          type: number
+          format: double
+        v_ms:
+          type: number
+          format: double
+        speed_ms:
+          type: number
+          format: double
+          minimum: 0
+        speed_knots:
+          type: number
+          format: double
+          minimum: 0
+        direction_deg:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 360
+
+    CurrentGridResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - requested_date
+        - resolved_date
+        - vectors
+        - total
+        - primary_source
+        - acquired_at_utc
+      properties:
+        requested_date:
+          type: string
+        resolved_date:
+          type: string
+        vectors:
+          type: array
+          items:
+            $ref: "#/components/schemas/CurrentVectorCell"
+        total:
+          type: integer
+          minimum: 0
+        primary_source:
+          type: string
+        acquired_at_utc:
           type: string
           format: date-time

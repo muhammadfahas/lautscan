@@ -94,38 +94,38 @@ component LautScanApp
             polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"
           column gap=0
             text "LAUT SCAN" font-size=16 font-weight=700 letter-spacing="0.04em" color="var(--ink-primary)"
-            text "Know the Ocean. Find the Fish." font-size=12 color="var(--ink-muted)"
+            text "Peta Kondisi Laut Nusantara" font-size=12 color="var(--ink-muted)"
 
-        row gap=6 align-items="center" flex-wrap="wrap" role="navigation" aria-label="Primary Navigation"
-          link href=path("ocean_map") min-height=44 min-width=44 padding="8px 12px" border-radius=8 display="flex" align-items="center" gap=8 cursor="pointer" color="var(--ink-primary)" text-decoration="none" aria-label="Ocean Map" testId="nav-ocean-map"
+        row gap=6 align-items="center" flex-wrap="wrap" role="navigation" aria-label="Navigasi Utama"
+          link href=path("ocean_map") min-height=44 min-width=44 padding="8px 12px" border-radius=8 display="flex" align-items="center" gap=8 cursor="pointer" color="var(--ink-primary)" text-decoration="none" aria-label="Peta Laut" testId="nav-ocean-map"
             svg width=18 height=18 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width=2 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
               polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"
               line x1=9 y1=3 x2=9 y2=18
               line x1=15 y1=6 x2=15 y2=21
-            text "Ocean Map" font-size=14 font-weight=600
+            text "Peta Laut" font-size=14 font-weight=600
 
-          link href=path("species") min-height=44 min-width=44 padding="8px 12px" border-radius=8 display="flex" align-items="center" gap=8 cursor="pointer" color="var(--ink-primary)" text-decoration="none" aria-label="Species Explorer" testId="nav-species"
+          link href=path("species") min-height=44 min-width=44 padding="8px 12px" border-radius=8 display="flex" align-items="center" gap=8 cursor="pointer" color="var(--ink-primary)" text-decoration="none" aria-label="Jenis Ikan" testId="nav-species"
             svg width=18 height=18 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width=2 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
               path d="M6.5 12c.94-3.46 4.94-6 8.5-6 3.56 0 6.06 2.54 7 6-.94 3.46-3.44 6-7 6-3.56 0-7.56-2.54-8.5-6Z"
               path d="M18 12v.5"
               path d="M16 17.93a9.77 9.77 0 0 1 0-11.86"
               path d="M7 10.67C7 8 5.58 5.97 2.73 5.5c-1 1.5-1 5 .23 6.5-1.24 1.5-1.24 5-.23 6.5C5.58 18.03 7 16 7 13.33"
-            text "Species" font-size=14 font-weight=600
+            text "Jenis Ikan" font-size=14 font-weight=600
 
-          link href=path("trends") min-height=44 min-width=44 padding="8px 12px" border-radius=8 display="flex" align-items="center" gap=8 cursor="pointer" color="var(--ink-primary)" text-decoration="none" aria-label="Historical Trends" testId="nav-trends"
+          link href=path("trends") min-height=44 min-width=44 padding="8px 12px" border-radius=8 display="flex" align-items="center" gap=8 cursor="pointer" color="var(--ink-primary)" text-decoration="none" aria-label="Tren Bulanan" testId="nav-trends"
             svg width=18 height=18 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width=2 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
               polyline points="22 7 13.5 15.5 8.5 10.5 2 17"
               polyline points="16 7 22 7 22 13"
-            text "Trends" font-size=14 font-weight=600
+            text "Tren" font-size=14 font-weight=600
 
-          link href=path("sources") min-height=44 min-width=44 padding="8px 12px" border-radius=8 display="flex" align-items="center" gap=8 cursor="pointer" color="var(--ink-primary)" text-decoration="none" aria-label="Overview and Sources" testId="nav-sources"
+          link href=path("sources") min-height=44 min-width=44 padding="8px 12px" border-radius=8 display="flex" align-items="center" gap=8 cursor="pointer" color="var(--ink-primary)" text-decoration="none" aria-label="Sumber Data" testId="nav-sources"
             svg width=18 height=18 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width=2 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
               ellipse cx=12 cy=5 rx=9 ry=3
               path d="M3 5v14a9 3 0 0 0 18 0V5"
               path d="M3 12a9 3 0 0 0 18 0"
-            text "Overview & Sources" font-size=14 font-weight=600
+            text "Sumber Data" font-size=14 font-weight=600
 
-          link href=path("settings") min-height=44 min-width=44 padding="8px 12px" border-radius=8 display="flex" align-items="center" gap=8 cursor="pointer" color="var(--ink-primary)" text-decoration="none" aria-label="Settings" testId="nav-settings"
+          link href=path("settings") min-height=44 min-width=44 padding="8px 12px" border-radius=8 display="flex" align-items="center" gap=8 cursor="pointer" color="var(--ink-primary)" text-decoration="none" aria-label="Pengaturan" testId="nav-settings"
             svg width=18 height=18 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width=2 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
               line x1=21 y1=4 x2=14 y2=4
               line x1=10 y1=4 x2=3 y2=4
@@ -136,7 +136,7 @@ component LautScanApp
               line x1=14 y1=2 x2=14 y2=6
               line x1=8 y1=10 x2=8 y2=14
               line x1=16 y1=18 x2=16 y2=22
-            text "Settings" font-size=14 font-weight=600
+            text "Pengaturan" font-size=14 font-weight=600
 
       column flex=1 min-height=0 width="100%"
         for e in stack(ocean_map)

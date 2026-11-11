@@ -736,24 +736,17 @@ def render_tile_bytes(
     return _encode_rgba_image(rgba, fmt_lower), is_empty
 
 
-def render_tile_to_cache(
-    dataset_path: Path | str,
+def _write_tile_atomically(
     cache_dir: Path | str,
     layer: str,
     acq_date: str,
     z: int,
     x: int,
     y: int,
-    fmt: str = "png",
+    fmt_lower: str,
+    tile_bytes: bytes,
+    is_empty: bool,
 ) -> tuple[Path, int, bool, str]:
-    """Render an RGBA tile and atomically persist it under ``cache_dir``.
-
-    Returns ``(tile_path, byte_size, is_empty, etag_sha256)``.
-    """
-    if not _SAFE_DATE_RE.fullmatch(acq_date):
-        raise ValueError(f"Invalid acquisition date segment: {acq_date!r}")
-    fmt_lower = _validate_fmt(fmt)
-    tile_bytes, is_empty = render_tile_bytes(dataset_path, layer, z, x, y, fmt=fmt_lower)
     etag_sha256 = hashlib.sha256(tile_bytes).hexdigest()
     byte_size = len(tile_bytes)
 
@@ -780,6 +773,207 @@ def render_tile_to_cache(
         raise
 
     return (target_path, byte_size, is_empty, etag_sha256)
+
+
+def render_tile_to_cache(
+    dataset_path: Path | str,
+    cache_dir: Path | str,
+    layer: str,
+    acq_date: str,
+    z: int,
+    x: int,
+    y: int,
+    fmt: str = "png",
+) -> tuple[Path, int, bool, str]:
+    """Render an RGBA tile and atomically persist it under ``cache_dir``.
+
+    Returns ``(tile_path, byte_size, is_empty, etag_sha256)``.
+    """
+    if not _SAFE_DATE_RE.fullmatch(acq_date):
+        raise ValueError(f"Invalid acquisition date segment: {acq_date!r}")
+    fmt_lower = _validate_fmt(fmt)
+    tile_bytes, is_empty = render_tile_bytes(dataset_path, layer, z, x, y, fmt=fmt_lower)
+    return _write_tile_atomically(
+        cache_dir, layer, acq_date, z, x, y, fmt_lower, tile_bytes, is_empty
+    )
+
+
+def render_potential_tile_bytes(
+    sst_dataset_path: Path | str,
+    chl_dataset_path: Path | str,
+    z: int,
+    x: int,
+    y: int,
+    fmt: str = "png",
+) -> tuple[bytes, bool]:
+    """Render composite fishing potential hotspot tile from SST + Chlorophyll grids."""
+    fmt_lower = _validate_fmt(fmt)
+    n = _validate_tile_xyz(z, x, y)
+    sst_path = Path(sst_dataset_path)
+    chl_path = Path(chl_dataset_path)
+    if not sst_path.exists():
+        raise FileNotFoundError(f"SST NetCDF dataset not found: {sst_path}")
+    if not chl_path.exists():
+        raise FileNotFoundError(f"Chlorophyll NetCDF dataset not found: {chl_path}")
+
+    min_lon, min_lat, max_lon, max_lat = tile_bounds_wgs84(z, x, y)
+    if (
+        max_lon < INDONESIA_LON_MIN
+        or min_lon > INDONESIA_LON_MAX
+        or max_lat < INDONESIA_LAT_MIN
+        or min_lat > INDONESIA_LAT_MAX
+    ):
+        empty_rgba = np.zeros((TILE_SIZE, TILE_SIZE, 4), dtype=np.uint8)
+        return _encode_rgba_image(empty_rgba, fmt_lower), True
+
+    sst_grid = _load_layer_grid(sst_path, "sst")
+    chl_grid = _load_layer_grid(chl_path, "chlorophyll")
+
+    px = np.arange(TILE_SIZE, dtype=np.float64) + 0.5
+    py = np.arange(TILE_SIZE, dtype=np.float64) + 0.5
+    x_norm = (x + px / TILE_SIZE) / n
+    y_norm = (y + py / TILE_SIZE) / n
+    tile_lon = (x_norm * 360.0) - 180.0
+    tile_lat = np.degrees(np.arctan(np.sinh(np.pi * (1.0 - 2.0 * y_norm))))
+
+    q_lat = tile_lat[:, np.newaxis]
+    q_lon = tile_lon[np.newaxis, :]
+    sst_vals = _bilinear_sample_grid(sst_grid.lat, sst_grid.lon, sst_grid.primary, q_lat, q_lon)
+    chl_vals = _bilinear_sample_grid(chl_grid.lat, chl_grid.lon, chl_grid.primary, q_lat, q_lon)
+
+    in_indonesia = (
+        (q_lat >= INDONESIA_LAT_MIN)
+        & (q_lat <= INDONESIA_LAT_MAX)
+        & (q_lon >= INDONESIA_LON_MIN)
+        & (q_lon <= INDONESIA_LON_MAX)
+    )
+    valid = in_indonesia & np.isfinite(sst_vals) & np.isfinite(chl_vals) & (chl_vals > 0.0)
+    rgba = np.zeros((TILE_SIZE, TILE_SIZE, 4), dtype=np.uint8)
+    if not np.any(valid):
+        return _encode_rgba_image(rgba, fmt_lower), True
+
+    sst_v = sst_vals[valid]
+    chl_v = chl_vals[valid]
+    sst_score = np.exp(-(((sst_v - 28.5) / 2.2) ** 2))
+    chl_log_min = math.log10(0.18)
+    chl_log_max = math.log10(1.8)
+    chl_score = np.clip(
+        (np.log10(np.maximum(chl_v, 0.01)) - chl_log_min) / (chl_log_max - chl_log_min),
+        0.0,
+        1.0,
+    )
+    score = 0.45 * sst_score + 0.55 * chl_score
+
+    hotspot = score >= 0.48
+    if not np.any(hotspot):
+        return _encode_rgba_image(rgba, fmt_lower), True
+
+    t = np.clip((score[hotspot] - 0.48) / 0.52, 0.0, 1.0)
+    # Sea-teal (#14B8A6) -> Emerald (#22C55E) -> Warm Gold (#F59E0B)
+    r_lo = 20.0 + (34.0 - 20.0) * (t / 0.55)
+    r_hi = 34.0 + (245.0 - 34.0) * ((t - 0.55) / 0.45)
+    g_lo = 184.0 + (197.0 - 184.0) * (t / 0.55)
+    g_hi = 197.0 + (158.0 - 197.0) * ((t - 0.55) / 0.45)
+    b_lo = 166.0 + (94.0 - 166.0) * (t / 0.55)
+    b_hi = 94.0 + (11.0 - 94.0) * ((t - 0.55) / 0.45)
+    r = np.where(t < 0.55, r_lo, r_hi)
+    g = np.where(t < 0.55, g_lo, g_hi)
+    b = np.where(t < 0.55, b_lo, b_hi)
+    a = 80.0 + 135.0 * (t ** 0.8)
+
+    hot_colors = np.stack([r, g, b, a], axis=-1).clip(0, 255).astype(np.uint8)
+    hotspot_rgba = np.zeros((sst_v.size, 4), dtype=np.uint8)
+    hotspot_rgba[hotspot] = hot_colors
+    rgba[valid] = hotspot_rgba
+
+    is_empty = not bool(np.any(rgba[:, :, 3] > 0))
+    return _encode_rgba_image(rgba, fmt_lower), is_empty
+
+
+def render_potential_tile_to_cache(
+    sst_dataset_path: Path | str,
+    chl_dataset_path: Path | str,
+    cache_dir: Path | str,
+    acq_date: str,
+    z: int,
+    x: int,
+    y: int,
+    fmt: str = "png",
+) -> tuple[Path, int, bool, str]:
+    """Render and atomically cache a composite fishing potential RGBA tile."""
+    if not _SAFE_DATE_RE.fullmatch(acq_date):
+        raise ValueError(f"Invalid acquisition date segment: {acq_date!r}")
+    fmt_lower = _validate_fmt(fmt)
+    tile_bytes, is_empty = render_potential_tile_bytes(
+        sst_dataset_path, chl_dataset_path, z, x, y, fmt=fmt_lower
+    )
+    return _write_tile_atomically(
+        cache_dir, "potential", acq_date, z, x, y, fmt_lower, tile_bytes, is_empty
+    )
+
+
+def sample_currents_grid(
+    dataset_path: Path | str,
+    min_lon: float,
+    min_lat: float,
+    max_lon: float,
+    max_lat: float,
+    max_vectors: int = 160,
+) -> dict[str, Any]:
+    """Return decimated ocean current velocity vectors within a WGS84 bounding box."""
+    path = Path(dataset_path)
+    if not path.exists():
+        raise FileNotFoundError(f"Currents NetCDF dataset not found: {path}")
+
+    grid = _load_layer_grid(path, "currents")
+    if grid.u_ms is None or grid.v_ms is None:
+        return {
+            "vectors": [],
+            "acquired_at_utc": grid.acquired_at_utc,
+            "primary_source": grid.primary_source,
+        }
+
+    lat_idx = np.where((grid.lat >= min_lat) & (grid.lat <= max_lat))[0]
+    lon_idx = np.where((grid.lon >= min_lon) & (grid.lon <= max_lon))[0]
+    if lat_idx.size == 0 or lon_idx.size == 0:
+        return {
+            "vectors": [],
+            "acquired_at_utc": grid.acquired_at_utc,
+            "primary_source": grid.primary_source,
+        }
+
+    target_axis = max(4, int(math.sqrt(max(1, max_vectors))))
+    lat_step = max(1, math.ceil(lat_idx.size / target_axis))
+    lon_step = max(1, math.ceil(lon_idx.size / target_axis))
+
+    vectors: list[dict[str, float]] = []
+    for iy in lat_idx[::lat_step]:
+        for ix in lon_idx[::lon_step]:
+            u_val = float(grid.u_ms[iy, ix])
+            v_val = float(grid.v_ms[iy, ix])
+            if not (math.isfinite(u_val) and math.isfinite(v_val)):
+                continue
+            speed = math.hypot(u_val, v_val)
+            if speed < 0.01:
+                continue
+            direction = (math.degrees(math.atan2(u_val, v_val)) + 360.0) % 360.0
+            vectors.append(
+                {
+                    "lat": round(float(grid.lat[iy]), 3),
+                    "lon": round(float(grid.lon[ix]), 3),
+                    "u_ms": round(u_val, 3),
+                    "v_ms": round(v_val, 3),
+                    "speed_ms": round(speed, 3),
+                    "speed_knots": round(speed * 1.94384, 3),
+                    "direction_deg": round(direction, 1),
+                }
+            )
+
+    return {
+        "vectors": vectors,
+        "acquired_at_utc": grid.acquired_at_utc,
+        "primary_source": grid.primary_source,
+    }
 
 
 def _nearest_within_one_cell(

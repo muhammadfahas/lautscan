@@ -199,3 +199,26 @@ class ErrorResponse(_StrictModel):
     message: str
     detail: str | None = None
     timestamp_utc: datetime
+
+
+class CurrentVectorCell(_StrictModel):
+    """Single decimated ocean current velocity cell."""
+
+    lat: float = Field(ge=-90.0, le=90.0)
+    lon: float = Field(ge=-180.0, le=180.0)
+    u_ms: float
+    v_ms: float
+    speed_ms: float = Field(ge=0.0)
+    speed_knots: float = Field(ge=0.0)
+    direction_deg: float = Field(ge=0.0, le=360.0)
+
+
+class CurrentGridResponse(_StrictModel):
+    """Decimated vector grid payload for directional ocean current rendering."""
+
+    requested_date: str
+    resolved_date: str
+    vectors: list[CurrentVectorCell]
+    total: int = Field(ge=0)
+    primary_source: str
+    acquired_at_utc: datetime

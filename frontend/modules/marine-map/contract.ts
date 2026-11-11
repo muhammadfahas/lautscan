@@ -7,19 +7,23 @@
 
 export type BaseMapStyle = 'daylight' | 'night';
 
-export type OceanOverlayLayer = 'sst' | 'chlorophyll' | 'currents';
+export type OceanOverlayLayer = 'potential' | 'sst' | 'chlorophyll' | 'currents';
 
 export interface MarineMapProps {
   centerLat: number;
   centerLon: number;
   zoom: number;
   baseStyle: BaseMapStyle;
+  potentialVisible: boolean;
+  potentialOpacity: number;
   sstVisible: boolean;
   sstOpacity: number;
   chlorophyllVisible: boolean;
   chlorophyllOpacity: number;
   currentsVisible: boolean;
   currentsOpacity: number;
+  currentsRasterVisible?: boolean;
+  showSpeciesPins: boolean;
   selectedDate: string;
   tileBaseUrl: string;
   wppGeoJsonCollection: string;
@@ -32,12 +36,16 @@ export interface MarineMapRawProps {
   centerLon?: number | string | null;
   zoom?: number | string | null;
   baseStyle?: string | null;
+  potentialVisible?: boolean | string | null;
+  potentialOpacity?: number | string | null;
   sstVisible?: boolean | string | null;
   sstOpacity?: number | string | null;
   chlorophyllVisible?: boolean | string | null;
   chlorophyllOpacity?: number | string | null;
   currentsVisible?: boolean | string | null;
   currentsOpacity?: number | string | null;
+  currentsRasterVisible?: boolean | string | null;
+  showSpeciesPins?: boolean | string | null;
   selectedDate?: string | null;
   tileBaseUrl?: string | null;
   wppGeoJsonCollection?: string | null;
@@ -179,12 +187,16 @@ export function buildMarineMapDefaults(
     centerLon: INDONESIA_DEFAULT_CENTER.centerLon,
     zoom: INDONESIA_DEFAULT_CENTER.zoom,
     baseStyle: 'daylight',
-    sstVisible: true,
-    sstOpacity: 0.72,
+    potentialVisible: true,
+    potentialOpacity: 0.88,
+    sstVisible: false,
+    sstOpacity: 0.62,
     chlorophyllVisible: false,
     chlorophyllOpacity: 0.65,
     currentsVisible: false,
-    currentsOpacity: 0.65,
+    currentsOpacity: 0.88,
+    currentsRasterVisible: false,
+    showSpeciesPins: false,
     selectedDate: 'latest',
     tileBaseUrl: 'http://127.0.0.1:8080',
     wppGeoJsonCollection: '{"type":"FeatureCollection","features":[]}',

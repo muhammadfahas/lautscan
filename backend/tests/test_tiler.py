@@ -23,8 +23,11 @@ from app.etl.tiler import (
     TILE_SIZE,
     _get_colormap_lut,
     _read_netcdf3_classic_pure,
+    render_potential_tile_bytes,
+    render_potential_tile_to_cache,
     render_tile_bytes,
     render_tile_to_cache,
+    sample_currents_grid,
     sample_point_from_netcdf,
     tile_bounds_wgs84,
 )
@@ -470,6 +473,65 @@ class TestPointInspection(unittest.TestCase):
                 self.assertAlmostEqual(float(pt4["current_speed_ms"]), 1.0, places=5)
             except ImportError:
                 pass
+
+
+class TestPotentialAndCurrentsGrid(unittest.TestCase):
+    def test_render_potential_tile_hotspots_and_cache(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            cache_dir = Path(td)
+            sst_nc = ensure_sample_netcdf(cache_dir, "sst", "2026-11-11")
+            chl_nc = ensure_sample_netcdf(cache_dir, "chlorophyll", "2026-11-11")
+
+            # Indonesia sea tile renders composite potential hotspots
+            tile_path, byte_size, is_empty, etag = render_potential_tile_to_cache(
+                sst_dataset_path=sst_nc,
+                chl_dataset_path=chl_nc,
+                cache_dir=cache_dir,
+                acq_date="2026-11-11",
+                z=4,
+                x=13,
+                y=8,
+                fmt="png",
+            )
+            self.assertFalse(is_empty)
+            self.assertTrue(tile_path.exists())
+            self.assertEqual(len(tile_path.read_bytes()), byte_size)
+            self.assertEqual(len(etag), 64)
+            with Image.open(tile_path) as img:
+                self.assertEqual(img.size, (TILE_SIZE, TILE_SIZE))
+                alpha = np.asarray(img.convert("RGBA"))[:, :, 3]
+                self.assertTrue(np.any(alpha == 0))
+                self.assertTrue(np.any(alpha > 0))
+
+            # Out-of-Indonesia tile is completely transparent
+            empty_bytes, empty_flag = render_potential_tile_bytes(
+                sst_nc, chl_nc, z=4, x=0, y=0, fmt="png"
+            )
+            self.assertTrue(empty_flag)
+            with Image.open(io.BytesIO(empty_bytes)) as empty_img:
+                self.assertEqual(empty_img.getchannel("A").getextrema(), (0, 0))
+
+    def test_sample_currents_grid_decimation(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            cur_nc = ensure_sample_netcdf(Path(td), "currents", "2026-11-11")
+            grid = sample_currents_grid(
+                cur_nc,
+                min_lon=105.0,
+                min_lat=-9.0,
+                max_lon=118.0,
+                max_lat=-2.0,
+                max_vectors=64,
+            )
+            vectors = grid["vectors"]
+            self.assertGreater(len(vectors), 0)
+            self.assertLessEqual(len(vectors), 64)
+            first = vectors[0]
+            self.assertTrue(-9.0 <= first["lat"] <= -2.0)
+            self.assertTrue(105.0 <= first["lon"] <= 118.0)
+            self.assertGreaterEqual(first["speed_ms"], 0.01)
+            expected_kn = round(first["speed_ms"] * 1.94384, 3)
+            self.assertAlmostEqual(first["speed_knots"], expected_kn, places=2)
+            self.assertTrue(0.0 <= first["direction_deg"] <= 360.0)
 
 
 if __name__ == "__main__":

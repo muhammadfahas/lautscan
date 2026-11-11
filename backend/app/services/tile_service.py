@@ -16,7 +16,7 @@ from PIL import Image
 
 from app.core.config import get_settings
 from app.etl.fixtures import ensure_sample_netcdf
-from app.etl.tiler import render_tile_to_cache
+from app.etl.tiler import render_potential_tile_to_cache, render_tile_to_cache
 
 try:
     from sqlalchemy import select
@@ -33,11 +33,11 @@ except ImportError:  # pragma: no cover - optional when sqlalchemy models cannot
 
 logger = logging.getLogger(__name__)
 
-TileLayer = Literal["sst", "chlorophyll", "currents"]
+TileLayer = Literal["sst", "chlorophyll", "currents", "potential"]
 TileFormat = Literal["png", "webp"]
 TileCacheStatus = Literal["HIT", "MISS", "EMPTY"]
 
-SUPPORTED_LAYERS: tuple[TileLayer, ...] = ("sst", "chlorophyll", "currents")
+SUPPORTED_LAYERS: tuple[TileLayer, ...] = ("sst", "chlorophyll", "currents", "potential")
 SUPPORTED_FORMATS: tuple[TileFormat, ...] = ("png", "webp")
 MAX_TILE_ZOOM = 14
 TILE_CACHE_TTL_SECONDS = 3600
@@ -132,6 +132,7 @@ async def _resolve_dataset_metadata(
     requested_date: str,
 ) -> tuple[Any | None, Path, str, str, str]:
     """Resolve the active NetCDF path from PostGIS or fall back to deterministic fixture."""
+    lookup_layer = "sst" if layer == "potential" else layer
     dataset_id: Any | None = None
     dataset_path: Path | None = None
     resolved_date: str | None = None
@@ -141,7 +142,7 @@ async def _resolve_dataset_metadata(
     if db is not None and select is not None and RasterDataset is not None:
         try:
             stmt = select(RasterDataset).where(
-                RasterDataset.layer == layer,
+                RasterDataset.layer == lookup_layer,
                 RasterDataset.status == "ready",
             )
             if requested_date != "latest":
@@ -167,7 +168,7 @@ async def _resolve_dataset_metadata(
             else requested_date
         )
         dataset_path = await asyncio.to_thread(
-            ensure_sample_netcdf, tile_cache_dir, layer, resolved_date
+            ensure_sample_netcdf, tile_cache_dir, lookup_layer, resolved_date
         )
         timestamp_utc = f"{resolved_date}T12:00:00Z"
 
@@ -325,17 +326,36 @@ async def get_raster_tile(
         )
 
     # 3. Render tile on demand and populate disk, DB index, and Redis
-    tile_path, byte_size, is_empty, etag = await asyncio.to_thread(
-        render_tile_to_cache,
-        dataset_path,
-        tile_cache_dir,
-        valid_layer,
-        resolved_date,
-        z,
-        x,
-        y,
-        valid_fmt,
-    )
+    if valid_layer == "potential":
+        _, sst_path, _, _, _ = await _resolve_dataset_metadata(
+            db, tile_cache_dir, "sst", valid_date
+        )
+        _, chl_path, _, _, _ = await _resolve_dataset_metadata(
+            db, tile_cache_dir, "chlorophyll", valid_date
+        )
+        tile_path, byte_size, is_empty, etag = await asyncio.to_thread(
+            render_potential_tile_to_cache,
+            sst_path,
+            chl_path,
+            tile_cache_dir,
+            resolved_date,
+            z,
+            x,
+            y,
+            valid_fmt,
+        )
+    else:
+        tile_path, byte_size, is_empty, etag = await asyncio.to_thread(
+            render_tile_to_cache,
+            dataset_path,
+            tile_cache_dir,
+            valid_layer,
+            resolved_date,
+            z,
+            x,
+            y,
+            valid_fmt,
+        )
     content = await asyncio.to_thread(_read_bytes_sync, tile_path)
 
     await _record_tile_index(

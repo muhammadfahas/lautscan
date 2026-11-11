@@ -28,6 +28,8 @@ if str(BACKEND_DIR) not in sys.path:
 from app.schemas import common as schema_mod  # noqa: E402
 from app.schemas.common import (  # noqa: E402
     WPP_CODES,
+    CurrentGridResponse,
+    CurrentVectorCell,
     DataSourcesResponse,
     DataSourceStatusRecord,
     ErrorResponse,
@@ -51,6 +53,8 @@ ALL_SCHEMA_NAMES: tuple[str, ...] = (
     "SourceSyncLogRecord",
     "DataSourcesResponse",
     "ErrorResponse",
+    "CurrentVectorCell",
+    "CurrentGridResponse",
 )
 
 
@@ -243,7 +247,7 @@ class _FakeDbSession:
 
 
 class SchemaContractParityTests(unittest.TestCase):
-    """Verify all 10 Pydantic schemas align 1:1 with `docs/openapi-contract.yaml`."""
+    """Verify all 12 Pydantic schemas align 1:1 with `docs/openapi-contract.yaml`."""
 
     def test_all_10_openapi_schemas_match_field_for_field_and_forbid_extra(self) -> None:
         contract = yaml.safe_load(
@@ -371,6 +375,25 @@ class SchemaContractParityTests(unittest.TestCase):
         )
         self.assertEqual(err.error_code, "BAD_REQUEST")
 
+        vec = CurrentVectorCell(
+            lat=-6.1,
+            lon=108.4,
+            u_ms=0.25,
+            v_ms=-0.12,
+            speed_ms=0.277,
+            speed_knots=0.538,
+            direction_deg=115.6,
+        )
+        grid = CurrentGridResponse(
+            requested_date="latest",
+            resolved_date="2026-11-11",
+            vectors=[vec],
+            total=1,
+            primary_source="noaa_erddap",
+            acquired_at_utc=now,
+        )
+        self.assertEqual(grid.total, 1)
+
 
 class RouterAndAppEndpointTests(unittest.TestCase):
     """End-to-end FastAPI TestClient checks for `/v1/health`, `/v1/wpp`, CORS, and errors."""
@@ -394,6 +417,7 @@ class RouterAndAppEndpointTests(unittest.TestCase):
                 "app.routers.map_point",
                 "app.routers.species",
                 "app.routers.sources",
+                "app.routers.currents",
                 "app.core.config",
                 "app.core.db",
                 "app.core.redis",
@@ -423,6 +447,7 @@ class RouterAndAppEndpointTests(unittest.TestCase):
                 "app.routers.map_point",
                 "app.routers.species",
                 "app.routers.sources",
+                "app.routers.currents",
                 "app.core.config",
                 "app.core.db",
                 "app.core.redis",

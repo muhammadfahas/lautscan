@@ -1,36 +1,44 @@
 // features.test.contract - End-to-End Contract Interaction Tests across Feature Views
 
-test "toggles ocean layers, selects WPP-NRI zone, and inspects coordinate"
+test "switches 4 Lensa Laut modes, selects WPP-NRI zone, and inspects coordinate"
   clock data
   expect tree has "ocean-map-workspace"
   expect tree has "marine-map-canvas"
-  expect tree has "layer-manager-panel"
+  expect tree has "lensa-laut-dock"
   expect tree has "freshness-disclaimer-badge"
-  expect tree has "legend-sst"
+  expect tree has "legend-potential"
+  expect tree missing "legend-sst"
   expect tree missing "legend-chlorophyll"
   expect tree missing "legend-currents"
 
-  // Toggle Chlorophyll-a (Viridis) and Ocean Currents (Cividis)
-  tap "layer-toggle-chlorophyll"
-  tap "layer-toggle-currents"
+  // Switch between Suhu Air, Pakan Alami, and Arus Laut lenses
+  tap "lens-btn-sst"
+  expect tree has "legend-sst"
+  expect tree missing "legend-potential"
+  tap "lens-btn-chlorophyll"
   expect tree has "legend-chlorophyll"
+  tap "lens-btn-currents"
   expect tree has "legend-currents"
 
-  // Adjust SST opacity via accessible stepper button
-  tap "sst-opacity-up"
-  expect text "sst-opacity-value" == "85%"
+  // Adjust active lens opacity inside compact Atur popover
+  tap "toggle-tune-panel"
+  expect tree has "tune-panel-popover"
+  tap "active-opacity-down"
+  expect text "active-opacity-value" == "78%"
+  tap "toggle-tune-panel"
 
-  // Select WPP-NRI 712 (Java Sea) and inspect coordinate
+  // Select WPP-NRI 712 (Laut Jawa) and inspect coordinate
   type "wpp-zone-select" "712"
   tap "inspect-center-btn"
   clock data
   expect tree has "point-inspector-drawer"
-  expect tree has "inspector-coords"
   expect tree has "inspector-sst"
   expect tree has "inspector-chlorophyll"
   expect tree has "inspector-current"
+  tap "toggle-tech-details"
+  expect tree has "inspector-coords"
 
-  // Close Point Inspector Drawer
+  // Close Point Inspector Card
   tap "close-inspector-btn"
   expect tree missing "point-inspector-drawer"
 

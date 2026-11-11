@@ -2,6 +2,8 @@
 
 from app.schemas.common import (
     WPP_CODES,
+    CurrentGridResponse,
+    CurrentVectorCell,
     DataSourcesResponse,
     DataSourceStatusRecord,
     ErrorResponse,
@@ -17,6 +19,8 @@ from app.schemas.common import (
 )
 
 __all__ = [
+    "CurrentGridResponse",
+    "CurrentVectorCell",
     "DataSourceStatusRecord",
     "DataSourcesResponse",
     "ErrorResponse",

@@ -52,7 +52,7 @@ router = APIRouter(prefix="/v1", tags=["tiles"])
     },
 )
 async def get_tile(
-    layer: Literal["sst", "chlorophyll", "currents"] = Path(
+    layer: Literal["sst", "chlorophyll", "currents", "potential"] = Path(
         ...,
         description="Oceanographic raster layer key.",
     ),

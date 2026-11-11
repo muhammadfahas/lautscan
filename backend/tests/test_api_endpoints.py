@@ -28,6 +28,7 @@ if str(BACKEND_DIR) not in sys.path:
 
 from app.schemas.common import (  # noqa: E402
     WPP_CODES,
+    CurrentGridResponse,
     DataSourcesResponse,
     ErrorResponse,
     MapPointInspection,
@@ -55,11 +56,13 @@ _MANAGED_APP_MODULES: tuple[str, ...] = (
     "app.routers.map_point",
     "app.routers.species",
     "app.routers.sources",
+    "app.routers.currents",
     "app.services",
     "app.services.tile_service",
     "app.services.point_query",
     "app.services.species_service",
     "app.services.sources_service",
+    "app.services.currents_service",
     "app.core.config",
     "app.core.db",
     "app.core.redis",
@@ -320,6 +323,7 @@ class ApiFeatureEndpointsTests(unittest.TestCase):
 
     _sys_patcher: Any = None
     _saved_modules: dict[str, Any] = {}
+    currents_service_mod: Any = None
     app_mod: Any = None
     config_mod: Any = None
     db_mod: Any = None
@@ -345,6 +349,7 @@ class ApiFeatureEndpointsTests(unittest.TestCase):
         cls.tile_service_mod = importlib.import_module("app.services.tile_service")
         cls.point_query_mod = importlib.import_module("app.services.point_query")
         cls.sources_service_mod = importlib.import_module("app.services.sources_service")
+        cls.currents_service_mod = importlib.import_module("app.services.currents_service")
         cls.app_mod = importlib.import_module("app.main")
 
     @classmethod
@@ -391,6 +396,7 @@ class ApiFeatureEndpointsTests(unittest.TestCase):
                 "/v1/wpp",
                 "/v1/tiles/{layer}/{date}/{z}/{x}/{y}.png",
                 "/v1/map/point",
+                "/v1/currents/grid",
                 "/v1/species",
                 "/v1/sources",
             },
@@ -442,6 +448,17 @@ class ApiFeatureEndpointsTests(unittest.TestCase):
             r_cur = client.get("/v1/tiles/currents/latest/4/13/8.png")
             self.assertEqual(r_cur.status_code, 200)
             self.assertEqual(r_cur.headers["x-tile-cache"], "MISS")
+
+            r_pot = client.get("/v1/tiles/potential/latest/4/13/8.png")
+            self.assertEqual(r_pot.status_code, 200)
+            self.assertEqual(r_pot.headers["x-tile-cache"], "MISS")
+            with Image.open(io.BytesIO(r_pot.content)) as pot_img:
+                self.assertEqual(pot_img.size, (256, 256))
+                self.assertEqual(pot_img.mode, "RGBA")
+
+            r_pot_hit = client.get("/v1/tiles/potential/latest/4/13/8.png")
+            self.assertEqual(r_pot_hit.status_code, 200)
+            self.assertEqual(r_pot_hit.headers["x-tile-cache"], "HIT")
 
             # 5. Out-of-Indonesia tile returns transparent 256x256 PNG with X-Tile-Cache: EMPTY
             r_empty = client.get("/v1/tiles/sst/2026-11-11/4/0/0.png")
@@ -806,6 +823,28 @@ class ApiFeatureEndpointsTests(unittest.TestCase):
         self.assertEqual(r_no_logs.status_code, 200)
         parsed_no_logs = DataSourcesResponse.model_validate(r_no_logs.json())
         self.assertEqual(parsed_no_logs.recent_logs, [])
+
+    def test_currents_vector_grid_and_bbox_validation(self) -> None:
+        with (
+            patch.object(self.currents_service_mod, "get_settings", return_value=self.settings),
+            patch.object(self.tile_service_mod, "get_settings", return_value=self.settings),
+            TestClient(self.app) as client,
+        ):
+            r_grid = client.get(
+                "/v1/currents/grid?bbox=105,-9,116,-3&date=2026-11-11&max_vectors=80"
+            )
+            self.assertEqual(r_grid.status_code, 200)
+            parsed = CurrentGridResponse.model_validate(r_grid.json())
+            self.assertEqual(parsed.requested_date, "2026-11-11")
+            self.assertEqual(parsed.resolved_date, "2026-11-11")
+            self.assertEqual(parsed.total, len(parsed.vectors))
+            self.assertGreater(parsed.total, 0)
+            self.assertLessEqual(parsed.total, 80)
+
+            r_bad_bbox = client.get("/v1/currents/grid?bbox=not-a-bbox")
+            self.assertEqual(r_bad_bbox.status_code, 400)
+            err = ErrorResponse.model_validate(r_bad_bbox.json())
+            self.assertEqual(err.error_code, "INVALID_BBOX")
 
 
 if __name__ == "__main__":

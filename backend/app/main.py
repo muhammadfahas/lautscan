@@ -36,6 +36,7 @@ _OPTIONAL_ROUTER_MODULES: tuple[str, ...] = (
     "map_point",
     "species",
     "sources",
+    "currents",
 )
 
 
