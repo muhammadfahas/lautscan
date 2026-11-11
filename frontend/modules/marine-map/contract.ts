@@ -196,7 +196,7 @@ export function buildMarineMapDefaults(
     currentsVisible: false,
     currentsOpacity: 0.88,
     currentsRasterVisible: false,
-    showSpeciesPins: false,
+    showSpeciesPins: true,
     selectedDate: 'latest',
     tileBaseUrl: 'http://127.0.0.1:8080',
     wppGeoJsonCollection: '{"type":"FeatureCollection","features":[]}',

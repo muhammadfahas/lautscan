@@ -229,10 +229,8 @@ const STYLE = `
   transform: translate(-50%, -50%);
   min-width: 44px;
   min-height: 44px;
-  width: 44px;
-  height: 44px;
   border: 0;
-  padding: 0;
+  padding: 4px;
   margin: 0;
   background: transparent;
   display: inline-flex;
@@ -241,15 +239,46 @@ const STYLE = `
   pointer-events: auto;
   cursor: pointer;
 }
-.lautscan-marine-map .species-marker svg {
-  display: block;
-  width: 22px;
-  height: 22px;
-  filter: drop-shadow(0 1px 2px rgba(15, 23, 42, 0.35));
-  transition: transform 180ms ease;
+.lautscan-marine-map .species-marker-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px 3px 4px;
+  border-radius: 999px;
+  border: 1px solid var(--mm-border);
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--mm-ink);
+  font-family: "Fira Sans", system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.18);
+  transition: transform 160ms ease, background-color 160ms ease, border-color 160ms ease, color 160ms ease;
 }
-.lautscan-marine-map .species-marker[aria-pressed="true"] svg {
-  transform: scale(1.18);
+.lautscan-marine-map.theme-night .species-marker-pill {
+  background: rgba(13, 17, 23, 0.92);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.48);
+}
+.lautscan-marine-map .species-marker-dot {
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #FFFFFF;
+  flex-shrink: 0;
+}
+.lautscan-marine-map .species-marker:hover .species-marker-pill {
+  transform: scale(1.06);
+  border-color: var(--mm-focus);
+}
+.lautscan-marine-map .species-marker[aria-pressed="true"] .species-marker-pill {
+  background: var(--mm-cta);
+  border-color: var(--mm-cta);
+  color: #FFFFFF;
+  transform: scale(1.08);
 }
 .lautscan-marine-map .pin-layer {
   position: absolute;
@@ -431,11 +460,17 @@ function buildZoomOutSvg() {
   return '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg>';
 }
 
-function buildSpeciesSvg(selected) {
-  const fill = selected ? '#F97316' : '#0EA5E9';
-  const ring = selected ? '#FFFFFF' : '#F8FAFC';
-  const radius = selected ? 7.5 : 6;
-  return `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="${radius + 2.5}" fill="${ring}" fill-opacity="0.92"/><circle cx="12" cy="12" r="${radius}" fill="${fill}" stroke="#0F172A" stroke-width="1.2"/></svg>`;
+function buildSpeciesSvg() {
+  return '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 12c.94-3.46 4.94-6 8.5-6 3.56 0 6.06 2.54 7 6-.94 3.46-3.44 6-7 6-3.56 0-7.56-2.54-8.5-6Z"/><path d="M18 12v.5"/><path d="M7 10.67C7 8 5.58 5.97 2.73 5.5c-1 1.5-1 5 .23 6.5-1.24 1.5-1.24 5-.23 6.5C5.58 18.03 7 16 7 13.33"/></svg>';
+}
+
+function shortFishLabel(commonName, sciName) {
+  const raw = parseStr(commonName, '').trim();
+  const idPart = raw.includes('/') ? raw.split('/').pop().trim() : (raw || parseStr(sciName, 'Ikan').trim());
+  const cleaned = idPart.replace(/^ikan\s+/i, '').trim();
+  if (!cleaned) return 'Ikan';
+  const firstWord = cleaned.split(/\s+/)[0];
+  return firstWord.charAt(0).toUpperCase() + firstWord.slice(1);
 }
 
 function buildInspectPinSvg() {
@@ -602,13 +637,18 @@ function normalizeMarkers(text) {
       item.common_name ?? item.commonName ?? item.scientific_name ?? item.scientificName ?? item.title,
       id,
     );
+    const sciName = parseStr(item.scientific_name ?? item.scientificName ?? item.title, label);
+    const depthM = parseNum(item.depth_m ?? item.depthM, NaN);
     out.push({
       id,
       lat,
       lon,
       label,
-      scientificName: parseStr(item.scientific_name ?? item.scientificName ?? item.title, label),
+      shortName: shortFishLabel(label, sciName),
+      scientificName: sciName,
       wppCode: parseStr(item.wpp_code ?? item.wppCode, ''),
+      depthM: Number.isFinite(depthM) ? depthM : null,
+      habitatNote: parseStr(item.habitat_note ?? item.habitatNote, ''),
     });
   }
   return out;
@@ -754,7 +794,7 @@ export class MarineMap {
       currents: { visible: false, opacity: 0.88, container: this.currentsLayer, tiles: new Map() },
     };
     this.currentsRasterVisible = false;
-    this.showSpeciesPins = false;
+    this.showSpeciesPins = true;
     this.baseTiles = new Map();
     this.selectedDate = 'latest';
     this.tileBaseUrl = '';
@@ -842,7 +882,7 @@ export class MarineMap {
     if (changed('currentsVisible')) this.layers.currents.visible = parseBool(safeProps.currentsVisible, false);
     if (changed('currentsOpacity')) this.layers.currents.opacity = clamp(parseNum(safeProps.currentsOpacity, 0.88), 0, 1);
     if (changed('currentsRasterVisible')) this.currentsRasterVisible = parseBool(safeProps.currentsRasterVisible, false);
-    if (changed('showSpeciesPins')) this.showSpeciesPins = parseBool(safeProps.showSpeciesPins, false);
+    if (changed('showSpeciesPins')) this.showSpeciesPins = parseBool(safeProps.showSpeciesPins, true);
 
     const dateChanged = changed('selectedDate');
     const baseUrlChanged = changed('tileBaseUrl');
@@ -1014,19 +1054,19 @@ export class MarineMap {
     this.events?.change?.(String(value ?? ''));
   }
 
-  emitPointClick(lat, lon) {
+  emitPointClick(lat, lon, markerId = '') {
     const roundedLat = round(clamp(lat, -85, 85), 5);
     const roundedLon = round(lon, 5);
     this.inspectedPoint = { lat: roundedLat, lon: roundedLon };
     this.drawPin();
     this.reportState();
-    this.events?.message?.(
-      JSON.stringify({
-        type: 'pointclick',
-        lat: roundedLat,
-        lon: roundedLon,
-      }),
-    );
+    const payload = {
+      type: 'pointclick',
+      lat: roundedLat,
+      lon: roundedLon,
+    };
+    if (markerId) payload.markerId = markerId;
+    this.events?.message?.(JSON.stringify(payload));
   }
 
   rest() {
@@ -1850,17 +1890,39 @@ export class MarineMap {
     }
 
     const wppPts = this._renderedWppScreenPts ?? [];
+    const placedPts = [];
+    const offsets = [
+      [0, 0],
+      [0, -30],
+      [0, 30],
+      [78, 0],
+      [-78, 0],
+      [60, -28],
+      [-60, -28],
+      [60, 28],
+      [-60, 28],
+    ];
     const rendered = [];
     for (const marker of this.markers) {
       if (rendered.length >= MAX_RENDERED_MARKERS) break;
-      let [sx, sy] = this.projectPointToViewport(marker.lat, marker.lon, z, k, left, top, n);
-      if (sx < -44 || sx > w + 44 || sy < -44 || sy > h + 44) continue;
-      for (const [wx, wy] of wppPts) {
-        if (Math.abs(sx - wx) < 34 && Math.abs(sy - wy) < 20) {
-          sy += 24;
+      const [baseX, baseY] = this.projectPointToViewport(marker.lat, marker.lon, z, k, left, top, n);
+      if (baseX < -44 || baseX > w + 44 || baseY < -44 || baseY > h + 44) continue;
+
+      let sx = baseX;
+      let sy = baseY;
+      for (const [ox, oy] of offsets) {
+        const cx = baseX + ox;
+        const cy = baseY + oy;
+        if (cx < 24 || cx > w - 24 || cy < 20 || cy > h - 20) continue;
+        const hitsWpp = wppPts.some(([wx, wy]) => Math.abs(cx - wx) < 60 && Math.abs(cy - wy) < 24);
+        const hitsPin = placedPts.some(([px, py]) => Math.abs(cx - px) < 74 && Math.abs(cy - py) < 26);
+        if (!hitsWpp && !hitsPin) {
+          sx = cx;
+          sy = cy;
           break;
         }
       }
+      placedPts.push([sx, sy]);
 
       let btn = oldParts.get(marker.id);
       const selected = marker.id === this.selectedMarkerId;
@@ -1871,14 +1933,33 @@ export class MarineMap {
         btn.dataset.marker = marker.id;
         btn.dataset.testid = `species-marker-${marker.id}`;
       }
-      btn.setAttribute('aria-label', `${marker.label}${marker.wppCode ? ` (WPP ${marker.wppCode})` : ''}`);
+      btn.setAttribute('aria-label', `${marker.shortName} - ${marker.label}${marker.wppCode ? ` (WPP ${marker.wppCode})` : ''}`);
       btn.setAttribute('aria-pressed', String(selected));
       btn.style.left = `${round(sx, 1)}px`;
       btn.style.top = `${round(sy, 1)}px`;
-      const drawnState = selected ? '1' : '0';
+
+      const dotColor = selected
+        ? '#F97316'
+        : marker.depthM !== null && marker.depthM >= 80
+          ? '#1D4ED8'
+          : marker.depthM !== null && marker.depthM >= 40
+            ? '#0D9488'
+            : '#0284C7';
+      const drawnState = `${selected ? '1' : '0'}:${dotColor}:${marker.shortName}`;
       if (btn.dataset.drawn !== drawnState) {
         btn.dataset.drawn = drawnState;
-        btn.innerHTML = buildSpeciesSvg(selected);
+        const pill = this.doc.createElement('span');
+        pill.className = 'species-marker-pill';
+        const dot = this.doc.createElement('span');
+        dot.className = 'species-marker-dot';
+        dot.style.background = selected ? '#FFFFFF' : dotColor;
+        if (selected) dot.style.color = '#F97316';
+        dot.innerHTML = buildSpeciesSvg();
+        const nameEl = this.doc.createElement('span');
+        nameEl.className = 'species-marker-name';
+        nameEl.textContent = marker.shortName || 'Ikan';
+        pill.append(dot, nameEl);
+        btn.replaceChildren(pill);
       }
       nextParts.set(marker.id, btn);
       rendered.push(btn);
@@ -2018,11 +2099,14 @@ export class MarineMap {
           } else if (pressedChild.type === 'marker') {
             const markerBtn = ev.target.closest?.('.species-marker');
             if (markerBtn?.dataset.marker === pressedChild.id) {
-              const nextMarker = this.selectedMarkerId === pressedChild.id ? '' : pressedChild.id;
-              this.selectedMarkerId = nextMarker;
+              const markerObj = this.markers.find((item) => item.id === pressedChild.id);
+              this.selectedMarkerId = pressedChild.id;
               this.draw();
               this.reportState();
-              this.emitChange(nextMarker);
+              this.emitChange(pressedChild.id);
+              if (markerObj) {
+                this.emitPointClick(markerObj.lat, markerObj.lon, markerObj.id);
+              }
             }
           }
         }

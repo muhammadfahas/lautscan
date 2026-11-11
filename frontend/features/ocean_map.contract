@@ -123,7 +123,7 @@ component OceanMapView
   state sstOpacity = 0.62
   state chlorophyllOpacity = 0.65
   state currentsOpacity = 0.88
-  state showSpeciesPins = false
+  state showSpeciesPins = true
   state tunePanelOpen = false
   state techDetailsOpen = false
   state selectedDate = "latest"
