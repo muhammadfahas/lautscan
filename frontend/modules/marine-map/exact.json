@@ -1,0 +1,53 @@
+{
+  "kind": "interface",
+  "name": "@lautscan/marine-map",
+  "version": "1.0.0",
+  "substitute": "implementation",
+  "shapes": {},
+  "config": {
+    "web": {
+      "tiles": {
+        "type": "string",
+        "default": "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+      },
+      "attribution": {
+        "type": "string",
+        "default": "© OpenStreetMap contributors"
+      },
+      "maxZoom": {
+        "type": "number",
+        "default": 14
+      }
+    }
+  },
+  "views": {
+    "marine-map": {
+      "props": {
+        "centerLat": "number",
+        "centerLon": "number",
+        "zoom": "number",
+        "baseStyle": "string",
+        "sstVisible": "bool",
+        "sstOpacity": "number",
+        "chlorophyllVisible": "bool",
+        "chlorophyllOpacity": "number",
+        "currentsVisible": "bool",
+        "currentsOpacity": "number",
+        "selectedDate": "string",
+        "tileBaseUrl": "string",
+        "wppGeoJsonCollection": "string",
+        "selectedWppCode": "string",
+        "speciesMarkers": "string"
+      },
+      "events": [
+        "change",
+        {
+          "event": "moveend",
+          "args": ["string"]
+        },
+        "message"
+      ]
+    }
+  },
+  "names": []
+}

@@ -1,0 +1,403 @@
+// ocean_map.contract - LAUT SCAN Map-First Workspace, Layer Manager, Legends & Point Inspector
+
+use WppZoneRecord, MapPointInspection, DataSourceStatusRecord, UserPreferences from "../shapes.contract"
+
+fn clampOpacity(val: number): number =
+  Math.max(0.1, Math.min(1.0, Math.round(val * 100) / 100))
+
+fn opacityPct(val: number): string =
+  `${Math.round(val * 100)}%`
+
+fn parseNum(raw: string, fallback: number): number =
+  Number.isFinite(Number(raw)) ? Number(raw) : fallback
+
+fn extractJsonNum(json: string, keyToken: string, fallback: number): number =
+  json.indexOf(keyToken) >= 0 ? parseNum(json.slice(json.indexOf(keyToken) + keyToken.length).split(",")[0].split("}")[0].trim(), fallback) : fallback
+
+fn extractWppCode(payload: string): string =
+  payload.trim().length == 3 ? payload.trim() : ""
+
+fn zoneLat(zones: WppZoneRecord[], code: string): number =
+  match zones.find(z => z.wpp_code == code)
+    case some(z) => z.centroid_lat
+    case none => -2.5
+
+fn zoneLon(zones: WppZoneRecord[], code: string): number =
+  match zones.find(z => z.wpp_code == code)
+    case some(z) => z.centroid_lon
+    case none => 118.0
+
+fn formatFreshnessSource(sources: DataSourceStatusRecord[], inspection: option<MapPointInspection>): string =
+  match inspection
+    case some(pt) => pt.attribution
+    case none =>
+      match sources.find(s => s.source_key == "noaa_erddap")
+        case some(src) => `${src.display_name} (${src.status})`
+        case none => "NOAA CoastWatch / ERDDAP + OBIS"
+
+fn formatFreshnessTimestamp(sources: DataSourceStatusRecord[], inspection: option<MapPointInspection>): string =
+  match inspection
+    case some(pt) =>
+      match pt.acquired_at_utc
+        case some(ts) => ts
+        case none => "Cached baseline"
+    case none =>
+      match sources.find(s => s.source_key == "noaa_erddap")
+        case some(src) =>
+          match src.latest_data_timestamp_utc
+            case some(ts) => ts
+            case none =>
+              match src.last_sync_utc
+                case some(syncTs) => syncTs
+                case none => "Offline seed baseline"
+        case none => "Offline seed baseline"
+
+fn formatOptNumber(val: option<number>, decimals: number, unit: string): string =
+  match val
+    case some(v) => `${v.toFixed(decimals)} ${unit}`
+    case none => "Unavailable"
+
+fn formatOptText(val: option<string>, fallback: string): string =
+  match val
+    case some(s) => s
+    case none => fallback
+
+component OceanMapView
+  props
+    wppZones: WppZoneRecord[]
+    wppGeoJsonCollection: string
+    speciesMarkers: string
+    pointInspection: option<MapPointInspection>
+    sources: DataSourceStatusRecord[]
+    prefs: UserPreferences
+    apiBaseUrl: string
+    onInspectPoint: (lat: number, lon: number, date: string) => void
+    onClearInspection: () => void
+    onBoundsChange: (bbox: string) => void
+    onWppSelected: (wppCode: string) => void
+
+  state layerPanelOpen = true
+  state sstVisible = true
+  state sstOpacity = 0.75
+  state chlorophyllVisible = false
+  state chlorophyllOpacity = 0.7
+  state currentsVisible = false
+  state currentsOpacity = 0.8
+  state selectedDate = "latest"
+  state selectedWppCode = ""
+  state centerLat = -2.5
+  state centerLon = 118.0
+  state zoom = 5
+  state inspectorOpen = false
+
+  derive baseStyle = prefs.theme_mode == "night" ? "night" : "daylight"
+  derive useFahrenheit = prefs.temp_unit == "F"
+  derive useMs = prefs.speed_unit == "ms"
+  derive freshnessSource = formatFreshnessSource(sources, pointInspection)
+  derive freshnessTimestamp = formatFreshnessTimestamp(sources, pointInspection)
+  derive showInspector =
+    match pointInspection
+      case some(_) => true
+      case none => inspectorOpen
+
+  action toggleLayerPanel()
+    layerPanelOpen = not layerPanelOpen
+
+  action toggleSst()
+    sstVisible = not sstVisible
+
+  action stepSstOpacity(delta: number)
+    sstOpacity = clampOpacity(sstOpacity + delta)
+
+  action setSstOpacity(value: string)
+    sstOpacity = clampOpacity(parseNum(value, sstOpacity))
+
+  action toggleChlorophyll()
+    chlorophyllVisible = not chlorophyllVisible
+
+  action stepChlorophyllOpacity(delta: number)
+    chlorophyllOpacity = clampOpacity(chlorophyllOpacity + delta)
+
+  action setChlorophyllOpacity(value: string)
+    chlorophyllOpacity = clampOpacity(parseNum(value, chlorophyllOpacity))
+
+  action toggleCurrents()
+    currentsVisible = not currentsVisible
+
+  action stepCurrentsOpacity(delta: number)
+    currentsOpacity = clampOpacity(currentsOpacity + delta)
+
+  action setCurrentsOpacity(value: string)
+    currentsOpacity = clampOpacity(parseNum(value, currentsOpacity))
+
+  action selectWpp(code: string)
+    selectedWppCode = code
+    if code == ""
+      centerLat = -2.5
+      centerLon = 118.0
+      zoom = 5
+    else
+      centerLat = zoneLat(wppZones, code)
+      centerLon = zoneLon(wppZones, code)
+      zoom = 6
+    onWppSelected(code)
+
+  action selectDate(dateVal: string)
+    selectedDate = dateVal
+    if showInspector
+      onInspectPoint(centerLat, centerLon, dateVal)
+
+  action inspectCenter()
+    inspectorOpen = true
+    onInspectPoint(centerLat, centerLon, selectedDate)
+
+  action handleMapChange(payload: string)
+    let trimmed = payload.trim()
+    let code = extractWppCode(trimmed)
+    if code != ""
+      selectedWppCode = code
+      centerLat = zoneLat(wppZones, code)
+      centerLon = zoneLon(wppZones, code)
+      zoom = 6
+      onWppSelected(code)
+    else if trimmed == ""
+      selectedWppCode = ""
+      centerLat = -2.5
+      centerLon = 118.0
+      zoom = 5
+      onWppSelected("")
+
+  action handleMapMoveEnd(payload: string)
+    if payload.indexOf("minLon") >= 0
+      let minLon = extractJsonNum(payload, "\"minLon\":", 90.0)
+      let minLat = extractJsonNum(payload, "\"minLat\":", -15.0)
+      let maxLon = extractJsonNum(payload, "\"maxLon\":", 145.0)
+      let maxLat = extractJsonNum(payload, "\"maxLat\":", 10.0)
+      let nextLat = extractJsonNum(payload, "\"centerLat\":", centerLat)
+      let nextLon = extractJsonNum(payload, "\"centerLon\":", centerLon)
+      let nextZoom = extractJsonNum(payload, "\"zoom\":", zoom)
+      centerLat = nextLat
+      centerLon = nextLon
+      zoom = nextZoom
+      onBoundsChange(`${minLon.toFixed(4)},${minLat.toFixed(4)},${maxLon.toFixed(4)},${maxLat.toFixed(4)}`)
+
+  action handleMapMessage(payload: string)
+    if payload.indexOf("pointclick") >= 0
+      let lat = extractJsonNum(payload, "\"lat\":", centerLat)
+      let lon = extractJsonNum(payload, "\"lon\":", centerLon)
+      inspectorOpen = true
+      onInspectPoint(lat, lon, selectedDate)
+
+  action closeInspector()
+    inspectorOpen = false
+    onClearInspection()
+
+  view
+    column width="100%" flex=1 min-height="84vh" overflow-x="hidden" background-color="var(--surface-canvas)" color="var(--ink-primary)" testId="ocean-map-workspace"
+      // Map-First Full-Bleed Workspace (>= 75% screen area)
+      div width="100%" flex=1 min-height="76vh" position="relative" overflow="hidden" z-index=10 testId="ocean-map-canvas-wrap"
+        marine-map centerLat=centerLat centerLon=centerLon zoom=zoom baseStyle=baseStyle sstVisible=sstVisible sstOpacity=sstOpacity chlorophyllVisible=chlorophyllVisible chlorophyllOpacity=chlorophyllOpacity currentsVisible=currentsVisible currentsOpacity=currentsOpacity selectedDate=selectedDate tileBaseUrl=apiBaseUrl wppGeoJsonCollection=wppGeoJsonCollection selectedWppCode=selectedWppCode speciesMarkers=speciesMarkers change=handleMapChange moveend=handleMapMoveEnd message=handleMapMessage width="100%" height="100%" min-height="76vh" testId="marine-map-canvas"
+
+        // Floating Layer Manager Panel (Collapsible on mobile)
+        column position="absolute" top=12 left=12 max-width=340 width="calc(100% - 24px)" max-height="calc(100% - 24px)" overflow-y="auto" padding="12px" gap=10 border-radius=12 background-color="var(--surface-elevated)" border="1px solid var(--border-subtle)" z-index=20 testId="layer-manager-panel"
+          row width="100%" align-items="center" justify-content="space-between" gap=8
+            row align-items="center" gap=8
+              svg width=18 height=18 viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width=2 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+                polygon points="12 2 2 7 12 12 22 7 12 2"
+                polyline points="2 17 12 22 22 17"
+                polyline points="2 12 12 17 22 12"
+              text "Layer Manager" role="heading" font-size=15 font-weight=700 color="var(--ink-primary)"
+            button press=toggleLayerPanel min-height=44 min-width=44 padding="8px 10px" border-radius=8 border="1px solid var(--border-subtle)" background-color="var(--surface-canvas)" color="var(--ink-primary)" cursor="pointer" aria-label="Toggle layer manager panel" aria-expanded=layerPanelOpen testId="toggle-layer-panel"
+              svg width=18 height=18 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width=2 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+                if layerPanelOpen
+                  polyline points="18 15 12 9 6 15"
+                else
+                  polyline points="6 9 12 15 18 9"
+
+          if layerPanelOpen
+            column width="100%" min-width=0 gap=10 testId="layer-manager-body"
+              // SST (plasma)
+              column width="100%" padding="8px 10px" gap=6 border-radius=8 background-color="var(--surface-canvas)" border="1px solid var(--border-subtle)"
+                row width="100%" align-items="center" justify-content="space-between" gap=8
+                  row align-items="center" gap=8
+                    input type="checkbox" checked=sstVisible change=toggleSst min-height=44 min-width=44 cursor="pointer" aria-label="Toggle Sea Surface Temperature SST layer" testId="layer-toggle-sst"
+                    text "SST (Plasma)" font-size=14 font-weight=600 color="var(--ink-primary)"
+                  text opacityPct(sstOpacity) class="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-muted)" testId="sst-opacity-value"
+                row width="100%" align-items="center" gap=6
+                  button press=stepSstOpacity(-0.1) min-height=44 min-width=44 padding="6px" border-radius=6 border="1px solid var(--border-subtle)" background-color="var(--surface-elevated)" color="var(--ink-primary)" cursor="pointer" aria-label="Decrease SST opacity" testId="sst-opacity-down"
+                    text "-" font-size=16 font-weight=700
+                  input type="range" min="0.1" max="1" step="0.05" value=`${sstOpacity}` change=setSstOpacity min-height=44 min-width=44 flex=1 cursor="pointer" aria-label="SST layer opacity slider" testId="opacity-slider-sst"
+                  button press=stepSstOpacity(0.1) min-height=44 min-width=44 padding="6px" border-radius=6 border="1px solid var(--border-subtle)" background-color="var(--surface-elevated)" color="var(--ink-primary)" cursor="pointer" aria-label="Increase SST opacity" testId="sst-opacity-up"
+                    text "+" font-size=16 font-weight=700
+
+              // Chlorophyll-a (viridis)
+              column width="100%" padding="8px 10px" gap=6 border-radius=8 background-color="var(--surface-canvas)" border="1px solid var(--border-subtle)"
+                row width="100%" align-items="center" justify-content="space-between" gap=8
+                  row align-items="center" gap=8
+                    input type="checkbox" checked=chlorophyllVisible change=toggleChlorophyll min-height=44 min-width=44 cursor="pointer" aria-label="Toggle Chlorophyll-a layer" testId="layer-toggle-chlorophyll"
+                    text "Chlorophyll-a (Viridis)" font-size=14 font-weight=600 color="var(--ink-primary)"
+                  text opacityPct(chlorophyllOpacity) class="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-muted)" testId="chl-opacity-value"
+                row width="100%" align-items="center" gap=6
+                  button press=stepChlorophyllOpacity(-0.1) min-height=44 min-width=44 padding="6px" border-radius=6 border="1px solid var(--border-subtle)" background-color="var(--surface-elevated)" color="var(--ink-primary)" cursor="pointer" aria-label="Decrease Chlorophyll-a opacity" testId="chl-opacity-down"
+                    text "-" font-size=16 font-weight=700
+                  input type="range" min="0.1" max="1" step="0.05" value=`${chlorophyllOpacity}` change=setChlorophyllOpacity min-height=44 min-width=44 flex=1 cursor="pointer" aria-label="Chlorophyll-a layer opacity slider" testId="opacity-slider-chlorophyll"
+                  button press=stepChlorophyllOpacity(0.1) min-height=44 min-width=44 padding="6px" border-radius=6 border="1px solid var(--border-subtle)" background-color="var(--surface-elevated)" color="var(--ink-primary)" cursor="pointer" aria-label="Increase Chlorophyll-a opacity" testId="chl-opacity-up"
+                    text "+" font-size=16 font-weight=700
+
+              // Ocean Currents (cividis)
+              column width="100%" padding="8px 10px" gap=6 border-radius=8 background-color="var(--surface-canvas)" border="1px solid var(--border-subtle)"
+                row width="100%" align-items="center" justify-content="space-between" gap=8
+                  row align-items="center" gap=8
+                    input type="checkbox" checked=currentsVisible change=toggleCurrents min-height=44 min-width=44 cursor="pointer" aria-label="Toggle Ocean Currents layer" testId="layer-toggle-currents"
+                    text "Ocean Currents (Cividis)" font-size=14 font-weight=600 color="var(--ink-primary)"
+                  text opacityPct(currentsOpacity) class="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-muted)" testId="currents-opacity-value"
+                row width="100%" align-items="center" gap=6
+                  button press=stepCurrentsOpacity(-0.1) min-height=44 min-width=44 padding="6px" border-radius=6 border="1px solid var(--border-subtle)" background-color="var(--surface-elevated)" color="var(--ink-primary)" cursor="pointer" aria-label="Decrease Ocean Currents opacity" testId="currents-opacity-down"
+                    text "-" font-size=16 font-weight=700
+                  input type="range" min="0.1" max="1" step="0.05" value=`${currentsOpacity}` change=setCurrentsOpacity min-height=44 min-width=44 flex=1 cursor="pointer" aria-label="Ocean Currents layer opacity slider" testId="opacity-slider-currents"
+                  button press=stepCurrentsOpacity(0.1) min-height=44 min-width=44 padding="6px" border-radius=6 border="1px solid var(--border-subtle)" background-color="var(--surface-elevated)" color="var(--ink-primary)" cursor="pointer" aria-label="Increase Ocean Currents opacity" testId="currents-opacity-up"
+                    text "+" font-size=16 font-weight=700
+
+              // WPP-NRI Zone & Date Selectors
+              column width="100%" min-width=0 gap=6
+                label "WPP-NRI Zone (571-718)" font-size=12 font-weight=600 color="var(--ink-muted)"
+                select value=selectedWppCode change=selectWpp width="100%" max-width="100%" min-height=44 min-width=44 padding="8px 10px" border-radius=8 border="1px solid var(--border-subtle)" background-color="var(--surface-canvas)" color="var(--ink-primary)" font-size=15 cursor="pointer" aria-label="Select WPP-NRI fisheries management zone" testId="wpp-zone-select"
+                  option value="" "All Indonesia (WPP 571-718)"
+                  for z in wppZones key=z.wpp_code
+                    option value=z.wpp_code `${z.name}: ${z.waters_en}`
+
+              column width="100%" min-width=0 gap=6
+                label "Observation Date (UTC)" font-size=12 font-weight=600 color="var(--ink-muted)"
+                select value=selectedDate change=selectDate width="100%" max-width="100%" min-height=44 min-width=44 padding="8px 10px" border-radius=8 border="1px solid var(--border-subtle)" background-color="var(--surface-canvas)" color="var(--ink-primary)" font-size=15 cursor="pointer" aria-label="Select observation date" testId="date-selector"
+                  option value="latest" "Latest Available"
+                  option value="2026-11-10" "2026-11-10 (UTC)"
+                  option value="2026-11-01" "2026-11-01 (UTC)"
+                  option value="2026-10-15" "2026-10-15 (UTC)"
+
+              button press=inspectCenter min-height=44 min-width=44 padding="10px 12px" border-radius=8 border="1px solid var(--accent-cta)" background-color="var(--accent-cta)" color="#FFFFFF" cursor="pointer" aria-label="Inspect oceanographic values at map center" testId="inspect-center-btn"
+                row align-items="center" justify-content="center" gap=8
+                  svg width=16 height=16 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width=2 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+                    circle cx=12 cy=12 r=10
+                    line x1=22 y1=12 x2=18 y2=12
+                    line x1=6 y1=12 x2=2 y2=12
+                    line x1=12 y1=6 x2=12 y2=2
+                    line x1=12 y1=22 x2=12 y2=18
+                  text "Inspect Map Center" font-size=14 font-weight=700
+
+        // Point Inspector Drawer (contained inside ocean-map-canvas-wrap)
+        if showInspector
+          column position="absolute" top=12 right=12 max-width=380 width="calc(100% - 24px)" max-height="calc(76vh - 24px)" overflow-y="auto" padding="16px" gap=12 border-radius=12 background-color="var(--surface-elevated)" border="1px solid var(--border-subtle)" z-index=30 testId="point-inspector-drawer"
+            row width="100%" align-items="center" justify-content="space-between" gap=8
+              row align-items="center" gap=8
+                svg width=18 height=18 viewBox="0 0 24 24" fill="none" stroke="var(--accent-cta)" stroke-width=2 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+                  circle cx=12 cy=12 r=10
+                  line x1=22 y1=12 x2=18 y2=12
+                  line x1=6 y1=12 x2=2 y2=12
+                  line x1=12 y1=6 x2=12 y2=2
+                  line x1=12 y1=22 x2=12 y2=18
+                text "Point Inspector" role="heading" font-size=17 font-weight=700 color="var(--ink-primary)"
+              button press=closeInspector min-height=44 min-width=44 padding="8px" border-radius=8 border="1px solid var(--border-subtle)" background-color="var(--surface-canvas)" color="var(--ink-primary)" cursor="pointer" aria-label="Close point inspector drawer" testId="close-inspector-btn"
+                svg width=18 height=18 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width=2 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+                  line x1=18 y1=6 x2=6 y2=18
+                  line x1=6 y1=6 x2=18 y2=18
+
+            match pointInspection
+              case some(pt) =>
+                column width="100%" gap=10
+                  if pt.is_cached_fallback
+                    row width="100%" padding="8px 10px" gap=8 align-items="center" border-radius=8 background-color="var(--surface-canvas)" border="1px solid var(--status-degraded)" testId="inspector-cached-notice"
+                      svg width=16 height=16 viewBox="0 0 24 24" fill="none" stroke="var(--status-degraded)" stroke-width=2 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+                        path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
+                        line x1=12 y1=9 x2=12 y2=13
+                        line x1=12 y1=17 x2=12.01 y2=17
+                      text "Cached fallback data displayed (live satellite grid pending or offline)." font-size=12 font-weight=600 color="var(--status-degraded)"
+
+                  column padding="10px" gap=4 border-radius=8 background-color="var(--surface-canvas)" border="1px solid var(--border-subtle)"
+                    text `Coordinates: ${pt.lat.toFixed(5)}, ${pt.lon.toFixed(5)}` class="tabular-nums" font-family="var(--font-mono)" font-size=14 font-weight=700 color="var(--ink-primary)" testId="inspector-coords"
+                    text `Zone: ${formatOptText(pt.wpp_name, "Outside WPP-NRI")} (${formatOptText(pt.wpp_code, "N/A")})` font-size=14 font-weight=600 color="var(--accent-primary)" testId="inspector-wpp"
+                    text formatOptText(pt.wpp_waters_id, "International or coastal boundary waters") font-size=12 color="var(--ink-muted)"
+
+                  row width="100%" gap=8 flex-wrap="wrap"
+                    column flex=1 min-width=130 padding="10px" gap=2 border-radius=8 background-color="var(--surface-canvas)" border="1px solid var(--border-subtle)" testId="inspector-sst"
+                      text "Sea Surface Temp" font-size=12 color="var(--ink-muted)"
+                      text (useFahrenheit ? formatOptNumber(pt.sst_f, 1, "°F") : formatOptNumber(pt.sst_c, 1, "°C")) class="tabular-nums" font-family="var(--font-mono)" font-size=16 font-weight=700 color="var(--ink-primary)"
+                      text (useFahrenheit ? formatOptNumber(pt.sst_c, 1, "°C") : formatOptNumber(pt.sst_f, 1, "°F")) class="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--ink-muted)"
+
+                    column flex=1 min-width=130 padding="10px" gap=2 border-radius=8 background-color="var(--surface-canvas)" border="1px solid var(--border-subtle)" testId="inspector-chlorophyll"
+                      text "Chlorophyll-a" font-size=12 color="var(--ink-muted)"
+                      text formatOptNumber(pt.chlorophyll_mg_m3, 2, "mg/m3") class="tabular-nums" font-family="var(--font-mono)" font-size=16 font-weight=700 color="var(--ink-primary)"
+
+                  column width="100%" padding="10px" gap=4 border-radius=8 background-color="var(--surface-canvas)" border="1px solid var(--border-subtle)" testId="inspector-current"
+                    text "Ocean Surface Current" font-size=12 color="var(--ink-muted)"
+                    text (useMs ? `${formatOptNumber(pt.current_speed_ms, 2, "m/s")} (${formatOptNumber(pt.current_speed_knots, 2, "kn")})` : `${formatOptNumber(pt.current_speed_knots, 2, "kn")} (${formatOptNumber(pt.current_speed_ms, 2, "m/s")})`) class="tabular-nums" font-family="var(--font-mono)" font-size=15 font-weight=700 color="var(--ink-primary)"
+                    text `Bearing: ${formatOptNumber(pt.current_direction_deg, 0, "deg")} (${formatOptText(pt.current_compass, "N/A")})` class="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--ink-muted)"
+
+                  match pt.salinity_psu
+                    case some(sal) =>
+                      row width="100%" justify-content="space-between" padding="8px 10px" border-radius=8 background-color="var(--surface-canvas)" border="1px solid var(--border-subtle)" testId="inspector-salinity"
+                        text "Salinity" font-size=13 color="var(--ink-muted)"
+                        text `${sal.toFixed(2)} PSU` class="tabular-nums" font-family="var(--font-mono)" font-size=13 font-weight=600
+                    case none => div display="none"
+
+                  match pt.wave_height_m
+                    case some(wh) =>
+                      row width="100%" justify-content="space-between" padding="8px 10px" border-radius=8 background-color="var(--surface-canvas)" border="1px solid var(--border-subtle)" testId="inspector-wave"
+                        text "Wave Height" font-size=13 color="var(--ink-muted)"
+                        text `${wh.toFixed(2)} m` class="tabular-nums" font-family="var(--font-mono)" font-size=13 font-weight=600
+                    case none => div display="none"
+
+                  column gap=3 padding="8px 10px" border-radius=8 background-color="var(--surface-canvas)" border="1px solid var(--border-subtle)"
+                    text `Interpolation: ${pt.interpolation_method} | Res: ${formatOptNumber(pt.spatial_resolution_km, 1, "km")}` class="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--ink-muted)"
+                    text `Acquired UTC: ${formatOptText(pt.acquired_at_utc, "Pending live sync")}` class="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--ink-muted)"
+                    text `Source: ${pt.attribution}` font-size=12 color="var(--ink-primary)"
+                    text pt.disclaimer font-size=11 line-height=1.4 color="var(--ink-muted)"
+              case none =>
+                text "Tap any ocean coordinate on the map or press Inspect Map Center to query SST, Chlorophyll-a, Currents, and WPP-NRI telemetry." font-size=14 color="var(--ink-muted)"
+
+      // Non-Overlapping Footer Strip: Numeric Colorblind-Safe Legends + Freshness & Disclaimer Badge
+      row width="100%" flex-wrap="wrap" justify-content="space-between" align-items="flex-start" gap=12 padding="10px 12px" background-color="var(--surface-elevated)" border-top="1px solid var(--border-subtle)" testId="ocean-map-footer"
+        // Numeric Colorblind-Safe Legend Bars (plasma, viridis, cividis)
+        row flex="1 1 320px" min-width=0 flex-wrap="wrap" gap=10 align-items="stretch" testId="map-legends"
+          if sstVisible
+            column flex="1 1 200px" min-width=0 padding="8px 10px" gap=3 border-radius=8 background-color="var(--surface-canvas)" border="1px solid var(--border-subtle)" testId="legend-sst"
+              row width="100%" justify-content="space-between" gap=6
+                text "SST (Plasma)" font-size=12 font-weight=700 color="var(--ink-primary)"
+                text (useFahrenheit ? "68.0 - 93.2 °F" : "20.0 - 34.0 °C") class="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--ink-muted)"
+              div width="100%" height=10 border-radius=999 background="linear-gradient(90deg, #0d0887 0%, #6a00a8 25%, #b12a90 50%, #e16462 72%, #fca636 88%, #f0f921 100%)" aria-hidden="true"
+              row width="100%" justify-content="space-between"
+                text (useFahrenheit ? "68.0" : "20.0") class="tabular-nums" font-family="var(--font-mono)" font-size=11 color="var(--ink-muted)"
+                text (useFahrenheit ? "80.6" : "27.0") class="tabular-nums" font-family="var(--font-mono)" font-size=11 color="var(--ink-muted)"
+                text (useFahrenheit ? "93.2 °F" : "34.0 °C") class="tabular-nums" font-family="var(--font-mono)" font-size=11 color="var(--ink-muted)"
+
+          if chlorophyllVisible
+            column flex="1 1 200px" min-width=0 padding="8px 10px" gap=3 border-radius=8 background-color="var(--surface-canvas)" border="1px solid var(--border-subtle)" testId="legend-chlorophyll"
+              row width="100%" justify-content="space-between" gap=6
+                text "Chlorophyll-a (Viridis)" font-size=12 font-weight=700 color="var(--ink-primary)"
+                text "0.01 - 10.0 mg/m3" class="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--ink-muted)"
+              div width="100%" height=10 border-radius=999 background="linear-gradient(90deg, #440154 0%, #3b528b 25%, #21918c 55%, #5ec962 80%, #fde725 100%)" aria-hidden="true"
+              row width="100%" justify-content="space-between"
+                text "0.01" class="tabular-nums" font-family="var(--font-mono)" font-size=11 color="var(--ink-muted)"
+                text "0.1" class="tabular-nums" font-family="var(--font-mono)" font-size=11 color="var(--ink-muted)"
+                text "1.0" class="tabular-nums" font-family="var(--font-mono)" font-size=11 color="var(--ink-muted)"
+                text "10.0" class="tabular-nums" font-family="var(--font-mono)" font-size=11 color="var(--ink-muted)"
+
+          if currentsVisible
+            column flex="1 1 200px" min-width=0 padding="8px 10px" gap=3 border-radius=8 background-color="var(--surface-canvas)" border="1px solid var(--border-subtle)" testId="legend-currents"
+              row width="100%" justify-content="space-between" gap=6
+                text "Ocean Currents (Cividis)" font-size=12 font-weight=700 color="var(--ink-primary)"
+                text (useMs ? "0.0 - 2.5 m/s" : "0.0 - 4.9 kn") class="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--ink-muted)"
+              div width="100%" height=10 border-radius=999 background="linear-gradient(90deg, #00224e 0%, #414d6b 25%, #7c7b78 50%, #b9ac70 75%, #fee838 100%)" aria-hidden="true"
+              row width="100%" justify-content="space-between"
+                text "0.0" class="tabular-nums" font-family="var(--font-mono)" font-size=11 color="var(--ink-muted)"
+                text (useMs ? "1.25" : "2.4") class="tabular-nums" font-family="var(--font-mono)" font-size=11 color="var(--ink-muted)"
+                text (useMs ? "2.5 m/s" : "4.9 kn") class="tabular-nums" font-family="var(--font-mono)" font-size=11 color="var(--ink-muted)"
+
+        // Permanent Freshness & Disclaimer Badge
+        column flex="1 1 280px" min-width=0 max-width=440 padding="8px 10px" gap=3 border-radius=8 background-color="var(--surface-canvas)" border="1px solid var(--border-subtle)" testId="freshness-disclaimer-badge"
+          row align-items="center" gap=6
+            svg width=15 height=15 viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width=2 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+              circle cx=12 cy=12 r=10
+              polyline points="12 6 12 12 16 14"
+            text `Source: ${freshnessSource}` font-size=12 font-weight=700 color="var(--ink-primary)" testId="badge-data-source"
+          text `Acquired UTC: ${freshnessTimestamp}` class="tabular-nums" font-family="var(--font-mono)" font-size=11 color="var(--ink-muted)" testId="badge-acquired-at"
+          text "Satellite & historical data only. Does not guarantee fish presence. Maritime safety must follow BMKG, Pushidrosal, and Basarnas." font-size=11 line-height=1.4 color="var(--ink-muted)" testId="badge-disclaimer-text"

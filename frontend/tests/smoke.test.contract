@@ -1,0 +1,39 @@
+// smoke.test.contract: LAUT SCAN 5-Menu Route Navigation & Shell Smoke Test
+
+test "navigates all 5 LAUT SCAN routes and verifies root shell testIds"
+  clock data
+  expect tree has "app-root"
+  expect tree has "nav-bar"
+  expect tree has "nav-ocean-map"
+  expect tree has "nav-species"
+  expect tree has "nav-trends"
+  expect tree has "nav-sources"
+  expect tree has "nav-settings"
+
+  // Default route "/" (Ocean Map)
+  expect tree has "view-ocean-map"
+
+  // Route "/species"
+  tap "nav-species"
+  clock data
+  expect tree has "view-species"
+
+  // Route "/trends"
+  tap "nav-trends"
+  clock data
+  expect tree has "view-trends"
+
+  // Route "/sources"
+  tap "nav-sources"
+  clock data
+  expect tree has "view-sources"
+
+  // Route "/settings"
+  tap "nav-settings"
+  clock data
+  expect tree has "view-settings"
+
+  // Return to "/" (Ocean Map)
+  tap "nav-ocean-map"
+  clock data
+  expect tree has "view-ocean-map"

@@ -1,0 +1,129 @@
+// LAUT SCAN: Frozen Exact Contract Data Shapes
+// 1:1 parity with docs/openapi-contract.yaml and docs/ARCHITECTURE.md §4.2
+
+shape HealthStatus
+  status: string
+  service: string
+  version: string
+  environment: string
+  db_ok: bool
+  postgis_version: option<string>
+  redis_ok: bool
+  tile_cache_ok: bool
+  timestamp_utc: string
+
+shape WppZoneRecord
+  wpp_code: string
+  name: string
+  waters_id: string
+  waters_en: string
+  legal_basis: string
+  geometry_source: string
+  centroid_lat: number
+  centroid_lon: number
+  min_lon: number
+  min_lat: number
+  max_lon: number
+  max_lat: number
+  area_km2: option<number>
+  sst_mean_c: option<number>
+  chlorophyll_mean_mg_m3: option<number>
+  latest_observation_utc: option<string>
+  geometry_geojson: option<string>
+
+shape WppZoneListResponse
+  items: WppZoneRecord[]
+  total: number
+
+shape MapPointInspection
+  lat: number
+  lon: number
+  requested_date: string
+  resolved_date: option<string>
+  wpp_code: option<string>
+  wpp_name: option<string>
+  wpp_waters_id: option<string>
+  sst_c: option<number>
+  sst_f: option<number>
+  chlorophyll_mg_m3: option<number>
+  current_speed_ms: option<number>
+  current_speed_knots: option<number>
+  current_direction_deg: option<number>
+  current_compass: option<string>
+  salinity_psu: option<number>
+  wave_height_m: option<number>
+  interpolation_method: string
+  spatial_resolution_km: option<number>
+  primary_source: option<string>
+  attribution: string
+  acquired_at_utc: option<string>
+  is_cached_fallback: bool
+  disclaimer: string
+
+shape SpeciesOccurrenceRecord
+  id: string
+  obis_id: option<string>
+  scientific_name: string
+  common_name: option<string>
+  taxon_rank: option<string>
+  family: option<string>
+  lat: number
+  lon: number
+  wpp_code: option<string>
+  depth_m: option<number>
+  event_date_utc: option<string>
+  individual_count: option<number>
+  habitat_note: option<string>
+  dataset_name: option<string>
+  attribution: string
+  license: option<string>
+
+shape SpeciesOccurrenceListResponse
+  items: SpeciesOccurrenceRecord[]
+  total: number
+  limit: number
+  offset: number
+  has_more: bool
+
+shape DataSourceStatusRecord
+  source_key: string
+  display_name: string
+  priority: string
+  enabled: bool
+  requires_credentials: bool
+  non_commercial_only: bool
+  status: string
+  last_sync_utc: option<string>
+  latest_data_timestamp_utc: option<string>
+  last_error: option<string>
+  attribution: string
+  license_summary: string
+  official_url: string
+
+shape SourceSyncLogRecord
+  id: string
+  source_key: string
+  dataset_type: string
+  status: string
+  records_ingested: number
+  started_at_utc: string
+  finished_at_utc: option<string>
+  duration_ms: option<number>
+  error_message: option<string>
+
+shape DataSourcesResponse
+  sources: DataSourceStatusRecord[]
+  recent_logs: SourceSyncLogRecord[]
+  checked_at_utc: string
+
+shape ErrorResponse
+  error_code: string
+  message: string
+  detail: option<string>
+  timestamp_utc: string
+
+shape UserPreferences
+  temp_unit: string
+  speed_unit: string
+  theme_mode: string
+  low_bandwidth: bool

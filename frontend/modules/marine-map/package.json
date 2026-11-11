@@ -1,0 +1,14 @@
+{
+  "name": "@lautscan/marine-map",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Custom Expo Exact Native Module for LAUT SCAN Indonesian marine intelligence map (OSM base tiles, multi-layer oceanographic XYZ overlays, WPP-NRI GeoJSON polygons, species markers, and coordinate point inspection).",
+  "main": "./web/index.js",
+  "types": "./contract.ts",
+  "exports": {
+    ".": "./exact.json",
+    "./web": "./web/index.js",
+    "./contract": "./contract.ts"
+  }
+}

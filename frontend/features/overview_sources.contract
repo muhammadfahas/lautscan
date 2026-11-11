@@ -1,0 +1,174 @@
+// overview_sources.contract - WPP-NRI National Overview, Provider Health Cards & Sync Logs
+
+use HealthStatus, WppZoneRecord, DataSourceStatusRecord, SourceSyncLogRecord, UserPreferences from "../shapes.contract"
+
+fn formatSstCell(sst: number, useF: bool): string =
+  useF ? `${((sst * 9 / 5) + 32).toFixed(1)} °F` : `${sst.toFixed(1)} °C`
+
+fn sourceStatusColor(status: string): string =
+  status == "healthy" ? "var(--status-healthy)" : (status == "degraded" ? "var(--status-degraded)" : "var(--ink-muted)")
+
+component OverviewSourcesView
+  props
+    health: HealthStatus
+    wppZones: WppZoneRecord[]
+    sources: DataSourceStatusRecord[]
+    recentLogs: SourceSyncLogRecord[]
+    checkedAtUtc: string
+    prefs: UserPreferences
+    onRefresh: () => void
+
+  derive useFahrenheit = prefs.temp_unit == "F"
+
+  view
+    column width="100%" max-width=1280 margin="0 auto" padding="20px 16px" gap=20 overflow-x="hidden" background-color="var(--surface-canvas)" color="var(--ink-primary)" testId="overview-sources-root"
+      // Header Bar
+      row width="100%" align-items="center" justify-content="space-between" flex-wrap="wrap" gap=12
+        row align-items="center" gap=10
+          svg width=22 height=22 viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width=2 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+            ellipse cx=12 cy=5 rx=9 ry=3
+            path d="M3 5v14a9 3 0 0 0 18 0V5"
+            path d="M3 12a9 3 0 0 0 18 0"
+          column gap=2
+            text "National Overview & Data Sources" role="heading" font-size=22 font-weight=700 color="var(--ink-primary)" testId="sources-heading"
+            text "WPP-NRI 571 to 718 oceanographic summary, satellite/biodiversity provider health, licensing attribution, and ETL ingestion telemetry." font-size=15 color="var(--ink-muted)"
+
+        row align-items="center" gap=12 flex-wrap="wrap"
+          text `Checked: ${checkedAtUtc}` class="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-muted)" testId="sources-checked-at"
+          button press=onRefresh min-height=44 min-width=120 padding="10px 16px" border-radius=8 border="1px solid var(--accent-primary)" background-color="var(--accent-primary)" color="#FFFFFF" cursor="pointer" aria-label="Refresh overview and data source status" testId="sources-refresh-btn"
+            row align-items="center" gap=8
+              svg width=16 height=16 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width=2 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+                path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"
+                path d="M3 3v5h5"
+                path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"
+                path d="M16 16h5v5"
+              text "Refresh Telemetry" font-size=14 font-weight=600
+
+      // System Infrastructure Health Strip
+      row width="100%" padding="14px 16px" gap=16 flex-wrap="wrap" align-items="center" justify-content="space-between" border-radius=12 background-color="var(--surface-elevated)" border="1px solid var(--border-subtle)" testId="system-health-strip"
+        row align-items="center" gap=10
+          svg width=18 height=18 viewBox="0 0 24 24" fill="none" stroke=(health.status == "ok" ? "var(--status-healthy)" : "var(--status-degraded)") stroke-width=2 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+            polyline points="22 12 18 12 15 21 9 3 6 12 2 12"
+          text `API Status: ${health.status}` class="tabular-nums" font-family="var(--font-mono)" font-size=14 font-weight=700 color=(health.status == "ok" ? "var(--status-healthy)" : "var(--status-degraded)")
+        row align-items="center" gap=16 flex-wrap="wrap"
+          text `PostGIS: ${health.db_ok ? "Connected" : "Fallback"}` class="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-primary)"
+          match health.postgis_version
+            case some(pg) => text `Engine: ${pg}` class="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-muted)"
+            case none => text "Engine: Offline Seed" class="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-muted)"
+          text `Redis: ${health.redis_ok ? "Online" : "Bypassed"}` class="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-primary)"
+          text `Tile Cache: ${health.tile_cache_ok ? "Writable" : "Unavailable"}` class="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-primary)"
+          text `Health UTC: ${health.timestamp_utc}` class="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-muted)"
+
+      // Data Provider Health Cards (noaa_erddap, obis, copernicus_marine, kkp_pdpi, gfw)
+      column width="100%" gap=12
+        text "Marine Data Provider Health & Attribution" role="heading" font-size=18 font-weight=600 color="var(--ink-primary)"
+        row width="100%" gap=14 flex-wrap="wrap" testId="provider-health-cards"
+          for src in sources key=src.source_key
+            column flex="1 1 280px" min-width=0 max-width="100%" padding="16px" gap=10 border-radius=12 background-color="var(--surface-elevated)" border="1px solid var(--border-subtle)" testId=`source-card-${src.source_key}`
+              row width="100%" align-items="flex-start" justify-content="space-between" gap=8
+                column flex=1 min-width=0 gap=2
+                  text src.display_name font-size=16 font-weight=700 color="var(--ink-primary)"
+                  text `${src.source_key} (${src.priority})` class="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--ink-muted)"
+                row align-items="center" gap=6 padding="4px 10px" border-radius=999 border="1px solid var(--border-subtle)" background-color="var(--surface-canvas)"
+                  svg width=14 height=14 viewBox="0 0 24 24" fill="none" stroke=sourceStatusColor(src.status) stroke-width=2 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+                    circle cx=12 cy=12 r=10
+                    if src.status == "healthy"
+                      polyline points="9 12 11 14 15 10"
+                    else
+                      line x1=12 y1=8 x2=12 y2=12
+                      line x1=12 y1=16 x2=12.01 y2=16
+                  text src.status font-size=12 font-weight=700 color=sourceStatusColor(src.status)
+
+              if src.non_commercial_only
+                row padding="4px 8px" border-radius=6 background-color="var(--surface-canvas)" border="1px solid var(--accent-cta)"
+                  text "NON-COMMERCIAL / OPT-IN ONLY" font-size=12 font-weight=700 color="var(--accent-cta)"
+
+              column gap=4
+                match src.last_sync_utc
+                  case some(ts) => text `Last Sync UTC: ${ts}` class="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--ink-primary)"
+                  case none => text "Last Sync UTC: Pending" class="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--ink-muted)"
+                match src.latest_data_timestamp_utc
+                  case some(ds) => text `Dataset UTC: ${ds}` class="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--ink-muted)"
+                  case none => text "Dataset UTC: Offline seed" class="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--ink-muted)"
+
+              text `Attribution: ${src.attribution}` font-size=13 color="var(--ink-primary)"
+              text `License: ${src.license_summary}` font-size=13 color="var(--ink-muted)"
+              text src.official_url class="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--accent-primary)"
+
+              match src.last_error
+                case some(err) => text `Note: ${err}` font-size=12 color="var(--status-degraded)"
+                case none => div display="none"
+
+      // National WPP-NRI Overview Table (WPP 571-718)
+      column width="100%" padding="16px" gap=12 border-radius=12 background-color="var(--surface-elevated)" border="1px solid var(--border-subtle)"
+        row width="100%" align-items="center" justify-content="space-between" flex-wrap="wrap" gap=8
+          text "WPP-NRI National Overview (Zones 571 to 718)" role="heading" font-size=18 font-weight=600 color="var(--ink-primary)"
+          text "Accessible summary table for low-bandwidth marine connections and screen readers." font-size=13 color="var(--ink-muted)"
+
+        div width="100%" overflow-x="auto" testId="overview-wpp-table-wrap"
+          table width="100%" border-collapse="collapse" testId="overview-wpp-table"
+            thead
+              tr
+                th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "WPP Code"
+                th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "Waters (Indonesia)"
+                th scope="col" text-align="right" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" (useFahrenheit ? "Mean SST (°F)" : "Mean SST (°C)")
+                th scope="col" text-align="right" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "Chlorophyll-a (mg/m3)"
+                th scope="col" text-align="right" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "Area (km2)"
+                th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "Geometry Source"
+                th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "Latest Observation UTC"
+            tbody
+              for z in wppZones key=z.wpp_code
+                tr testId=`overview-wpp-row-${z.wpp_code}`
+                  td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" class="tabular-nums" font-family="var(--font-mono)" font-weight=600 z.name
+                  td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" z.waters_id
+                  td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" text-align="right" class="tabular-nums" font-family="var(--font-mono)"
+                    match z.sst_mean_c
+                      case some(sst) => text formatSstCell(sst, useFahrenheit)
+                      case none => text "N/A"
+                  td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" text-align="right" class="tabular-nums" font-family="var(--font-mono)"
+                    match z.chlorophyll_mean_mg_m3
+                      case some(chl) => text `${chl.toFixed(2)}`
+                      case none => text "N/A"
+                  td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" text-align="right" class="tabular-nums" font-family="var(--font-mono)"
+                    match z.area_km2
+                      case some(area) => text `${Math.round(area)}`
+                      case none => text "N/A"
+                  td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" class="tabular-nums" font-family="var(--font-mono)" z.geometry_source
+                  td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" class="tabular-nums" font-family="var(--font-mono)"
+                    match z.latest_observation_utc
+                      case some(ts) => text ts
+                      case none => text "Baseline seed"
+
+      // Recent SourceSyncLogRecord Table
+      column width="100%" padding="16px" gap=12 border-radius=12 background-color="var(--surface-elevated)" border="1px solid var(--border-subtle)"
+        text "Recent ETL Synchronization Logs" role="heading" font-size=18 font-weight=600 color="var(--ink-primary)"
+        if recentLogs.length == 0
+          text "No ETL sync runs recorded yet in this session (showing offline/seed status until worker sync runs)." font-size=14 color="var(--ink-muted)" testId="sync-logs-empty"
+        else
+          div width="100%" overflow-x="auto" testId="sync-logs-table-wrap"
+            table width="100%" border-collapse="collapse" testId="sync-logs-table"
+              thead
+                tr
+                  th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "Source Key"
+                  th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "Dataset Type"
+                  th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "Status"
+                  th scope="col" text-align="right" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "Records"
+                  th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "Started UTC"
+                  th scope="col" text-align="right" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "Duration (ms)"
+                  th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "Message"
+              tbody
+                for log in recentLogs key=log.id
+                  tr testId=`sync-log-row-${log.id}`
+                    td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" class="tabular-nums" font-family="var(--font-mono)" log.source_key
+                    td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" log.dataset_type
+                    td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" class="tabular-nums" font-family="var(--font-mono)" log.status
+                    td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" text-align="right" class="tabular-nums" font-family="var(--font-mono)" `${log.records_ingested}`
+                    td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" class="tabular-nums" font-family="var(--font-mono)" log.started_at_utc
+                    td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" text-align="right" class="tabular-nums" font-family="var(--font-mono)"
+                      match log.duration_ms
+                        case some(ms) => text `${ms}`
+                        case none => text "N/A"
+                    td padding="10px 8px" border-bottom="1px solid var(--border-subtle)"
+                      match log.error_message
+                        case some(err) => text err
+                        case none => text "OK"

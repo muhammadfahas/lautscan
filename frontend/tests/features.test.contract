@@ -1,0 +1,88 @@
+// features.test.contract - End-to-End Contract Interaction Tests across Feature Views
+
+test "toggles ocean layers, selects WPP-NRI zone, and inspects coordinate"
+  clock data
+  expect tree has "ocean-map-workspace"
+  expect tree has "marine-map-canvas"
+  expect tree has "layer-manager-panel"
+  expect tree has "freshness-disclaimer-badge"
+  expect tree has "legend-sst"
+  expect tree missing "legend-chlorophyll"
+  expect tree missing "legend-currents"
+
+  // Toggle Chlorophyll-a (Viridis) and Ocean Currents (Cividis)
+  tap "layer-toggle-chlorophyll"
+  tap "layer-toggle-currents"
+  expect tree has "legend-chlorophyll"
+  expect tree has "legend-currents"
+
+  // Adjust SST opacity via accessible stepper button
+  tap "sst-opacity-up"
+  expect text "sst-opacity-value" == "85%"
+
+  // Select WPP-NRI 712 (Java Sea) and inspect coordinate
+  type "wpp-zone-select" "712"
+  tap "inspect-center-btn"
+  clock data
+  expect tree has "point-inspector-drawer"
+  expect tree has "inspector-coords"
+  expect tree has "inspector-sst"
+  expect tree has "inspector-chlorophyll"
+  expect tree has "inspector-current"
+
+  // Close Point Inspector Drawer
+  tap "close-inspector-btn"
+  expect tree missing "point-inspector-drawer"
+
+test "filters OBIS species by taxon and WPP-NRI zone"
+  clock data
+  tap "nav-species"
+  clock data
+  expect tree has "species-root"
+  expect tree has "species-filter-bar"
+  expect tree has "species-table"
+
+  type "species-taxon-input" "Thunnus"
+  tap "species-search-btn"
+  clock data
+  expect tree has "species-cards-grid"
+
+  type "species-wpp-select" "714"
+  clock data
+  expect tree has "species-table"
+
+  tap "species-reset-btn"
+  clock data
+  expect tree has "species-total-count"
+
+test "switches period in trends and verifies overview sources and settings units/theme"
+  clock data
+  tap "nav-trends"
+  clock data
+  expect tree has "trends-root"
+  expect tree has "trends-sst-chart"
+  expect tree has "trends-chl-chart"
+  expect tree has "trends-wpp-table"
+  tap "trends-period-monsoon"
+  type "trends-wpp-select" "718"
+
+  tap "nav-sources"
+  clock data
+  expect tree has "overview-sources-root"
+  expect tree has "provider-health-cards"
+  expect tree has "source-card-noaa_erddap"
+  expect tree has "source-card-obis"
+  expect tree has "source-card-copernicus_marine"
+  expect tree has "source-card-kkp_pdpi"
+  expect tree has "source-card-gfw"
+  expect tree has "overview-wpp-table"
+
+  tap "nav-settings"
+  clock data
+  expect tree has "settings-root"
+  tap "unit-temp-f"
+  expect tree has "settings-saved-notice"
+  tap "unit-speed-ms"
+  tap "theme-night"
+  tap "toggle-low-bandwidth"
+  expect tree has "settings-gfw-compliance"

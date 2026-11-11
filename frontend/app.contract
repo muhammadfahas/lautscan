@@ -1,0 +1,190 @@
+// app.contract: LAUT SCAN Root Shell, 5-Menu Routes, Resources, Mutations & Nav Bar
+
+use HealthStatus, WppZoneRecord, WppZoneListResponse, MapPointInspection, SpeciesOccurrenceRecord, SpeciesOccurrenceListResponse, DataSourceStatusRecord, SourceSyncLogRecord, DataSourcesResponse, ErrorResponse, UserPreferences from "./shapes.contract"
+use OceanMapView from "./features/ocean_map.contract"
+use SpeciesView from "./features/species.contract"
+use TrendsView from "./features/trends.contract"
+use OverviewSourcesView from "./features/overview_sources.contract"
+use SettingsView from "./features/settings.contract"
+
+routes
+  tab ocean_map "/"
+  tab species   "/species"
+  tab trends    "/trends"
+  tab sources   "/sources"
+  tab settings  "/settings"
+
+component LautScanApp
+  state selectedLat = -5.1233
+  state selectedLon = 111.3205
+  state selectedDate = "latest"
+  state selectedWppCode = ""
+  state hasPointSelection = false
+  state speciesTaxon = ""
+  state speciesWpp = ""
+  state speciesBbox = ""
+  state speciesOffset = 0
+  state refreshNonce = 0
+
+  resource health = loadHealth(refreshNonce) as shape HealthStatus else fallbackHealth()
+  resource wppZones = loadWppZones(true, refreshNonce) as shape WppZoneListResponse else fallbackWppZones()
+  resource sourcesData = loadSources(refreshNonce) as shape DataSourcesResponse else fallbackSources()
+  resource speciesData = loadSpecies(speciesTaxon, speciesWpp, speciesBbox, 50, speciesOffset) as shape SpeciesOccurrenceListResponse else fallbackSpecies()
+  resource pointData = loadPointInspection(selectedLat, selectedLon, selectedDate) as shape MapPointInspection else fallbackPointInspection(selectedLat, selectedLon, selectedDate)
+  resource prefs = loadPreferences() as shape UserPreferences else defaultPreferences()
+
+  mutation inspectPoint as shape MapPointInspection refreshes pointData
+  mutation savePrefs as shape UserPreferences refreshes prefs
+
+  derive apiBaseUrl = getApiBaseUrl()
+  derive wppGeoJsonCollection = buildWppGeoJsonCollection(wppZones.items)
+  derive speciesMarkersJson = buildSpeciesMarkersJson(speciesData.items)
+  derive activePointInspection =
+    if hasPointSelection
+      match inspectPoint
+        case some(pt) => some(pt)
+        case none => some(pointData)
+    else
+      none
+
+  action inspectPointAt(lat: number, lon: number, date: string)
+    selectedLat = lat
+    selectedLon = lon
+    selectedDate = date
+    hasPointSelection = true
+    send inspectPoint = fetchPointInspection(lat, lon, date)
+
+  action clearInspection()
+    hasPointSelection = false
+
+  action updateSpeciesBbox(bbox: string)
+    speciesBbox = bbox
+    speciesOffset = 0
+
+  action selectWppZone(wppCode: string)
+    selectedWppCode = wppCode
+    speciesWpp = wppCode
+    speciesOffset = 0
+
+  action filterSpecies(taxon: string, wppCode: string, offset: number)
+    speciesTaxon = taxon
+    speciesWpp = wppCode
+    speciesOffset = offset
+
+  action inspectZoneAndOpenMap(lat: number, lon: number, date: string)
+    selectedLat = lat
+    selectedLon = lon
+    selectedDate = date
+    hasPointSelection = true
+    send inspectPoint = fetchPointInspection(lat, lon, date)
+    open("ocean_map")
+
+  action refreshAllData()
+    refreshNonce = refreshNonce + 1
+
+  action saveUserPrefs(tempUnit: string, speedUnit: string, themeMode: string, lowBandwidth: bool)
+    send savePrefs = savePreferences(tempUnit, speedUnit, themeMode, lowBandwidth)
+
+  view
+    column width="100%" height="100%" min-height="100vh" background="var(--surface-canvas)" color="var(--ink-primary)" font-family="var(--font-sans)" overflow-x="hidden" data-theme=prefs.theme_mode testId="app-root"
+      row width="100%" padding="8px 16px" gap=12 align-items="center" justify-content="space-between" flex-wrap="wrap" background="var(--surface-elevated)" border-bottom="1px solid var(--border-subtle)" z-index=40 testId="nav-bar"
+        row gap=10 align-items="center"
+          svg width=24 height=24 viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width=2 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+            circle cx=12 cy=12 r=10
+            polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"
+          column gap=0
+            text "LAUT SCAN" font-size=16 font-weight=700 letter-spacing="0.04em" color="var(--ink-primary)"
+            text "Know the Ocean. Find the Fish." font-size=12 color="var(--ink-muted)"
+
+        row gap=6 align-items="center" flex-wrap="wrap" role="navigation" aria-label="Primary Navigation"
+          link href=path("ocean_map") min-height=44 min-width=44 padding="8px 12px" border-radius=8 display="flex" align-items="center" gap=8 cursor="pointer" color="var(--ink-primary)" text-decoration="none" aria-label="Ocean Map" testId="nav-ocean-map"
+            svg width=18 height=18 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width=2 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+              polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"
+              line x1=9 y1=3 x2=9 y2=18
+              line x1=15 y1=6 x2=15 y2=21
+            text "Ocean Map" font-size=14 font-weight=600
+
+          link href=path("species") min-height=44 min-width=44 padding="8px 12px" border-radius=8 display="flex" align-items="center" gap=8 cursor="pointer" color="var(--ink-primary)" text-decoration="none" aria-label="Species Explorer" testId="nav-species"
+            svg width=18 height=18 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width=2 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+              path d="M6.5 12c.94-3.46 4.94-6 8.5-6 3.56 0 6.06 2.54 7 6-.94 3.46-3.44 6-7 6-3.56 0-7.56-2.54-8.5-6Z"
+              path d="M18 12v.5"
+              path d="M16 17.93a9.77 9.77 0 0 1 0-11.86"
+              path d="M7 10.67C7 8 5.58 5.97 2.73 5.5c-1 1.5-1 5 .23 6.5-1.24 1.5-1.24 5-.23 6.5C5.58 18.03 7 16 7 13.33"
+            text "Species" font-size=14 font-weight=600
+
+          link href=path("trends") min-height=44 min-width=44 padding="8px 12px" border-radius=8 display="flex" align-items="center" gap=8 cursor="pointer" color="var(--ink-primary)" text-decoration="none" aria-label="Historical Trends" testId="nav-trends"
+            svg width=18 height=18 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width=2 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+              polyline points="22 7 13.5 15.5 8.5 10.5 2 17"
+              polyline points="16 7 22 7 22 13"
+            text "Trends" font-size=14 font-weight=600
+
+          link href=path("sources") min-height=44 min-width=44 padding="8px 12px" border-radius=8 display="flex" align-items="center" gap=8 cursor="pointer" color="var(--ink-primary)" text-decoration="none" aria-label="Overview and Sources" testId="nav-sources"
+            svg width=18 height=18 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width=2 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+              ellipse cx=12 cy=5 rx=9 ry=3
+              path d="M3 5v14a9 3 0 0 0 18 0V5"
+              path d="M3 12a9 3 0 0 0 18 0"
+            text "Overview & Sources" font-size=14 font-weight=600
+
+          link href=path("settings") min-height=44 min-width=44 padding="8px 12px" border-radius=8 display="flex" align-items="center" gap=8 cursor="pointer" color="var(--ink-primary)" text-decoration="none" aria-label="Settings" testId="nav-settings"
+            svg width=18 height=18 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width=2 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+              line x1=21 y1=4 x2=14 y2=4
+              line x1=10 y1=4 x2=3 y2=4
+              line x1=21 y1=12 x2=12 y2=12
+              line x1=8 y1=12 x2=3 y2=12
+              line x1=21 y1=20 x2=16 y2=20
+              line x1=12 y1=20 x2=3 y2=20
+              line x1=14 y1=2 x2=14 y2=6
+              line x1=8 y1=10 x2=8 y2=14
+              line x1=16 y1=18 x2=16 y2=22
+            text "Settings" font-size=14 font-weight=600
+
+      column flex=1 min-height=0 width="100%"
+        for e in stack(ocean_map)
+          column key=e.id navigationKey=`${e.id}` flex=1 min-height=0 width="100%" testId="view-ocean-map"
+            OceanMapView
+              wppZones=wppZones.items
+              wppGeoJsonCollection=wppGeoJsonCollection
+              speciesMarkers=speciesMarkersJson
+              pointInspection=activePointInspection
+              sources=sourcesData.sources
+              prefs=prefs
+              apiBaseUrl=apiBaseUrl
+              onInspectPoint=inspectPointAt
+              onClearInspection=clearInspection
+              onBoundsChange=updateSpeciesBbox
+              onWppSelected=selectWppZone
+
+        for e in stack(species)
+          column key=e.id navigationKey=`${e.id}` flex=1 min-height=0 width="100%" testId="view-species"
+            SpeciesView
+              items=speciesData.items
+              total=speciesData.total
+              hasMore=speciesData.has_more
+              wppZones=wppZones.items
+              onFilterSpecies=filterSpecies
+
+        for e in stack(trends)
+          column key=e.id navigationKey=`${e.id}` flex=1 min-height=0 width="100%" testId="view-trends"
+            TrendsView
+              wppZones=wppZones.items
+              prefs=prefs
+              pointInspection=activePointInspection
+              onInspectZone=inspectZoneAndOpenMap
+
+        for e in stack(sources)
+          column key=e.id navigationKey=`${e.id}` flex=1 min-height=0 width="100%" testId="view-sources"
+            OverviewSourcesView
+              health=health
+              wppZones=wppZones.items
+              sources=sourcesData.sources
+              recentLogs=sourcesData.recent_logs
+              checkedAtUtc=sourcesData.checked_at_utc
+              prefs=prefs
+              onRefresh=refreshAllData
+
+        for e in stack(settings)
+          column key=e.id navigationKey=`${e.id}` flex=1 min-height=0 width="100%" testId="view-settings"
+            SettingsView
+              prefs=prefs
+              health=health
+              onSavePrefs=saveUserPrefs

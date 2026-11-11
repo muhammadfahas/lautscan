@@ -1,0 +1,156 @@
+// species.contract - LAUT SCAN OBIS Fish Species Explorer
+
+use WppZoneRecord, SpeciesOccurrenceRecord from "../shapes.contract"
+
+fn formatDepth(depth: option<number>): string =
+  match depth
+    case some(d) => `${d.toFixed(1)} m`
+    case none => "Surface / N/A"
+
+fn formatOptionalText(val: option<string>, fallback: string): string =
+  match val
+    case some(s) => s
+    case none => fallback
+
+component SpeciesView
+  props
+    items: SpeciesOccurrenceRecord[]
+    total: number
+    hasMore: bool
+    wppZones: WppZoneRecord[]
+    onFilterSpecies: (taxon: string, wppCode: string, offset: number) => void
+
+  state taxonDraft = ""
+  state selectedWpp = ""
+  state offset = 0
+
+  derive pageEnd = offset + items.length
+  derive canPrev = offset >= 50
+
+  action editTaxon(value: string)
+    taxonDraft = value
+
+  action applyFilter()
+    offset = 0
+    onFilterSpecies(taxonDraft.trim(), selectedWpp, 0)
+
+  action selectWpp(code: string)
+    selectedWpp = code
+    offset = 0
+    onFilterSpecies(taxonDraft.trim(), code, 0)
+
+  action resetFilters()
+    taxonDraft = ""
+    selectedWpp = ""
+    offset = 0
+    onFilterSpecies("", "", 0)
+
+  action prevPage()
+    if offset >= 50
+      let nextOffset = offset - 50
+      offset = nextOffset
+      onFilterSpecies(taxonDraft.trim(), selectedWpp, nextOffset)
+
+  action nextPage()
+    if hasMore
+      let nextOffset = offset + 50
+      offset = nextOffset
+      onFilterSpecies(taxonDraft.trim(), selectedWpp, nextOffset)
+
+  view
+    column width="100%" max-width=1280 margin="0 auto" padding="20px 16px" gap=20 overflow-x="hidden" background-color="var(--surface-canvas)" color="var(--ink-primary)" testId="species-root"
+      // Header
+      row width="100%" align-items="center" justify-content="space-between" flex-wrap="wrap" gap=12
+        row align-items="center" gap=10
+          svg width=22 height=22 viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width=2 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+            path d="M6.5 12c.94-3.46 4.94-6 8.5-6 3.56 0 6.06 2.54 7 6-.94 3.46-3.44 6-7 6-3.56 0-7.56-2.54-8.5-6Z"
+            path d="M18 12v.5"
+            path d="M16 17.93a9.77 9.77 0 0 1 0-11.86"
+            path d="M7 10.67C7 8 5.58 5.97 2.73 5.5c-1 1.5-1 5 .23 6.5-1.24 1.5-1.24 5-.23 6.5C5.58 18.03 7 16 7 13.33"
+          column gap=2
+            text "OBIS Fish Species Explorer" role="heading" font-size=22 font-weight=700 color="var(--ink-primary)" testId="species-heading"
+            text "Open biodiversity observations across Indonesian waters. Historical OBIS records do not indicate real-time fish presence." font-size=15 color="var(--ink-muted)"
+
+        row padding="8px 12px" border-radius=8 background-color="var(--surface-elevated)" border="1px solid var(--border-subtle)"
+          text `Total Records: ${total}` class="tabular-nums" font-family="var(--font-mono)" font-size=14 font-weight=700 color="var(--ink-primary)" testId="species-total-count"
+
+      // Filter Toolbar
+      row width="100%" padding="14px 16px" gap=12 flex-wrap="wrap" align-items="center" border-radius=12 background-color="var(--surface-elevated)" border="1px solid var(--border-subtle)" testId="species-filter-bar"
+        column flex="2 1 220px" min-width=0 gap=4
+          label "Taxon / Species Name" font-size=13 font-weight=600 color="var(--ink-muted)"
+          input value=taxonDraft input=editTaxon submit=applyFilter placeholder="e.g. Thunnus, Cakalang, Scombridae" width="100%" max-width="100%" min-height=44 min-width=44 padding="10px 12px" border-radius=8 border="1px solid var(--border-subtle)" background-color="var(--surface-canvas)" color="var(--ink-primary)" font-size=16 cursor="pointer" aria-label="Filter species by scientific name, common name, or family" testId="species-taxon-input"
+
+        column flex="1 1 200px" min-width=0 gap=4
+          label "WPP-NRI Zone" font-size=13 font-weight=600 color="var(--ink-muted)"
+          select value=selectedWpp change=selectWpp width="100%" max-width="100%" min-height=44 min-width=44 padding="10px 12px" border-radius=8 border="1px solid var(--border-subtle)" background-color="var(--surface-canvas)" color="var(--ink-primary)" font-size=16 cursor="pointer" aria-label="Filter species by WPP-NRI fisheries management zone" testId="species-wpp-select"
+            option value="" "All WPP-NRI Zones (571-718)"
+            for z in wppZones key=z.wpp_code
+              option value=z.wpp_code `${z.name}: ${z.waters_en}`
+
+        row gap=10 align-items="flex-end" flex-wrap="wrap"
+          button press=applyFilter min-height=44 min-width=110 padding="10px 16px" border-radius=8 border="1px solid var(--accent-primary)" background-color="var(--accent-primary)" color="#FFFFFF" cursor="pointer" aria-label="Apply species filters" testId="species-search-btn"
+            row align-items="center" gap=6
+              svg width=16 height=16 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width=2 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+                circle cx=11 cy=11 r=8
+                path d="m21 21-4.3-4.3"
+              text "Search" font-size=14 font-weight=600
+
+          button press=resetFilters min-height=44 min-width=96 padding="10px 14px" border-radius=8 border="1px solid var(--border-subtle)" background-color="var(--surface-canvas)" color="var(--ink-primary)" cursor="pointer" aria-label="Reset species filters" testId="species-reset-btn"
+            text "Reset" font-size=14 font-weight=600
+
+      // Species Cards Grid
+      if items.length == 0
+        column width="100%" padding="24px" align-items="center" gap=8 border-radius=12 background-color="var(--surface-elevated)" border="1px solid var(--border-subtle)" testId="species-empty-state"
+          text "No OBIS species occurrences matched the current taxon or WPP-NRI filter." font-size=15 font-weight=600 color="var(--ink-primary)"
+          text "Try clearing filters or selecting another Indonesian WPP-NRI zone." font-size=14 color="var(--ink-muted)"
+      else
+        row width="100%" gap=14 flex-wrap="wrap" testId="species-cards-grid"
+          for sp in items key=sp.id
+            column flex="1 1 280px" min-width=0 max-width="100%" padding="16px" gap=8 border-radius=12 background-color="var(--surface-elevated)" border="1px solid var(--border-subtle)" testId=`species-card-${sp.id}`
+              row width="100%" align-items="flex-start" justify-content="space-between" gap=8
+                column flex=1 min-width=0 gap=2
+                  text sp.scientific_name font-size=16 font-weight=700 font-style="italic" color="var(--ink-primary)"
+                  text formatOptionalText(sp.common_name, "Common name unlisted") font-size=14 font-weight=600 color="var(--accent-primary)"
+                row padding="4px 8px" border-radius=6 background-color="var(--surface-canvas)" border="1px solid var(--border-subtle)"
+                  text `WPP ${formatOptionalText(sp.wpp_code, "N/A")}` class="tabular-nums" font-family="var(--font-mono)" font-size=12 font-weight=700 color="var(--ink-primary)"
+
+              row gap=12 flex-wrap="wrap"
+                text `Family: ${formatOptionalText(sp.family, "Unclassified")}` font-size=13 color="var(--ink-muted)"
+                text `Depth: ${formatDepth(sp.depth_m)}` class="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-primary)"
+
+              text `Coord: ${sp.lat.toFixed(4)}, ${sp.lon.toFixed(4)}` class="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-muted)"
+              text formatOptionalText(sp.habitat_note, "No habitat summary provided by OBIS contributor.") font-size=14 line-height=1.5 color="var(--ink-primary)"
+              text `Attribution: ${sp.attribution}` font-size=12 color="var(--ink-muted)"
+
+      // Accessible Species Table
+      column width="100%" padding="16px" gap=12 border-radius=12 background-color="var(--surface-elevated)" border="1px solid var(--border-subtle)"
+        row width="100%" align-items="center" justify-content="space-between" flex-wrap="wrap" gap=8
+          text "Accessible Species Observation Table" role="heading" font-size=18 font-weight=600 color="var(--ink-primary)"
+          text `Showing ${items.length > 0 ? offset + 1 : 0} to ${pageEnd} of ${total}` class="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-muted)"
+
+        div width="100%" overflow-x="auto" testId="species-table-wrap"
+          table width="100%" border-collapse="collapse" testId="species-table"
+            thead
+              tr
+                th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "Scientific Name"
+                th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "Common Name"
+                th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "WPP Code"
+                th scope="col" text-align="right" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "Depth (m)"
+                th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "Habitat Note"
+                th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "Attribution"
+            tbody
+              for sp in items key=sp.id
+                tr testId=`species-row-${sp.id}`
+                  td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" font-style="italic" font-weight=600 sp.scientific_name
+                  td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" formatOptionalText(sp.common_name, "N/A")
+                  td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" class="tabular-nums" font-family="var(--font-mono)" formatOptionalText(sp.wpp_code, "N/A")
+                  td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" text-align="right" class="tabular-nums" font-family="var(--font-mono)" formatDepth(sp.depth_m)
+                  td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" formatOptionalText(sp.habitat_note, "N/A")
+                  td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" sp.attribution
+
+        // Pagination Controls
+        row width="100%" justify-content="space-between" align-items="center" gap=12 flex-wrap="wrap"
+          button press=prevPage disabled=(not canPrev) min-height=44 min-width=110 padding="10px 14px" border-radius=8 border="1px solid var(--border-subtle)" background-color="var(--surface-canvas)" color="var(--ink-primary)" cursor="pointer" aria-label="Previous species page" testId="species-prev-btn"
+            text "Previous" font-size=14 font-weight=600
+          button press=nextPage disabled=(not hasMore) min-height=44 min-width=110 padding="10px 14px" border-radius=8 border="1px solid var(--border-subtle)" background-color="var(--surface-canvas)" color="var(--ink-primary)" cursor="pointer" aria-label="Next species page" testId="species-next-btn"
+            text "Next Page" font-size=14 font-weight=600

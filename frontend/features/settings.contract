@@ -1,0 +1,177 @@
+// settings.contract - LAUT SCAN Maritime Preferences and License Compliance View
+
+use HealthStatus, UserPreferences from "../shapes.contract"
+
+fn tempLabel(unit: string): string =
+  unit == "F" ? "Fahrenheit (°F)" : "Celsius (°C)"
+
+fn speedLabel(unit: string): string =
+  unit == "ms" ? "Meters per second (m/s)" : "Knots (knot)"
+
+fn themeLabel(mode: string): string =
+  mode == "daylight" ? "Daylight Maritime" : (mode == "night" ? "Night Maritime" : "System Default")
+
+fn tileModeLabel(lowBandwidth: bool): string =
+  lowBandwidth ? "WebP (Low-Bandwidth Maritime)" : "PNG (Standard Lossless RGBA)"
+
+component SettingsView
+  props
+    prefs: UserPreferences
+    health: HealthStatus
+    onSavePrefs: (tempUnit: string, speedUnit: string, themeMode: string, lowBandwidth: bool) => void
+
+  state savedNotice = false
+
+  derive activeTempLabel = tempLabel(prefs.temp_unit)
+  derive activeSpeedLabel = speedLabel(prefs.speed_unit)
+  derive activeThemeLabel = themeLabel(prefs.theme_mode)
+  derive tileFormatLabel = tileModeLabel(prefs.low_bandwidth)
+
+  action selectTempUnit(unit: string)
+    onSavePrefs(unit, prefs.speed_unit, prefs.theme_mode, prefs.low_bandwidth)
+    savedNotice = true
+
+  action selectSpeedUnit(unit: string)
+    onSavePrefs(prefs.temp_unit, unit, prefs.theme_mode, prefs.low_bandwidth)
+    savedNotice = true
+
+  action selectThemeMode(mode: string)
+    onSavePrefs(prefs.temp_unit, prefs.speed_unit, mode, prefs.low_bandwidth)
+    savedNotice = true
+
+  action toggleLowBandwidth()
+    onSavePrefs(prefs.temp_unit, prefs.speed_unit, prefs.theme_mode, not prefs.low_bandwidth)
+    savedNotice = true
+
+  action dismissSavedNotice()
+    savedNotice = false
+
+  view
+    column width="100%" max-width=1040 margin="0 auto" padding="20px 16px" gap=20 overflow-x="hidden" background-color="var(--surface-canvas)" color="var(--ink-primary)" testId="settings-root"
+      row width="100%" align-items="center" justify-content="space-between" flex-wrap="wrap" gap=12
+        row align-items="center" gap=10
+          svg width=22 height=22 viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width=2 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+            line x1=21 y1=4 x2=14 y2=4
+            line x1=10 y1=4 x2=3 y2=4
+            line x1=21 y1=12 x2=12 y2=12
+            line x1=8 y1=12 x2=3 y2=12
+            line x1=21 y1=20 x2=16 y2=20
+            line x1=12 y1=20 x2=3 y2=20
+            line x1=14 y1=2 x2=14 y2=6
+            line x1=8 y1=10 x2=8 y2=14
+            line x1=16 y1=18 x2=16 y2=22
+          column gap=2
+            text "Maritime Preferences & Compliance" role="heading" font-size=22 font-weight=700 color="var(--ink-primary)" testId="settings-heading"
+            text "Configure oceanographic units, bridge display theme, low-bandwidth tile mode, and open-data compliance." font-size=15 color="var(--ink-muted)"
+
+        if savedNotice
+          row align-items="center" gap=8 padding="8px 12px" border-radius=8 background-color="var(--surface-elevated)" border="1px solid var(--status-healthy)" testId="settings-saved-notice"
+            svg width=18 height=18 viewBox="0 0 24 24" fill="none" stroke="var(--status-healthy)" stroke-width=2 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+              polyline points="20 6 9 17 4 12"
+            text "Preferences saved locally" font-size=14 font-weight=600 color="var(--status-healthy)"
+            button press=dismissSavedNotice min-height=44 min-width=44 padding="6px 10px" border-radius=6 border="1px solid var(--border-subtle)" background-color="var(--surface-canvas)" color="var(--ink-primary)" cursor="pointer" aria-label="Dismiss saved notice" testId="settings-dismiss-notice"
+              text "OK" font-size=13 font-weight=600
+
+      // Unit Preferences Card
+      column width="100%" padding="16px" gap=16 border-radius=12 background-color="var(--surface-elevated)" border="1px solid var(--border-subtle)" testId="settings-units-section"
+        row align-items="center" gap=8
+          svg width=20 height=20 viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width=2 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+            path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"
+          text "Oceanographic Measurement Units" role="heading" font-size=18 font-weight=600 color="var(--ink-primary)"
+
+        row width="100%" gap=20 flex-wrap="wrap"
+          column flex=1 min-width=260 gap=8
+            text `Temperature Unit (Active: ${activeTempLabel})` font-size=14 font-weight=600 color="var(--ink-muted)" testId="settings-active-temp"
+            row gap=10 flex-wrap="wrap"
+              button press=selectTempUnit("C") min-height=44 min-width=120 padding="10px 16px" border-radius=8 border=(prefs.temp_unit == "C" ? "2px solid var(--accent-primary)" : "1px solid var(--border-subtle)") background-color="var(--surface-canvas)" color="var(--ink-primary)" cursor="pointer" aria-label="Select Celsius temperature unit" testId="unit-temp-c"
+                text "Celsius (°C)" font-size=15 font-weight=600
+              button press=selectTempUnit("F") min-height=44 min-width=120 padding="10px 16px" border-radius=8 border=(prefs.temp_unit == "F" ? "2px solid var(--accent-primary)" : "1px solid var(--border-subtle)") background-color="var(--surface-canvas)" color="var(--ink-primary)" cursor="pointer" aria-label="Select Fahrenheit temperature unit" testId="unit-temp-f"
+                text "Fahrenheit (°F)" font-size=15 font-weight=600
+
+          column flex=1 min-width=260 gap=8
+            text `Current Speed Unit (Active: ${activeSpeedLabel})` font-size=14 font-weight=600 color="var(--ink-muted)" testId="settings-active-speed"
+            row gap=10 flex-wrap="wrap"
+              button press=selectSpeedUnit("knots") min-height=44 min-width=120 padding="10px 16px" border-radius=8 border=(prefs.speed_unit != "ms" ? "2px solid var(--accent-primary)" : "1px solid var(--border-subtle)") background-color="var(--surface-canvas)" color="var(--ink-primary)" cursor="pointer" aria-label="Select knots speed unit" testId="unit-speed-knot"
+                text "Knots (knot)" font-size=15 font-weight=600
+              button press=selectSpeedUnit("ms") min-height=44 min-width=120 padding="10px 16px" border-radius=8 border=(prefs.speed_unit == "ms" ? "2px solid var(--accent-primary)" : "1px solid var(--border-subtle)") background-color="var(--surface-canvas)" color="var(--ink-primary)" cursor="pointer" aria-label="Select meters per second speed unit" testId="unit-speed-ms"
+                text "Meters/sec (m/s)" font-size=15 font-weight=600
+
+      // Theme Mode Card
+      column width="100%" padding="16px" gap=14 border-radius=12 background-color="var(--surface-elevated)" border="1px solid var(--border-subtle)" testId="settings-theme-section"
+        row align-items="center" gap=8
+          svg width=20 height=20 viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width=2 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+            circle cx=12 cy=12 r=4
+            path d="M12 2v2"
+            path d="M12 20v2"
+            path d="m4.93 4.93 1.41 1.41"
+            path d="m17.66 17.66 1.41 1.41"
+            path d="M2 12h2"
+            path d="M20 12h2"
+            path d="m6.34 17.66-1.41 1.41"
+            path d="m19.07 4.93-1.41 1.41"
+          column gap=2
+            text "Maritime Display Theme" role="heading" font-size=18 font-weight=600 color="var(--ink-primary)"
+            text `Active mode: ${activeThemeLabel} (Daylight for high-glare deck use, Night for low-emission bridge navigation).` font-size=14 color="var(--ink-muted)" testId="settings-active-theme"
+
+        row gap=10 flex-wrap="wrap"
+          button press=selectThemeMode("daylight") min-height=44 min-width=150 padding="10px 16px" border-radius=8 border=(prefs.theme_mode == "daylight" ? "2px solid var(--accent-primary)" : "1px solid var(--border-subtle)") background-color="var(--surface-canvas)" color="var(--ink-primary)" cursor="pointer" aria-label="Switch to Daylight Maritime theme" testId="theme-daylight"
+            row align-items="center" gap=8
+              svg width=18 height=18 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width=2 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+                circle cx=12 cy=12 r=4
+                path d="M12 2v2"
+                path d="M12 20v2"
+                path d="M2 12h2"
+                path d="M20 12h2"
+              text "Daylight Maritime" font-size=15 font-weight=600
+
+          button press=selectThemeMode("night") min-height=44 min-width=150 padding="10px 16px" border-radius=8 border=(prefs.theme_mode == "night" ? "2px solid var(--accent-primary)" : "1px solid var(--border-subtle)") background-color="var(--surface-canvas)" color="var(--ink-primary)" cursor="pointer" aria-label="Switch to Night Maritime theme" testId="theme-night"
+            row align-items="center" gap=8
+              svg width=18 height=18 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width=2 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+                path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"
+              text "Night Maritime" font-size=15 font-weight=600
+
+          button press=selectThemeMode("system") min-height=44 min-width=130 padding="10px 16px" border-radius=8 border=(prefs.theme_mode == "system" ? "2px solid var(--accent-primary)" : "1px solid var(--border-subtle)") background-color="var(--surface-canvas)" color="var(--ink-primary)" cursor="pointer" aria-label="Follow System theme preference" testId="theme-system"
+            row align-items="center" gap=8
+              svg width=18 height=18 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width=2 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+                rect width=20 height=14 x=2 y=3 rx=2
+                line x1=8 y1=21 x2=16 y2=21
+                line x1=12 y1=17 x2=12 y2=21
+              text "System" font-size=15 font-weight=600
+
+      // Low-Bandwidth & Tile Cache Card
+      column width="100%" padding="16px" gap=14 border-radius=12 background-color="var(--surface-elevated)" border="1px solid var(--border-subtle)" testId="settings-bandwidth-section"
+        row width="100%" align-items="center" justify-content="space-between" flex-wrap="wrap" gap=12
+          column flex=1 min-width=240 gap=4
+            row align-items="center" gap=8
+              svg width=20 height=20 viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width=2 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+                path d="M5 12.55a11 11 0 0 1 14.08 0"
+                path d="M1.42 9a16 16 0 0 1 21.16 0"
+                path d="M8.53 16.11a6 6 0 0 1 6.95 0"
+                line x1=12 y1=20 x2=12.01 y2=20
+              text "Low-Bandwidth Maritime Tile Mode (WebP)" role="heading" font-size=18 font-weight=600 color="var(--ink-primary)"
+            text "Prefer compressed 256x256 WebP oceanographic tiles (?format=webp) and lightweight table fallbacks when operating on limited coastal cellular or satellite links." font-size=14 color="var(--ink-muted)"
+            text `Current tile format: ${tileFormatLabel}` class="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-primary)" testId="settings-tile-format-status"
+
+          row align-items="center" gap=10
+            input type="checkbox" checked=prefs.low_bandwidth change=toggleLowBandwidth min-height=44 min-width=44 cursor="pointer" aria-label="Enable low-bandwidth WebP raster tiles" testId="toggle-low-bandwidth"
+            button press=toggleLowBandwidth min-height=44 min-width=140 padding="10px 14px" border-radius=8 border="1px solid var(--border-subtle)" background-color="var(--surface-canvas)" color="var(--ink-primary)" cursor="pointer" aria-label="Toggle low-bandwidth WebP tile preference" testId="btn-toggle-low-bandwidth"
+              text (prefs.low_bandwidth ? "WebP Enabled" : "Enable WebP") font-size=14 font-weight=600
+
+        row align-items="center" gap=12 flex-wrap="wrap" padding="10px 12px" border-radius=8 background-color="var(--surface-canvas)" border="1px solid var(--border-subtle)"
+          text `Server Tile Cache Status: ${health.tile_cache_ok ? "Ready" : "Degraded / Offline Fallback"}` class="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-muted)"
+          text `API Service: ${health.service} v${health.version} (${health.environment})` class="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-muted)"
+
+      // GFW Non-Commercial Compliance & Safety Disclosure Card
+      column width="100%" padding="16px" gap=12 border-radius=12 background-color="var(--surface-elevated)" border="1px solid var(--border-subtle)" testId="settings-gfw-compliance"
+        row align-items="center" gap=8
+          svg width=20 height=20 viewBox="0 0 24 24" fill="none" stroke="var(--accent-cta)" stroke-width=2 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+            path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"
+            line x1=12 y1=8 x2=12 y2=12
+            line x1=12 y1=16 x2=12.01 y2=16
+          text "Global Fishing Watch (GFW) & Open-Data Compliance" role="heading" font-size=18 font-weight=600 color="var(--ink-primary)"
+
+        text "Global Fishing Watch (GFW) AIS vessel activity integration is strictly opt-in and disabled by default. The free GFW v3 API tier is licensed solely for non-commercial, academic, and public-interest maritime research. Commercial fleet operators must configure an independent licensed BYO-Token on the backend server (GFW_API_TOKEN) so LAUT SCAN remains compliant with its MIT open-source license. External API tokens and Copernicus Marine credentials never leave the backend server." font-size=15 line-height=1.6 color="var(--ink-primary)"
+
+        column padding="12px" gap=6 border-radius=8 background-color="var(--surface-canvas)" border="1px solid var(--border-subtle)" testId="settings-safety-disclaimer"
+          text "Operational Safety & Non-Guarantee Notice" font-size=14 font-weight=700 color="var(--ink-primary)"
+          text "LAUT SCAN visualizes historical biodiversity records (OBIS) and satellite-derived oceanographic layers that involve acquisition latency and spatial grid resolution limits. Fishing ground indicators do not guarantee catch presence, and all navigation or marine safety decisions must follow official authorities (BMKG, Pushidrosal, and Basarnas)." font-size=14 line-height=1.55 color="var(--ink-muted)"

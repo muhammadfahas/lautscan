@@ -1,0 +1,30 @@
+{
+  "name": "LAUT SCAN",
+  "bundleId": "com.lautscan.app",
+  "slug": "laut-scan",
+  "version": "1.2.0",
+  "description": "Open-Source Marine Intelligence Platform: Know the Ocean. Find the Fish.",
+  "packages": {
+    "@lautscan/marine-map": {
+      "path": "./modules/marine-map"
+    }
+  },
+  "env": [
+    "API_BASE_URL"
+  ],
+  "commands": {
+    "server": [
+      "python",
+      "-m",
+      "uvicorn",
+      "app.main:app",
+      "--app-dir",
+      "../backend",
+      "--port",
+      "8080"
+    ]
+  },
+  "server": {
+    "database": false
+  }
+}

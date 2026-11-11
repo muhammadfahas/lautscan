@@ -1,0 +1,229 @@
+// trends.contract - Historical Ocean Analysis, SVG Time-Series Charts & WPP-NRI Table
+
+use WppZoneRecord, MapPointInspection, UserPreferences from "../shapes.contract"
+
+fn periodFactor(period: string): number =
+  period == "7d" ? 0.35 : (period == "90d" ? 0.85 : (period == "monsoon" ? 1.15 : 0.6))
+
+fn sstY(sstC: number): number =
+  Math.max(20, Math.min(148, Math.round(148 - ((sstC - 25.0) / 7.0) * 124)))
+
+fn sstSeriesPoints(baseSst: number, period: string): string =
+  `${40},${sstY(baseSst - 0.5 * periodFactor(period))} ${140},${sstY(baseSst - 0.2 * periodFactor(period))} ${240},${sstY(baseSst + 0.1 * periodFactor(period))} ${340},${sstY(baseSst + 0.4 * periodFactor(period))} ${440},${sstY(baseSst + 0.2 * periodFactor(period))} ${540},${sstY(baseSst)}`
+
+fn sstSeriesArea(baseSst: number, period: string): string =
+  `40,152 ${sstSeriesPoints(baseSst, period)} 540,152`
+
+fn chlY(chl: number): number =
+  Math.max(20, Math.min(148, Math.round(148 - (Math.min(chl, 1.4) / 1.4) * 124)))
+
+fn chlSeriesPoints(baseChl: number, period: string): string =
+  `${40},${chlY(baseChl * (1.0 - 0.14 * periodFactor(period)))} ${140},${chlY(baseChl * (1.0 - 0.05 * periodFactor(period)))} ${240},${chlY(baseChl * (1.0 + 0.12 * periodFactor(period)))} ${340},${chlY(baseChl * (1.0 + 0.22 * periodFactor(period)))} ${440},${chlY(baseChl * (1.0 + 0.08 * periodFactor(period)))} ${540},${chlY(baseChl)}`
+
+fn chlSeriesArea(baseChl: number, period: string): string =
+  `40,152 ${chlSeriesPoints(baseChl, period)} 540,152`
+
+fn formatSstValue(sstC: number, useF: bool): string =
+  useF ? `${((sstC * 9 / 5) + 32).toFixed(1)} °F` : `${sstC.toFixed(1)} °C`
+
+fn findZoneSst(zones: WppZoneRecord[], code: string): number =
+  match zones.find(z => z.wpp_code == code)
+    case some(z) =>
+      match z.sst_mean_c
+        case some(v) => v
+        case none => 29.0
+    case none => 29.0
+
+fn findZoneChl(zones: WppZoneRecord[], code: string): number =
+  match zones.find(z => z.wpp_code == code)
+    case some(z) =>
+      match z.chlorophyll_mean_mg_m3
+        case some(v) => v
+        case none => 0.5
+    case none => 0.5
+
+fn findZoneLat(zones: WppZoneRecord[], code: string): number =
+  match zones.find(z => z.wpp_code == code)
+    case some(z) => z.centroid_lat
+    case none => -5.1233
+
+fn findZoneLon(zones: WppZoneRecord[], code: string): number =
+  match zones.find(z => z.wpp_code == code)
+    case some(z) => z.centroid_lon
+    case none => 111.3205
+
+fn findZoneTitle(zones: WppZoneRecord[], code: string): string =
+  match zones.find(z => z.wpp_code == code)
+    case some(z) => `${z.name} (${z.waters_id})`
+    case none => `WPP-NRI ${code}`
+
+component TrendsView
+  props
+    wppZones: WppZoneRecord[]
+    prefs: UserPreferences
+    pointInspection: option<MapPointInspection>
+    onInspectZone: (lat: number, lon: number, date: string) => void
+
+  state selectedPeriod = "30d"
+  state selectedWppCode = "712"
+  state selectedDate = "latest"
+
+  derive useFahrenheit = prefs.temp_unit == "F"
+  derive activeSst = findZoneSst(wppZones, selectedWppCode)
+  derive activeChl = findZoneChl(wppZones, selectedWppCode)
+  derive activeTitle = findZoneTitle(wppZones, selectedWppCode)
+  derive sstPoints = sstSeriesPoints(activeSst, selectedPeriod)
+  derive sstArea = sstSeriesArea(activeSst, selectedPeriod)
+  derive sstBaselineY = sstY(activeSst)
+  derive chlPoints = chlSeriesPoints(activeChl, selectedPeriod)
+  derive chlArea = chlSeriesArea(activeChl, selectedPeriod)
+  derive chlBaselineY = chlY(activeChl)
+
+  action setPeriod(period: string)
+    selectedPeriod = period
+
+  action selectZone(code: string)
+    selectedWppCode = code
+
+  action selectDate(dateVal: string)
+    selectedDate = dateVal
+
+  action inspectSelectedZone()
+    let lat = findZoneLat(wppZones, selectedWppCode)
+    let lon = findZoneLon(wppZones, selectedWppCode)
+    onInspectZone(lat, lon, selectedDate)
+
+  view
+    column width="100%" max-width=1280 margin="0 auto" padding="20px 16px" gap=20 overflow-x="hidden" background-color="var(--surface-canvas)" color="var(--ink-primary)" testId="trends-root"
+      // Header
+      row width="100%" align-items="center" justify-content="space-between" flex-wrap="wrap" gap=12
+        row align-items="center" gap=10
+          svg width=22 height=22 viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width=2 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+            polyline points="22 7 13.5 15.5 8.5 10.5 2 17"
+            polyline points="16 7 22 7 22 13"
+          column gap=2
+            text "Historical Ocean Analysis & Trends" role="heading" font-size=22 font-weight=700 color="var(--ink-primary)" testId="trends-heading"
+            text "Compare Sea Surface Temperature (SST) and Chlorophyll-a baselines across WPP-NRI zones and seasonal monsoon cycles." font-size=15 color="var(--ink-muted)"
+
+        row gap=8 flex-wrap="wrap" role="group" aria-label="Analysis period selector"
+          button press=setPeriod("7d") min-height=44 min-width=64 padding="10px 14px" border-radius=8 border=(selectedPeriod == "7d" ? "2px solid var(--accent-primary)" : "1px solid var(--border-subtle)") background-color="var(--surface-elevated)" color="var(--ink-primary)" cursor="pointer" aria-label="7 day trend period" testId="trends-period-7d"
+            text "7D" font-size=14 font-weight=700
+          button press=setPeriod("30d") min-height=44 min-width=64 padding="10px 14px" border-radius=8 border=(selectedPeriod == "30d" ? "2px solid var(--accent-primary)" : "1px solid var(--border-subtle)") background-color="var(--surface-elevated)" color="var(--ink-primary)" cursor="pointer" aria-label="30 day trend period" testId="trends-period-30d"
+            text "30D" font-size=14 font-weight=700
+          button press=setPeriod("90d") min-height=44 min-width=64 padding="10px 14px" border-radius=8 border=(selectedPeriod == "90d" ? "2px solid var(--accent-primary)" : "1px solid var(--border-subtle)") background-color="var(--surface-elevated)" color="var(--ink-primary)" cursor="pointer" aria-label="90 day trend period" testId="trends-period-90d"
+            text "90D" font-size=14 font-weight=700
+          button press=setPeriod("monsoon") min-height=44 min-width=96 padding="10px 14px" border-radius=8 border=(selectedPeriod == "monsoon" ? "2px solid var(--accent-primary)" : "1px solid var(--border-subtle)") background-color="var(--surface-elevated)" color="var(--ink-primary)" cursor="pointer" aria-label="Monsoon seasonal comparison" testId="trends-period-monsoon"
+            text "Monsoon" font-size=14 font-weight=700
+
+      // Zone & Date Synchronization Controls
+      row width="100%" padding="14px 16px" gap=12 flex-wrap="wrap" align-items="flex-end" border-radius=12 background-color="var(--surface-elevated)" border="1px solid var(--border-subtle)" testId="trends-controls"
+        column flex="2 1 220px" min-width=0 gap=4
+          label "Target WPP-NRI Zone" font-size=13 font-weight=600 color="var(--ink-muted)"
+          select value=selectedWppCode change=selectZone width="100%" max-width="100%" min-height=44 min-width=44 padding="10px 12px" border-radius=8 border="1px solid var(--border-subtle)" background-color="var(--surface-canvas)" color="var(--ink-primary)" font-size=16 cursor="pointer" aria-label="Select WPP-NRI zone for historical trends" testId="trends-wpp-select"
+            for z in wppZones key=z.wpp_code
+              option value=z.wpp_code `${z.name}: ${z.waters_en}`
+
+        column flex="1 1 180px" min-width=0 gap=4
+          label "Reference Date (UTC)" font-size=13 font-weight=600 color="var(--ink-muted)"
+          select value=selectedDate change=selectDate width="100%" max-width="100%" min-height=44 min-width=44 padding="10px 12px" border-radius=8 border="1px solid var(--border-subtle)" background-color="var(--surface-canvas)" color="var(--ink-primary)" font-size=16 cursor="pointer" aria-label="Select reference observation date" testId="trends-date-select"
+            option value="latest" "Latest Available Satellite Pass"
+            option value="2026-11-01" "2026-11-01 (Northwest Transition)"
+            option value="2026-08-15" "2026-08-15 (Southeast Monsoon Peak)"
+            option value="2026-02-15" "2026-02-15 (Northwest Monsoon Peak)"
+
+        button press=inspectSelectedZone min-height=44 min-width=180 padding="10px 16px" border-radius=8 border="1px solid var(--accent-cta)" background-color="var(--accent-cta)" color="#FFFFFF" cursor="pointer" aria-label="Inspect selected WPP zone on Ocean Map" testId="trends-inspect-btn"
+          text "Inspect Zone on Map" font-size=14 font-weight=700
+
+      // SVG Time-Series Charts Row
+      row width="100%" gap=16 flex-wrap="wrap"
+        // SST Time-Series Card
+        column flex="1 1 280px" min-width=0 max-width="100%" padding="16px" gap=10 border-radius=12 background-color="var(--surface-elevated)" border="1px solid var(--border-subtle)" testId="trends-sst-card"
+          row width="100%" align-items="center" justify-content="space-between" gap=8 flex-wrap="wrap"
+            column gap=2
+              text "Sea Surface Temperature (SST) Trend" role="heading" font-size=17 font-weight=600 color="var(--ink-primary)"
+              text activeTitle font-size=13 color="var(--ink-muted)"
+            text `Mean: ${formatSstValue(activeSst, useFahrenheit)}` class="tabular-nums" font-family="var(--font-mono)" font-size=16 font-weight=700 color="var(--accent-primary)" testId="trends-sst-mean"
+
+          svg width="100%" height=180 viewBox="0 0 580 180" role="img" aria-label=`SST trend chart for ${activeTitle} over ${selectedPeriod}` testId="trends-sst-chart"
+            line x1=36 y1=24 x2=550 y2=24 stroke="var(--border-subtle)" stroke-width=1
+            line x1=36 y1=88 x2=550 y2=88 stroke="var(--border-subtle)" stroke-width=1
+            line x1=36 y1=152 x2=550 y2=152 stroke="var(--border-subtle)" stroke-width=1
+            line x1=36 y1=sstBaselineY x2=550 y2=sstBaselineY stroke="var(--accent-cta)" stroke-width=1.5 stroke-dasharray="5 4"
+            polygon points=sstArea fill="rgba(59, 130, 246, 0.18)"
+            polyline points=sstPoints fill="none" stroke="var(--accent-primary)" stroke-width=3 stroke-linecap="round" stroke-linejoin="round"
+            circle cx=40 cy=sstY(activeSst - 0.5 * periodFactor(selectedPeriod)) r=4 fill="var(--accent-primary)"
+            circle cx=240 cy=sstY(activeSst + 0.1 * periodFactor(selectedPeriod)) r=4 fill="var(--accent-primary)"
+            circle cx=340 cy=sstY(activeSst + 0.4 * periodFactor(selectedPeriod)) r=4 fill="var(--accent-primary)"
+            circle cx=540 cy=sstY(activeSst) r=5 fill="var(--accent-cta)"
+
+          row width="100%" justify-content="space-between" align-items="center"
+            text (useFahrenheit ? "Range: 77.0 to 89.6 °F" : "Range: 25.0 to 32.0 °C") class="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--ink-muted)"
+            text `Period: ${selectedPeriod} (solid) vs Zone Mean (dashed)` font-size=12 color="var(--ink-muted)"
+
+        // Chlorophyll-a Time-Series Card
+        column flex="1 1 280px" min-width=0 max-width="100%" padding="16px" gap=10 border-radius=12 background-color="var(--surface-elevated)" border="1px solid var(--border-subtle)" testId="trends-chl-card"
+          row width="100%" align-items="center" justify-content="space-between" gap=8 flex-wrap="wrap"
+            column gap=2
+              text "Chlorophyll-a Concentration Trend" role="heading" font-size=17 font-weight=600 color="var(--ink-primary)"
+              text activeTitle font-size=13 color="var(--ink-muted)"
+            text `Mean: ${activeChl.toFixed(2)} mg/m3` class="tabular-nums" font-family="var(--font-mono)" font-size=16 font-weight=700 color="var(--status-healthy)" testId="trends-chl-mean"
+
+          svg width="100%" height=180 viewBox="0 0 580 180" role="img" aria-label=`Chlorophyll-a trend chart for ${activeTitle} over ${selectedPeriod}` testId="trends-chl-chart"
+            line x1=36 y1=24 x2=550 y2=24 stroke="var(--border-subtle)" stroke-width=1
+            line x1=36 y1=88 x2=550 y2=88 stroke="var(--border-subtle)" stroke-width=1
+            line x1=36 y1=152 x2=550 y2=152 stroke="var(--border-subtle)" stroke-width=1
+            line x1=36 y1=chlBaselineY x2=550 y2=chlBaselineY stroke="var(--accent-cta)" stroke-width=1.5 stroke-dasharray="5 4"
+            polygon points=chlArea fill="rgba(22, 163, 74, 0.18)"
+            polyline points=chlPoints fill="none" stroke="var(--status-healthy)" stroke-width=3 stroke-linecap="round" stroke-linejoin="round"
+            circle cx=40 cy=chlY(activeChl * (1.0 - 0.14 * periodFactor(selectedPeriod))) r=4 fill="var(--status-healthy)"
+            circle cx=240 cy=chlY(activeChl * (1.0 + 0.12 * periodFactor(selectedPeriod))) r=4 fill="var(--status-healthy)"
+            circle cx=340 cy=chlY(activeChl * (1.0 + 0.22 * periodFactor(selectedPeriod))) r=4 fill="var(--status-healthy)"
+            circle cx=540 cy=chlY(activeChl) r=5 fill="var(--accent-cta)"
+
+          row width="100%" justify-content="space-between" align-items="center"
+            text "Range: 0.00 to 1.40 mg/m3" class="tabular-nums" font-family="var(--font-mono)" font-size=12 color="var(--ink-muted)"
+            text `Period: ${selectedPeriod} (solid) vs Zone Mean (dashed)` font-size=12 color="var(--ink-muted)"
+
+      // Active Point Telemetry Summary if inspected
+      match pointInspection
+        case some(pt) =>
+          row width="100%" padding="12px 16px" gap=12 flex-wrap="wrap" align-items="center" justify-content="space-between" border-radius=10 background-color="var(--surface-elevated)" border="1px solid var(--border-subtle)" testId="trends-point-summary"
+            text `Last Inspected Coordinate: ${pt.lat.toFixed(4)}, ${pt.lon.toFixed(4)} (${pt.requested_date})` class="tabular-nums" font-family="var(--font-mono)" font-size=13 color="var(--ink-primary)"
+            text `Attribution: ${pt.attribution}` font-size=13 color="var(--ink-muted)"
+        case none =>
+          text "Select a WPP-NRI zone above or click any point on Ocean Map to synchronize historical coordinates." font-size=13 color="var(--ink-muted)"
+
+      // Accessible WPP-NRI Summary Table Fallback
+      column width="100%" padding="16px" gap=12 border-radius=12 background-color="var(--surface-elevated)" border="1px solid var(--border-subtle)"
+        row width="100%" align-items="center" justify-content="space-between" flex-wrap="wrap" gap=8
+          text "WPP-NRI Historical Baseline Table (Zones 571 to 718)" role="heading" font-size=18 font-weight=600 color="var(--ink-primary)"
+          text "Screen-reader and low-bandwidth fallback summary for chart data." font-size=13 color="var(--ink-muted)"
+
+        div width="100%" overflow-x="auto" testId="trends-table-wrap"
+          table width="100%" border-collapse="collapse" testId="trends-wpp-table"
+            thead
+              tr
+                th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "WPP Code"
+                th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "Zone Name"
+                th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "Indonesian Waters"
+                th scope="col" text-align="right" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" (useFahrenheit ? "Mean SST (°F)" : "Mean SST (°C)")
+                th scope="col" text-align="right" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "Mean Chlorophyll-a (mg/m3)"
+                th scope="col" text-align="left" padding="10px 8px" border-bottom="2px solid var(--border-subtle)" "Latest Observation UTC"
+            tbody
+              for z in wppZones key=z.wpp_code
+                tr testId=`trends-row-${z.wpp_code}`
+                  td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" class="tabular-nums" font-family="var(--font-mono)" font-weight=700 z.wpp_code
+                  td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" z.name
+                  td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" z.waters_id
+                  td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" text-align="right" class="tabular-nums" font-family="var(--font-mono)"
+                    match z.sst_mean_c
+                      case some(sst) => text formatSstValue(sst, useFahrenheit)
+                      case none => text "N/A"
+                  td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" text-align="right" class="tabular-nums" font-family="var(--font-mono)"
+                    match z.chlorophyll_mean_mg_m3
+                      case some(chl) => text `${chl.toFixed(2)}`
+                      case none => text "N/A"
+                  td padding="10px 8px" border-bottom="1px solid var(--border-subtle)" class="tabular-nums" font-family="var(--font-mono)"
+                    match z.latest_observation_utc
+                      case some(ts) => text ts
+                      case none => text "Baseline seed"
