@@ -1,0 +1,196 @@
+name: LAUT SCAN CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  backend:
+    name: Backend Lint, Typecheck & Pytest
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_DB: lautscan_test
+          POSTGRES_USER: lautscan
+          POSTGRES_PASSWORD: lautscan_test_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U lautscan -d lautscan_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      POSTGRES_HOST: 127.0.0.1
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: lautscan_test
+      POSTGRES_USER: lautscan
+      POSTGRES_PASSWORD: lautscan_test_password
+      DATABASE_URL: postgresql+asyncpg://lautscan:lautscan_test_password@127.0.0.1:5432/lautscan_test
+      REDIS_URL: redis://127.0.0.1:6379/0
+      TILE_CACHE_DIR: /tmp/lautscan-tiles
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/pyproject.toml
+
+      - name: Install system spatial/netcdf dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libpq-dev \
+            libgeos-dev \
+            libgdal-dev \
+            libnetcdf-dev \
+            libhdf5-dev
+
+      - name: Validate backend/pyproject.toml
+        run: |
+          python -c "import tomllib, pathlib; data = tomllib.loads(pathlib.Path('backend/pyproject.toml').read_text(encoding='utf-8')); print('Parsed project:', data['project']['name'])"
+
+      - name: Install backend and dev dependencies
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Lint and format check (ruff)
+        working-directory: backend
+        run: |
+          if [ -d app ] || [ -d tests ]; then
+            ruff check .
+            ruff format --check .
+          else
+            echo "No backend Python source directories (app/ or tests/) yet; skipping ruff."
+          fi
+
+      - name: Typecheck (mypy)
+        working-directory: backend
+        run: |
+          if [ -d app ]; then
+            mypy app
+          else
+            echo "No backend/app directory yet; skipping mypy."
+          fi
+
+      - name: Run unit & PostGIS integration tests (pytest)
+        working-directory: backend
+        run: |
+          if [ -d tests ]; then
+            mkdir -p "$TILE_CACHE_DIR"
+            pytest
+          else
+            echo "No backend/tests directory yet; skipping pytest."
+          fi
+
+  frontend-contract:
+    name: Frontend Exact Contract Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout LAUT SCAN repository
+        uses: actions/checkout@v4
+        with:
+          path: lautscan
+
+      - name: Check for frontend Exact contract files
+        id: check_frontend
+        run: |
+          if [ -d "lautscan/frontend" ] && find lautscan/frontend -maxdepth 4 -name "*.contract" | grep -q .; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "frontend/ or *.contract files not present yet; skipping Exact Contract check."
+          fi
+
+      - name: Set up Bun 1.4.2
+        if: steps.check_frontend.outputs.exists == 'true'
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.2"
+
+      - name: Set up Rust toolchain
+        if: steps.check_frontend.outputs.exists == 'true'
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Checkout sibling expo/exact repository
+        if: steps.check_frontend.outputs.exists == 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: expo/exact
+          path: exact
+
+      - name: Set up expo/exact dependencies
+        if: steps.check_frontend.outputs.exists == 'true'
+        working-directory: exact
+        run: |
+          bun install
+          if [ -f scripts/exact.mjs ]; then
+            bun scripts/exact.mjs setup
+          fi
+
+      - name: Install frontend dependencies
+        if: steps.check_frontend.outputs.exists == 'true'
+        working-directory: lautscan/frontend
+        run: |
+          if [ -f package.json ]; then
+            bun install
+          fi
+
+      - name: Validate Exact Contract files (contract build --json)
+        if: steps.check_frontend.outputs.exists == 'true'
+        run: |
+          CONTRACT_BIN=""
+          if command -v contract >/dev/null 2>&1; then
+            CONTRACT_BIN="$(command -v contract)"
+          elif [ -x "$PWD/exact/target/release/contract" ]; then
+            CONTRACT_BIN="$PWD/exact/target/release/contract"
+          elif [ -x "$PWD/exact/target/debug/contract" ]; then
+            CONTRACT_BIN="$PWD/exact/target/debug/contract"
+          fi
+
+          while IFS= read -r contract_file; do
+            echo "Validating $contract_file ..."
+            if [ -n "$CONTRACT_BIN" ]; then
+              "$CONTRACT_BIN" build --json "$contract_file"
+            elif [ -f exact/scripts/exact.mjs ]; then
+              bun exact/scripts/exact.mjs contract build --json "$contract_file"
+            else
+              echo "Unable to locate Exact contract compiler binary or scripts/exact.mjs" >&2
+              exit 1
+            fi
+          done < <(find lautscan/frontend -maxdepth 4 -name "*.contract" ! -name "*.test.contract" | sort)
+
+      - name: Typecheck frontend TypeScript
+        if: steps.check_frontend.outputs.exists == 'true'
+        working-directory: lautscan/frontend
+        run: |
+          if [ -f tsconfig.json ]; then
+            bunx tsc --noEmit
+          else
+            echo "No tsconfig.json in frontend/; skipping tsc."
+          fi
