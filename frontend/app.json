@@ -1,8 +1,9 @@
 {
   "name": "LAUT SCAN",
-  "bundleId": "com.lautscan.app",
-  "slug": "laut-scan",
-  "version": "1.2.0",
+  "short_name": "LAUT SCAN",
+  "id": "com.lautscan.app",
+  "start_url": "/",
+  "display": "standalone",
   "description": "Open-Source Marine Intelligence Platform: Know the Ocean. Find the Fish.",
   "app": {
     "id": "com.lautscan.app",
@@ -13,7 +14,11 @@
   ],
   "packages": {
     "@lautscan/marine-map": {
-      "path": "./modules/marine-map"
+      "web": {
+        "tiles": "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+        "attribution": "© OpenStreetMap contributors",
+        "maxZoom": 14
+      }
     }
   },
   "env": [
