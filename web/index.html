@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/app.css?v=20261113j">
+  <link rel="stylesheet" href="/app.css?v=20261113k">
 </head>
 <body>
   <div class="app-shell">
@@ -48,18 +48,73 @@
         <!-- Top-Left Quick Controls + Lightweight Zoom & Area Insight Pill -->
         <div class="top-left-hud">
           <div class="quick-bar">
-            <select id="wpp-select" class="pill-select" aria-label="Pilih wilayah perairan">
-              <option value="">Seluruh Samudra Dunia (Global)</option>
-            </select>
-            <select id="fish-filter-select" class="pill-select" aria-label="Filter jenis ikan di peta">
-              <option value="">Semua Jenis Ikan</option>
-              <option value="tuna">Tuna &amp; Cakalang</option>
-              <option value="kembung">Kembung &amp; Layang</option>
-              <option value="tongkol">Tongkol &amp; Tenggiri</option>
-              <option value="kakap">Kakap &amp; Kerapu</option>
-              <option value="lemuru">Lemuru &amp; Lemadang</option>
-              <option value="udang">Udang</option>
-            </select>
+            <!-- Custom Animated Dropdown: WPP / Samudra -->
+            <div id="wpp-dropdown-wrap" class="custom-dropdown">
+              <button id="wpp-dropdown-trigger" class="dropdown-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" aria-label="Pilih wilayah perairan">
+                <span id="wpp-dropdown-label" class="dropdown-label">Seluruh Samudra Dunia (Global)</span>
+                <svg class="dropdown-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <polyline points="6 9 12 15 18 9"/>
+                </svg>
+              </button>
+              <div id="wpp-dropdown-menu" class="dropdown-menu" role="listbox" tabindex="-1">
+                <div class="dropdown-item selected" role="option" data-value="" data-label="Seluruh Samudra Dunia (Global)" aria-selected="true">
+                  <span class="item-text">Seluruh Samudra Dunia (Global)</span>
+                  <span class="item-check" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+                </div>
+              </div>
+              <select id="wpp-select" class="native-hidden" aria-hidden="true" tabindex="-1">
+                <option value="">Seluruh Samudra Dunia (Global)</option>
+              </select>
+            </div>
+
+            <!-- Custom Animated Dropdown: Filter Ikan -->
+            <div id="fish-dropdown-wrap" class="custom-dropdown">
+              <button id="fish-dropdown-trigger" class="dropdown-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" aria-label="Filter jenis ikan di peta">
+                <span id="fish-dropdown-label" class="dropdown-label">Semua Jenis Ikan</span>
+                <svg class="dropdown-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <polyline points="6 9 12 15 18 9"/>
+                </svg>
+              </button>
+              <div id="fish-dropdown-menu" class="dropdown-menu" role="listbox" tabindex="-1">
+                <div class="dropdown-item selected" role="option" data-value="" data-label="Semua Jenis Ikan" aria-selected="true">
+                  <span class="item-text">Semua Jenis Ikan</span>
+                  <span class="item-check" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+                </div>
+                <div class="dropdown-item" role="option" data-value="tuna" data-label="Tuna &amp; Cakalang" aria-selected="false">
+                  <span class="item-text">Tuna &amp; Cakalang</span>
+                  <span class="item-check" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+                </div>
+                <div class="dropdown-item" role="option" data-value="kembung" data-label="Kembung &amp; Layang" aria-selected="false">
+                  <span class="item-text">Kembung &amp; Layang</span>
+                  <span class="item-check" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+                </div>
+                <div class="dropdown-item" role="option" data-value="tongkol" data-label="Tongkol &amp; Tenggiri" aria-selected="false">
+                  <span class="item-text">Tongkol &amp; Tenggiri</span>
+                  <span class="item-check" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+                </div>
+                <div class="dropdown-item" role="option" data-value="kakap" data-label="Kakap &amp; Kerapu" aria-selected="false">
+                  <span class="item-text">Kakap &amp; Kerapu</span>
+                  <span class="item-check" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+                </div>
+                <div class="dropdown-item" role="option" data-value="lemuru" data-label="Lemuru &amp; Lemadang" aria-selected="false">
+                  <span class="item-text">Lemuru &amp; Lemadang</span>
+                  <span class="item-check" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+                </div>
+                <div class="dropdown-item" role="option" data-value="udang" data-label="Udang" aria-selected="false">
+                  <span class="item-text">Udang</span>
+                  <span class="item-check" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+                </div>
+              </div>
+              <select id="fish-filter-select" class="native-hidden" aria-hidden="true" tabindex="-1">
+                <option value="">Semua Jenis Ikan</option>
+                <option value="tuna">Tuna &amp; Cakalang</option>
+                <option value="kembung">Kembung &amp; Layang</option>
+                <option value="tongkol">Tongkol &amp; Tenggiri</option>
+                <option value="kakap">Kakap &amp; Kerapu</option>
+                <option value="lemuru">Lemuru &amp; Lemadang</option>
+                <option value="udang">Udang</option>
+              </select>
+            </div>
             <div class="hud-divider" aria-hidden="true"></div>
             <button id="toggle-species-btn" class="pill-btn" type="button" aria-pressed="true" aria-label="Tampilkan pin titik ikan">
               <span class="fish-2d-icon" aria-hidden="true" style="width:14px;height:14px;"></span>
@@ -301,6 +356,124 @@
       S: 'Selatan', SSW: 'Barat Daya', SW: 'Barat Daya', WSW: 'Barat Daya',
       W: 'Barat', WNW: 'Barat Laut', NW: 'Barat Laut', NNW: 'Barat Laut',
     };
+
+    function initCustomDropdown({ wrapId, triggerId, labelId, menuId, selectId, onChange }) {
+      const wrap = document.getElementById(wrapId);
+      const trigger = document.getElementById(triggerId);
+      const label = document.getElementById(labelId);
+      const menu = document.getElementById(menuId);
+      const select = document.getElementById(selectId);
+      if (!wrap || !trigger || !menu || !select) return null;
+
+      function openMenu() {
+        document.querySelectorAll('.custom-dropdown.open').forEach((el) => {
+          if (el !== wrap) {
+            el.classList.remove('open');
+            el.querySelector('.dropdown-trigger')?.setAttribute('aria-expanded', 'false');
+          }
+        });
+        wrap.classList.add('open');
+        trigger.setAttribute('aria-expanded', 'true');
+      }
+
+      function closeMenu() {
+        wrap.classList.remove('open');
+        trigger.setAttribute('aria-expanded', 'false');
+      }
+
+      trigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (wrap.classList.contains('open')) {
+          closeMenu();
+        } else {
+          openMenu();
+        }
+      });
+
+      menu.addEventListener('click', (e) => {
+        const item = e.target.closest('.dropdown-item');
+        if (!item) return;
+        const val = item.getAttribute('data-value') || '';
+        const text = item.getAttribute('data-label') || item.querySelector('.item-text')?.textContent || item.textContent.trim();
+        select.value = val;
+        label.textContent = text;
+        menu.querySelectorAll('.dropdown-item').forEach((it) => {
+          const isSel = it === item;
+          it.classList.toggle('selected', isSel);
+          it.setAttribute('aria-selected', String(isSel));
+        });
+        closeMenu();
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+        if (onChange) onChange(val);
+      });
+
+      return {
+        setValue(val) {
+          select.value = val;
+          const matched = menu.querySelector(`.dropdown-item[data-value="${CSS.escape(val)}"]`);
+          if (matched) {
+            const text = matched.getAttribute('data-label') || matched.querySelector('.item-text')?.textContent || matched.textContent.trim();
+            label.textContent = text;
+            menu.querySelectorAll('.dropdown-item').forEach((it) => {
+              const isSel = it === matched;
+              it.classList.toggle('selected', isSel);
+              it.setAttribute('aria-selected', String(isSel));
+            });
+          }
+        },
+        populate(items) {
+          menu.innerHTML = items
+            .map((it) => {
+              const isSel = it.value === select.value;
+              return `<div class="dropdown-item ${isSel ? 'selected' : ''}" role="option" data-value="${it.value}" data-label="${it.label}" aria-selected="${isSel}">
+                <span class="item-text">${it.label}</span>
+                ${it.badge ? `<span class="item-badge">${it.badge}</span>` : ''}
+                <span class="item-check" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+              </div>`;
+            })
+            .join('');
+          const cur = menu.querySelector(`.dropdown-item[data-value="${CSS.escape(select.value)}"]`);
+          if (cur) {
+            label.textContent = cur.getAttribute('data-label') || cur.querySelector('.item-text')?.textContent || cur.textContent.trim();
+          }
+        },
+        close: closeMenu,
+      };
+    }
+
+    const wppDropdown = initCustomDropdown({
+      wrapId: 'wpp-dropdown-wrap',
+      triggerId: 'wpp-dropdown-trigger',
+      labelId: 'wpp-dropdown-label',
+      menuId: 'wpp-dropdown-menu',
+      selectId: 'wpp-select',
+    });
+
+    const fishDropdown = initCustomDropdown({
+      wrapId: 'fish-dropdown-wrap',
+      triggerId: 'fish-dropdown-trigger',
+      labelId: 'fish-dropdown-label',
+      menuId: 'fish-dropdown-menu',
+      selectId: 'fish-filter-select',
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.custom-dropdown')) {
+        document.querySelectorAll('.custom-dropdown.open').forEach((el) => {
+          el.classList.remove('open');
+          el.querySelector('.dropdown-trigger')?.setAttribute('aria-expanded', 'false');
+        });
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        document.querySelectorAll('.custom-dropdown.open').forEach((el) => {
+          el.classList.remove('open');
+          el.querySelector('.dropdown-trigger')?.setAttribute('aria-expanded', 'false');
+        });
+      }
+    });
 
     const initialLens = LENS_META[urlParams.get('lens')] ? urlParams.get('lens') : 'potential';
     const initialInspect = urlParams.get('inspect') === '1';
@@ -1159,6 +1332,7 @@
         if (val === '' || /^\d{3}$/.test(val)) {
           state.selectedWpp = val;
           document.getElementById('wpp-select').value = state.selectedWpp;
+          wppDropdown?.setValue(state.selectedWpp);
           const zone = state.wppZones.find((z) => z.wpp_code === state.selectedWpp);
           if (zone) {
             state.centerLat = zone.centroid_lat;
@@ -1258,18 +1432,28 @@
 
         const wppSel = document.getElementById('wpp-select');
         const wppTbody = document.getElementById('wpp-tbody');
+        const customWppItems = [
+          { value: '', label: 'Seluruh Samudra Dunia (Global)' },
+        ];
         state.wppZones.forEach((z) => {
           const opt = document.createElement('option');
           opt.value = z.wpp_code;
           opt.textContent = `${z.name}: ${z.waters_id}`;
           wppSel.appendChild(opt);
+          customWppItems.push({
+            value: z.wpp_code,
+            label: `${z.name}: ${z.waters_id}`,
+            badge: `WPP ${z.wpp_code}`,
+          });
           const tr = document.createElement('tr');
           tr.innerHTML = `<td class="tabular-nums">${z.wpp_code}</td><td>${z.name}</td><td>${z.waters_id}</td><td class="tabular-nums">${z.centroid_lat.toFixed(2)}, ${z.centroid_lon.toFixed(2)}</td><td class="tabular-nums">${z.area_km2 ? Math.round(z.area_km2).toLocaleString('id-ID') : '-'}</td><td class="tabular-nums">${formatWibDateTime(z.latest_observation_utc, 'Data dasar')}</td>`;
           wppTbody.appendChild(tr);
         });
+        wppDropdown?.populate(customWppItems);
 
         if (state.selectedWpp) {
           wppSel.value = state.selectedWpp;
+          wppDropdown?.setValue(state.selectedWpp);
           const selectedZone = state.wppZones.find((z) => z.wpp_code === state.selectedWpp);
           if (selectedZone && !Number.isFinite(rawLatParam) && !Number.isFinite(rawLonParam)) {
             state.centerLat = selectedZone.centroid_lat;
@@ -1314,6 +1498,7 @@
         badgeEl.textContent = `Data Ikan 2020-2026 (${speciesTotal} titik) · NASA/NOAA (${noaaDateWib})`;
         document.getElementById('toggle-species-btn').setAttribute('aria-pressed', String(state.showSpeciesPins));
         document.getElementById('fish-filter-select').value = state.fishFilter;
+        fishDropdown?.setValue(state.fishFilter);
         if (state.theme === 'night') document.documentElement.setAttribute('data-theme', 'night');
         document.getElementById('theme-select').value = state.theme;
         syncMap();
@@ -1370,6 +1555,7 @@
 
     document.getElementById('fish-filter-select').addEventListener('change', (e) => {
       state.fishFilter = e.target.value;
+      fishDropdown?.setValue(state.fishFilter);
       if (!state.showSpeciesPins) {
         state.showSpeciesPins = true;
         document.getElementById('toggle-species-btn').setAttribute('aria-pressed', 'true');
@@ -1389,6 +1575,7 @@
 
     document.getElementById('wpp-select').addEventListener('change', (e) => {
       state.selectedWpp = e.target.value;
+      wppDropdown?.setValue(state.selectedWpp);
       const zone = state.wppZones.find((z) => z.wpp_code === state.selectedWpp);
       if (zone) {
         state.centerLat = zone.centroid_lat;
