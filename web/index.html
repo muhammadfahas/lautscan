@@ -9,413 +9,541 @@
   <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/app.css">
   <style>
+    /* Compact Desktop Application Stylesheet */
     * { box-sizing: border-box; }
     html, body {
-      margin: 0; padding: 0; width: 100%; max-width: 100%; overflow-x: hidden;
+      margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
       font-family: var(--font-sans); background: var(--surface-canvas); color: var(--ink-primary);
+      -webkit-font-smoothing: antialiased;
     }
     .app-shell {
-      display: flex; flex-direction: column; min-height: 100vh; width: 100%; max-width: 100%; overflow-x: hidden;
+      display: flex; flex-direction: column; width: 100%; height: 100vh; max-height: 100vh; overflow: hidden;
     }
 
-    /* Top Header & Navigation */
+    /* Top Header / Navbar - Compact Desktop Window Titlebar (Height ~42px) */
     .nav-bar {
       display: flex; align-items: center; justify-content: space-between;
-      flex-wrap: wrap; gap: 10px; padding: 10px 18px;
-      background: color-mix(in srgb, var(--surface-elevated) 92%, #070A18);
-      border-bottom: 1px solid var(--border-subtle);
-      backdrop-filter: blur(14px);
-      position: sticky; top: 0; z-index: 40; width: 100%; max-width: 100%;
+      height: 42px; min-height: 42px; max-height: 42px;
+      padding: 0 12px;
+      background: var(--surface-glass-header);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      border-bottom: var(--border-hairline);
+      position: relative; z-index: 40; width: 100%;
     }
-    .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .brand {
+      display: flex; align-items: center; gap: 8px; min-width: 0; user-select: none;
+    }
+    .brand-icon {
+      width: 18px; height: 18px; flex-shrink: 0;
+      color: var(--accent-primary);
+    }
     .brand-title {
-      font-size: 17px; font-weight: 800; letter-spacing: 0.06em; line-height: 1.15;
-      background: linear-gradient(135deg, #38BDF8 0%, #60A5FA 55%, #34D399 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
+      font-size: 13px; font-weight: 700; letter-spacing: 0.06em; line-height: 1;
+      color: var(--ink-primary);
+      text-transform: uppercase;
     }
-    .brand-sub { font-size: 12px; color: var(--ink-muted); line-height: 1.25; font-weight: 500; }
-    .nav-right { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; max-width: 100%; min-width: 0; }
-    .nav-tabs { display: flex; gap: 4px; flex-wrap: wrap; max-width: 100%; min-width: 0; }
+    .brand-divider {
+      color: var(--ink-muted); opacity: 0.4; font-size: 12px; margin: 0 2px;
+    }
+    .brand-sub {
+      font-size: 11px; color: var(--ink-muted); font-weight: 500; line-height: 1;
+      white-space: nowrap;
+    }
+    .nav-right {
+      display: flex; align-items: center; gap: 6px; min-width: 0;
+    }
+    .nav-tabs {
+      display: flex; align-items: center; gap: 2px;
+      flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .nav-tabs::-webkit-scrollbar { display: none; }
     .nav-btn {
-      display: inline-flex; align-items: center; justify-content: center; gap: 7px;
-      min-height: 44px; min-width: 44px; padding: 8px 14px;
-      border-radius: 10px; border: 1px solid transparent;
+      display: inline-flex; align-items: center; justify-content: center;
+      height: 28px; min-height: 28px; padding: 0 10px; flex-shrink: 0;
+      border-radius: 6px; border: 1px solid transparent;
       background: transparent; color: var(--ink-muted);
-      font: 600 14px var(--font-sans); cursor: pointer;
-      transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
+      font: 500 12px var(--font-sans); cursor: pointer;
+      white-space: nowrap;
+      transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
     }
     .nav-btn:hover {
-      background: color-mix(in srgb, var(--accent-primary) 12%, transparent);
+      background: var(--surface-hover);
       color: var(--ink-primary);
     }
     .nav-btn.active {
-      background: color-mix(in srgb, var(--accent-primary) 16%, transparent);
-      border-color: var(--accent-primary); color: var(--accent-primary);
-      box-shadow: 0 0 14px rgba(56, 189, 248, 0.22);
+      background: var(--accent-primary-dim);
+      border-color: var(--accent-primary);
+      color: var(--accent-primary);
+      font-weight: 600;
+    }
+    #quick-theme-btn {
+      height: 28px; width: 28px; min-height: 28px; min-width: 28px;
+      padding: 0; border-radius: 6px; border: var(--border-hairline);
+      background: var(--surface-subtle); color: var(--ink-muted);
+      display: inline-flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: all 140ms ease; flex-shrink: 0;
+    }
+    #quick-theme-btn:hover {
+      background: var(--surface-hover);
+      color: var(--ink-primary);
+      border-color: var(--border-hover);
     }
 
-    .view-panel { display: none; flex: 1; flex-direction: column; width: 100%; max-width: 100%; min-width: 0; }
+    /* Tab Panels & Views */
+    .view-panel {
+      display: none; flex: 1; flex-direction: column; width: 100%; height: calc(100vh - 42px);
+      overflow-y: auto; overflow-x: hidden;
+    }
     .view-panel.active { display: flex; }
+    #tab-ocean_map.view-panel {
+      overflow: hidden; height: calc(100vh - 42px);
+    }
 
-    /* Full-bleed Map Workspace */
+    /* Workspace - Native Desktop GIS Map Stage */
     .map-stage {
-      position: relative; height: 79vh; min-height: 520px; flex: 1; width: 100%; max-width: 100%;
+      position: relative; flex: 1; width: 100%; height: calc(100vh - 42px - 28px); min-height: 0;
       background: var(--surface-canvas); overflow: hidden;
     }
     .map-host { position: absolute; inset: 0; width: 100%; height: 100%; }
 
-    /* Top-left Quick Controls + Zoom & Area Insight Pill */
+    /* Footer / Statusbar (Food bar / Foot bar) - Compact Height ~28px */
+    .map-footer {
+      display: flex; align-items: center; justify-content: space-between;
+      height: 28px; min-height: 28px; max-height: 28px; padding: 0 12px;
+      background: var(--surface-glass-footer);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      border-top: var(--border-hairline);
+      font-size: 11px; color: var(--ink-muted);
+      position: relative; z-index: 30; width: 100%; box-sizing: border-box;
+    }
+    .map-footer > div {
+      display: flex; align-items: center; gap: 8px; min-width: 0;
+    }
+    .map-footer .footer-disclaimer {
+      max-width: 580px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;
+    }
+    .badge {
+      display: inline-flex; align-items: center; gap: 4px; padding: 1px 6px;
+      border-radius: 4px; font-size: 11px; font-weight: 500; font-family: var(--font-mono);
+      border: var(--border-hairline); background: var(--surface-subtle);
+      white-space: nowrap;
+    }
+    .badge.ok { color: var(--status-healthy); border-color: rgba(34, 197, 94, 0.25); background: rgba(34, 197, 94, 0.08); }
+    .badge.warn { color: var(--status-degraded); border-color: rgba(245, 158, 11, 0.25); background: rgba(245, 158, 11, 0.08); }
+
+    /* Top-Left Quick Controls & Insight Bar */
     .top-left-hud {
-      position: absolute; top: 12px; left: 12px; z-index: 20;
-      max-width: calc(100% - 24px);
-      display: flex; flex-direction: column; align-items: flex-start; gap: 8px;
+      position: absolute; top: 8px; left: 8px; z-index: 20;
+      max-width: calc(100% - 16px);
+      display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
       pointer-events: none;
     }
     .map-stage.inspector-open .top-left-hud {
-      max-width: calc(100% - 404px);
+      max-width: calc(100% - 376px);
     }
     .top-left-hud > * { pointer-events: auto; }
     .quick-bar {
-      display: flex; align-items: center; flex-wrap: wrap; gap: 8px; max-width: 100%;
+      display: flex; align-items: center; flex-wrap: wrap; gap: 4px;
+      padding: 3px 4px; border-radius: 8px;
+      background: var(--surface-glass-panel);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      border: var(--border-hairline);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+      max-width: 100%;
     }
     .pill-select, .pill-btn {
-      min-height: 44px; border-radius: 999px;
-      border: 1px solid var(--border-subtle);
-      background: color-mix(in srgb, var(--surface-elevated) 90%, #070A18);
-      backdrop-filter: blur(12px);
-      color: var(--ink-primary); font: 600 13px var(--font-sans);
-      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
-      cursor: pointer; transition: border-color 160ms ease, background-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
+      height: 28px; min-height: 28px; border-radius: 6px;
+      border: var(--border-hairline);
+      background: var(--surface-subtle);
+      color: var(--ink-primary); font: 500 12px var(--font-sans);
+      cursor: pointer; transition: all 140ms ease;
     }
-    .pill-select { padding: 8px 14px; max-width: 245px; min-width: 0; }
+    .pill-select {
+      padding: 0 8px; max-width: 220px; min-width: 0; outline: none;
+      text-overflow: ellipsis; white-space: nowrap; overflow: hidden;
+    }
+    #fish-filter-select {
+      max-width: 170px;
+    }
+    .pill-select:hover, .pill-btn:hover {
+      background: var(--surface-hover);
+      border-color: var(--border-hover);
+    }
+    .pill-select:focus, .pill-btn:focus-visible {
+      border-color: var(--accent-primary);
+      outline: none;
+    }
     .pill-btn {
-      display: inline-flex; align-items: center; gap: 6px;
-      min-width: 44px; padding: 8px 14px;
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 0 9px; white-space: nowrap;
     }
-    .pill-btn:hover, .pill-select:hover { border-color: var(--accent-primary); }
     .pill-btn[aria-pressed="true"] {
-      background: var(--accent-primary); border-color: var(--accent-primary); color: #070A18;
-      box-shadow: 0 0 14px rgba(56, 189, 248, 0.40);
+      background: var(--accent-primary);
+      border-color: var(--accent-primary);
+      color: #070A18;
+      font-weight: 600;
     }
-
+    [data-theme="daylight"] .pill-btn[aria-pressed="true"] {
+      color: #FFFFFF;
+    }
     .area-insight-pill {
-      display: inline-flex; align-items: center; flex-wrap: wrap; gap: 8px;
-      max-width: min(680px, 100%); padding: 7px 12px; border-radius: 12px;
-      border: 1px solid var(--border-subtle);
-      background: color-mix(in srgb, var(--surface-elevated) 90%, #070A18);
-      backdrop-filter: blur(12px);
-      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
-      font-size: 12px; line-height: 1.35; color: var(--ink-primary);
+      display: inline-flex; align-items: center; flex-wrap: wrap; gap: 6px;
+      max-width: min(640px, 100%); padding: 3px 8px; border-radius: 6px;
+      border: var(--border-hairline);
+      background: var(--surface-glass-panel);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+      font-size: 11px; line-height: 1.35; color: var(--ink-primary);
     }
     .insight-scale-tag {
-      display: inline-flex; align-items: center; gap: 5px;
-      padding: 2px 8px; border-radius: 999px;
-      background: color-mix(in srgb, var(--accent-primary) 14%, transparent);
-      color: var(--accent-primary); font-weight: 700; font-size: 11px; white-space: nowrap;
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 1px 6px; border-radius: 4px;
+      background: var(--accent-primary-dim);
+      color: var(--accent-primary); font-weight: 700; font-size: 10.5px; white-space: nowrap;
     }
     .insight-summary-text {
       color: var(--ink-muted); font-weight: 500; min-width: 0;
     }
-    .insight-summary-text strong { color: var(--ink-primary); font-weight: 700; }
+    .insight-summary-text strong { color: var(--ink-primary); font-weight: 600; }
 
-    /* Bottom-center Floating 4 Lensa Laut Dock */
+    /* Bottom-Center Floating 4 Lensa Laut Dock */
     .lens-dock-wrap {
-      position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%);
-      z-index: 22; width: min(650px, calc(100% - 140px));
-      display: flex; flex-direction: column; align-items: center; gap: 8px;
+      position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
+      z-index: 22; width: min(600px, calc(100% - 24px));
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
       pointer-events: none;
     }
     .lens-dock-wrap > * { pointer-events: auto; }
     .lens-dock {
-      width: 100%; padding: 10px 12px; border-radius: 16px;
-      background: color-mix(in srgb, var(--surface-elevated) 92%, #070A18);
-      backdrop-filter: blur(14px); border: 1px solid var(--border-subtle);
-      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.65), 0 0 20px rgba(56, 189, 248, 0.10);
-      display: flex; flex-direction: column; gap: 8px;
+      width: 100%; padding: 6px 8px; border-radius: 8px;
+      background: var(--surface-glass-panel);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      border: var(--border-hairline);
+      box-shadow: var(--dock-shadow);
+      display: flex; flex-direction: column; gap: 5px;
     }
     .lens-row {
-      display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+      display: flex; align-items: center; gap: 4px; width: 100%;
     }
     .lens-btn {
-      flex: 1 1 92px; min-height: 44px; padding: 8px 10px;
-      border-radius: 10px; border: 1px solid var(--border-subtle);
-      background: color-mix(in srgb, var(--surface-canvas) 85%, transparent); color: var(--ink-primary);
-      font: 700 13px var(--font-sans); cursor: pointer;
-      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-      transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
-      white-space: nowrap;
+      flex: 1 1 auto; height: 30px; min-height: 30px; padding: 0 8px;
+      border-radius: 6px; border: var(--border-hairline);
+      background: var(--surface-subtle); color: var(--ink-secondary);
+      font: 600 12px var(--font-sans); cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+      transition: all 140ms ease; white-space: nowrap;
     }
-    .lens-btn:hover { border-color: var(--accent-primary); }
+    .lens-btn:hover {
+      background: var(--surface-hover);
+      border-color: var(--border-hover);
+      color: var(--ink-primary);
+    }
     .lens-btn[data-lens="potential"].active {
       background: var(--accent-cta); border-color: var(--accent-cta); color: #FFFFFF;
-      box-shadow: 0 0 16px rgba(249, 115, 22, 0.50);
     }
     .lens-btn:not([data-lens="potential"]).active {
       background: var(--accent-primary); border-color: var(--accent-primary); color: #070A18;
-      box-shadow: 0 0 16px rgba(56, 189, 248, 0.55);
+    }
+    [data-theme="daylight"] .lens-btn:not([data-lens="potential"]).active {
+      color: #FFFFFF;
     }
     .tune-btn {
-      min-height: 44px; min-width: 44px; padding: 8px 11px;
-      border-radius: 10px; border: 1px solid var(--border-subtle);
-      background: transparent; color: var(--ink-primary);
-      font: 600 12px var(--font-sans); cursor: pointer;
-      display: inline-flex; align-items: center; gap: 5px;
+      height: 30px; min-height: 30px; padding: 0 8px;
+      border-radius: 6px; border: var(--border-hairline);
+      background: var(--surface-subtle); color: var(--ink-primary);
+      font: 600 11px var(--font-sans); cursor: pointer;
+      display: inline-flex; align-items: center; gap: 4px;
+      transition: all 140ms ease;
+    }
+    .tune-btn:hover {
+      background: var(--surface-hover);
+      border-color: var(--border-hover);
     }
     .tune-btn[aria-expanded="true"] {
-      background: var(--surface-canvas); border-color: var(--accent-primary); color: var(--accent-primary);
+      background: var(--accent-primary-dim); border-color: var(--accent-primary); color: var(--accent-primary);
     }
 
     /* Qualitative + Numeric Tiered Legend */
     .legend-wrap {
-      display: flex; flex-direction: column; gap: 6px; padding: 2px 4px 0; width: 100%;
+      display: flex; flex-direction: column; gap: 4px; padding: 0 2px; width: 100%;
     }
     .legend-head {
-      display: flex; align-items: center; gap: 10px; width: 100%;
+      display: flex; align-items: center; gap: 8px; width: 100%;
     }
     .legend-caption {
-      font-size: 11px; font-weight: 600; color: var(--ink-muted); white-space: nowrap;
+      font-size: 10.5px; font-weight: 500; color: var(--ink-muted); white-space: nowrap;
     }
-    .scale-bar { flex: 1; height: 8px; border-radius: 999px; min-width: 60px; }
-    .scale-potential { background: linear-gradient(90deg, rgba(20,184,166,0.16) 0%, #14B8A6 42%, #22C55E 72%, #F59E0B 100%); }
+    .scale-bar { flex: 1; height: 4px; border-radius: 2px; min-width: 50px; }
+    .scale-potential { background: linear-gradient(90deg, rgba(20,184,166,0.2) 0%, #14B8A6 42%, #22C55E 72%, #F59E0B 100%); }
     .scale-sst { background: linear-gradient(90deg, #0d0887 0%, #6a00a8 25%, #b12a90 50%, #e16462 72%, #fca636 88%, #f0f921 100%); }
     .scale-chlorophyll { background: linear-gradient(90deg, #440154 0%, #3b528b 25%, #21918c 55%, #5ec962 80%, #fde725 100%); }
     .legend-tiers {
-      display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; width: 100%;
+      display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; width: 100%;
     }
     .tier-chip {
-      display: flex; align-items: center; justify-content: center; gap: 6px;
-      padding: 4px 7px; border-radius: 8px; min-width: 0;
-      background: var(--surface-canvas); border: 1px solid var(--border-subtle);
-      font-size: 11px; line-height: 1.25; color: var(--ink-primary);
+      display: flex; align-items: center; justify-content: center; gap: 4px;
+      padding: 2px 6px; border-radius: 4px; min-width: 0;
+      background: var(--surface-subtle); border: var(--border-hairline);
+      font-size: 10px; line-height: 1.25; color: var(--ink-primary);
     }
     .tier-swatch {
-      width: 10px; height: 10px; border-radius: 999px; flex-shrink: 0;
-      border: 1px solid rgba(15, 23, 42, 0.16);
+      width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
     }
     .tier-flow {
-      width: 14px; height: 3px; border-radius: 2px; flex-shrink: 0;
+      width: 10px; height: 3px; border-radius: 1px; flex-shrink: 0;
     }
     .tier-text {
-      display: flex; align-items: baseline; gap: 4px; flex-wrap: wrap; justify-content: center; min-width: 0;
+      display: flex; align-items: baseline; gap: 3px; flex-wrap: wrap; justify-content: center; min-width: 0;
     }
-    .tier-name { font-weight: 700; color: var(--ink-primary); }
+    .tier-name { font-weight: 600; color: var(--ink-primary); }
     .tier-range {
       font-family: var(--font-mono); font-variant-numeric: tabular-nums;
-      font-size: 10px; color: var(--ink-muted);
+      font-size: 9.5px; color: var(--ink-muted);
     }
 
-    /* Compact Atur Popover */
+    /* Compact Atur Popover - Desktop Popup Style */
     .tune-popover {
-      width: min(380px, 100%); padding: 12px; border-radius: 14px;
-      background: color-mix(in srgb, var(--surface-elevated) 96%, transparent);
-      backdrop-filter: blur(10px); border: 1px solid var(--border-subtle);
-      box-shadow: 0 10px 28px rgba(15, 23, 42, 0.18);
-      display: none; flex-direction: column; gap: 10px;
+      position: absolute; bottom: calc(100% + 6px); right: 0;
+      width: 330px; max-width: calc(100vw - 24px); padding: 8px 10px; border-radius: 8px;
+      background: var(--surface-glass-popover);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      border: var(--border-hairline);
+      box-shadow: var(--panel-shadow);
+      display: none; flex-direction: column; gap: 7px;
+      z-index: 25;
     }
     .tune-popover.open { display: flex; }
     .preset-row {
-      display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; width: 100%;
+      display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; width: 100%;
     }
     .preset-btn {
-      min-height: 44px; min-width: 44px; padding: 6px 8px; border-radius: 8px;
-      border: 1px solid var(--border-subtle); background: var(--surface-canvas);
-      color: var(--ink-primary); font: 600 12px var(--font-sans); cursor: pointer;
+      height: 26px; min-height: 26px; padding: 0 6px; border-radius: 4px;
+      border: var(--border-hairline); background: var(--surface-subtle);
+      color: var(--ink-primary); font: 500 11px var(--font-sans); cursor: pointer;
       display: inline-flex; align-items: center; justify-content: center; text-align: center;
-      transition: border-color 160ms ease, background-color 160ms ease, color 160ms ease;
+      transition: all 140ms ease;
     }
-    .preset-btn:hover { border-color: var(--accent-primary); }
+    .preset-btn:hover { border-color: var(--border-hover); background: var(--surface-hover); }
     .preset-btn[aria-pressed="true"] {
-      background: color-mix(in srgb, var(--accent-primary) 14%, transparent);
+      background: var(--accent-primary-dim);
       border-color: var(--accent-primary); color: var(--accent-primary);
+      font-weight: 600;
     }
 
-    /* Kondisi Titik Ini Inspector Card */
+    /* Kondisi Titik Ini Inspector Card - Desktop Sidebar Style */
     .inspector-card {
-      position: absolute; top: 12px; right: 12px; z-index: 30;
-      width: min(380px, calc(100% - 24px)); max-height: calc(100% - 58px); overflow-y: auto;
-      background: color-mix(in srgb, var(--surface-elevated) 96%, transparent);
-      backdrop-filter: blur(10px); border: 1px solid var(--border-subtle);
-      border-radius: 14px; padding: 14px; display: none; flex-direction: column; gap: 10px;
-      box-shadow: 0 12px 32px rgba(15, 23, 42, 0.20);
+      position: absolute; top: 8px; right: 8px; z-index: 30;
+      width: min(350px, calc(100% - 16px));
+      max-height: calc(100% - 80px); /* Leave room above bottom dock to prevent collision */
+      overflow-y: auto; overflow-x: hidden;
+      background: var(--surface-glass-panel);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      border: var(--border-hairline);
+      border-radius: 8px; padding: 8px 10px; display: none; flex-direction: column; gap: 7px;
+      box-shadow: var(--panel-shadow);
     }
     .inspector-card.open { display: flex; }
+    .drawer-header {
+      position: sticky; top: 0; z-index: 5; background: inherit;
+      padding-bottom: 5px; border-bottom: var(--border-hairline);
+    }
+    .drawer-close-btn {
+      width: 24px; height: 24px; min-width: 24px; min-height: 24px;
+      border-radius: 5px; border: var(--border-hairline);
+      background: var(--surface-subtle); color: var(--ink-muted);
+      display: inline-flex; align-items: center; justify-content: center;
+      cursor: pointer; padding: 0; transition: all 140ms ease;
+    }
+    .drawer-close-btn:hover {
+      background: var(--surface-hover); color: var(--ink-primary); border-color: var(--border-hover);
+    }
     .row-between { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
     .zone-summary {
       display: flex; align-items: center; justify-content: space-between; gap: 8px;
-      padding: 10px; border-radius: 10px; background: var(--surface-canvas);
-      border: 1px solid var(--border-subtle);
+      padding: 8px 10px; border-radius: 6px; background: var(--surface-subtle);
+      border: var(--border-hairline);
     }
     .takeaway-box {
-      padding: 10px 12px; border-radius: 10px;
-      background: color-mix(in srgb, var(--accent-primary) 8%, var(--surface-canvas));
-      border: 1px solid color-mix(in srgb, var(--accent-primary) 26%, var(--border-subtle));
-      display: flex; flex-direction: column; gap: 4px;
+      padding: 8px 10px; border-radius: 6px;
+      background: var(--accent-primary-dim);
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      display: flex; flex-direction: column; gap: 3px;
     }
     .takeaway-title {
-      font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+      font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
       color: var(--accent-primary);
     }
     .takeaway-text {
-      font-size: 13px; line-height: 1.45; font-weight: 500; color: var(--ink-primary);
+      font-size: 12px; line-height: 1.4; font-weight: 500; color: var(--ink-primary);
     }
     .fish-banner {
-      display: flex; align-items: center; gap: 10px; padding: 10px 12px;
-      border-radius: 10px; background: color-mix(in srgb, var(--accent-cta) 8%, var(--surface-canvas));
-      border: 1px solid color-mix(in srgb, var(--accent-cta) 28%, var(--border-subtle));
+      display: flex; align-items: center; gap: 8px; padding: 8px 10px;
+      border-radius: 6px; background: var(--accent-cta-dim);
+      border: 1px solid rgba(249, 115, 22, 0.2);
     }
     .fish-banner-icon {
-      width: 38px; height: 38px; border-radius: 999px; flex-shrink: 0;
+      width: 30px; height: 30px; border-radius: 5px; flex-shrink: 0;
       background: var(--accent-cta); color: #FFFFFF;
       display: flex; align-items: center; justify-content: center;
     }
     .profile-badge {
-      display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px;
-      background: var(--surface-elevated); border: 1px solid var(--border-subtle);
-      font-size: 11px; font-weight: 700; color: var(--ink-primary); white-space: nowrap;
+      display: inline-flex; align-items: center; padding: 1px 6px; border-radius: 4px;
+      background: var(--surface-subtle); border: var(--border-hairline);
+      font-size: 10px; font-weight: 600; color: var(--ink-primary); white-space: nowrap;
     }
     .nearby-fish-box {
-      padding: 10px; border-radius: 10px; background: var(--surface-canvas);
-      border: 1px solid var(--border-subtle); display: flex; flex-direction: column; gap: 6px;
+      padding: 8px; border-radius: 6px; background: var(--surface-subtle);
+      border: var(--border-hairline); display: flex; flex-direction: column; gap: 5px;
     }
-    .nearby-fish-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .nearby-fish-chips { display: flex; flex-wrap: wrap; gap: 4px; }
     .nearby-fish-chip {
-      min-height: 44px; min-width: 44px; padding: 6px 11px; border-radius: 999px;
-      font-size: 12px; font-weight: 600;
-      background: var(--surface-elevated); border: 1px solid var(--border-subtle);
-      color: var(--ink-primary); cursor: pointer;
+      height: 24px; min-height: 24px; padding: 0 8px; border-radius: 4px;
+      font-size: 11px; font-weight: 500;
+      background: var(--surface-subtle); border: var(--border-hairline);
+      color: var(--ink-primary); cursor: pointer; transition: all 140ms ease;
     }
     .nearby-fish-chip:hover { border-color: var(--accent-primary); color: var(--accent-primary); }
     .potential-box {
-      padding: 10px 12px; border-radius: 10px; background: var(--surface-canvas);
-      border: 1px solid var(--border-subtle); display: flex; flex-direction: column; gap: 6px;
+      padding: 8px 10px; border-radius: 6px; background: var(--surface-subtle);
+      border: var(--border-hairline); display: flex; flex-direction: column; gap: 5px;
     }
     .score-sub-row {
-      display: flex; flex-wrap: wrap; gap: 6px; font-size: 11px; color: var(--ink-muted);
+      display: flex; flex-wrap: wrap; gap: 4px; font-size: 10px; color: var(--ink-muted);
     }
     .score-pill {
-      padding: 2px 7px; border-radius: 6px; background: var(--surface-elevated);
-      border: 1px solid var(--border-subtle);
+      padding: 1px 5px; border-radius: 4px; background: var(--surface-subtle);
+      border: var(--border-hairline);
     }
     .fish-detail-grid {
-      display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 4px;
-      font-size: 12px;
+      display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: 2px;
+      font-size: 11px;
     }
     .fish-detail-item {
-      padding: 6px 8px; border-radius: 8px; background: var(--surface-elevated);
-      border: 1px solid var(--border-subtle); display: flex; flex-direction: column; gap: 2px;
+      padding: 4px 6px; border-radius: 4px; background: var(--surface-subtle);
+      border: var(--border-hairline); display: flex; flex-direction: column; gap: 1px;
     }
     .verdict-pill {
-      padding: 5px 10px; border-radius: 999px; font-size: 12px; font-weight: 700;
+      padding: 2px 7px; border-radius: 4px; font-size: 11px; font-weight: 700;
       white-space: nowrap; color: #FFFFFF;
     }
     .verdict-high { background: #16A34A; }
     .verdict-mid { background: #0284C7; }
     .verdict-low { background: #64748B; }
-    .tiles-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .tiles-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
     .metric-tile {
-      padding: 10px; border-radius: 10px; background: var(--surface-canvas);
-      border: 1px solid var(--border-subtle); display: flex; flex-direction: column; gap: 4px; min-width: 0;
+      padding: 8px; border-radius: 6px; background: var(--surface-subtle);
+      border: var(--border-hairline); display: flex; flex-direction: column; gap: 3px; min-width: 0;
     }
-    .metric-label { display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; color: var(--ink-muted); }
-    .metric-value { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 17px; font-weight: 700; }
-    .metric-status { font-size: 12px; font-weight: 600; color: var(--accent-primary); }
-    .meter-track { width: 100%; height: 6px; border-radius: 999px; background: var(--border-subtle); overflow: hidden; }
-    .meter-fill { height: 100%; border-radius: 999px; background: var(--status-healthy); }
+    .metric-label { display: flex; align-items: gap: 4px; font-size: 11px; font-weight: 600; color: var(--ink-muted); }
+    .metric-value { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 15px; font-weight: 700; }
+    .metric-status { font-size: 11px; font-weight: 600; color: var(--accent-primary); }
+    .meter-track { width: 100%; height: 4px; border-radius: 2px; background: rgba(125, 125, 125, 0.2); overflow: hidden; }
+    .meter-fill { height: 100%; border-radius: 2px; background: var(--status-healthy); }
     .current-tile {
-      padding: 10px 12px; border-radius: 10px; background: var(--surface-canvas);
-      border: 1px solid var(--border-subtle);
-      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      padding: 8px 10px; border-radius: 6px; background: var(--surface-subtle);
+      border: var(--border-hairline);
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
     }
     .compass-ring {
-      width: 44px; height: 44px; flex-shrink: 0; border-radius: 999px;
-      background: var(--surface-elevated); border: 1px solid var(--border-subtle);
+      width: 34px; height: 34px; flex-shrink: 0; border-radius: 50%;
+      background: var(--surface-subtle); border: var(--border-hairline);
       display: flex; align-items: center; justify-content: center;
       transition: transform 220ms ease;
     }
     .tech-toggle {
-      width: 100%; min-height: 44px; padding: 8px 12px; border-radius: 8px;
-      border: 1px solid var(--border-subtle); background: var(--surface-canvas);
-      color: var(--ink-primary); font: 600 13px var(--font-sans); cursor: pointer;
+      width: 100%; height: 28px; min-height: 28px; padding: 0 8px; border-radius: 5px;
+      border: var(--border-hairline); background: var(--surface-subtle);
+      color: var(--ink-primary); font: 600 11px var(--font-sans); cursor: pointer;
       display: flex; align-items: center; justify-content: space-between;
     }
     .tech-panel {
-      display: none; flex-direction: column; gap: 4px; padding: 10px;
-      border-radius: 8px; background: var(--surface-canvas); border: 1px solid var(--border-subtle);
-      font-size: 12px; color: var(--ink-muted);
+      display: none; flex-direction: column; gap: 3px; padding: 8px;
+      border-radius: 5px; background: var(--surface-subtle); border: var(--border-hairline);
+      font-size: 11px; color: var(--ink-muted);
     }
     .tech-panel.open { display: flex; }
 
+    /* Map zoom controls compact override */
+    .lautscan-marine-map .zoom-controls {
+      left: 8px !important; bottom: 8px !important;
+      border-radius: 6px !important; border: var(--border-hairline) !important;
+      background: var(--surface-glass-panel) !important;
+      backdrop-filter: var(--glass-blur) !important;
+      -webkit-backdrop-filter: var(--glass-blur) !important;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25) !important;
+    }
+    .lautscan-marine-map .zoom-btn {
+      width: 28px !important; height: 28px !important; min-width: 28px !important; min-height: 28px !important;
+    }
+
     /* Shared UI primitives for other tabs */
-    .map-footer {
-      display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center;
-      gap: 10px; padding: 8px 16px; width: 100%; max-width: 100%;
-      background: var(--surface-elevated); border-top: 1px solid var(--border-subtle);
-      font-size: 12px; color: var(--ink-muted);
-    }
-    .map-footer > div { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
     .btn {
-      min-height: 44px; min-width: 44px; padding: 8px 12px; border-radius: 8px;
-      border: 1px solid var(--border-subtle); background: var(--surface-canvas);
-      color: var(--ink-primary); font: 600 13px var(--font-sans); cursor: pointer;
-      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      height: 28px; min-height: 28px; padding: 0 10px; border-radius: 5px;
+      border: var(--border-hairline); background: var(--surface-subtle);
+      color: var(--ink-primary); font: 500 12px var(--font-sans); cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+      transition: all 140ms ease;
     }
-    .btn.cta { background: var(--accent-cta); color: #FFFFFF; border-color: var(--accent-cta); }
+    .btn:hover { background: var(--surface-hover); border-color: var(--border-hover); }
+    .btn.cta { background: var(--accent-cta); color: #FFFFFF; border-color: var(--accent-cta); font-weight: 600; }
     .select-box, .input-box {
-      width: 100%; min-height: 44px; padding: 8px 10px; border-radius: 8px;
-      border: 1px solid var(--border-subtle); background: var(--surface-canvas);
-      color: var(--ink-primary); font: 500 14px var(--font-sans);
+      width: 100%; height: 28px; min-height: 28px; padding: 0 8px; border-radius: 5px;
+      border: var(--border-hairline); background: var(--surface-subtle);
+      color: var(--ink-primary); font: 500 12px var(--font-sans); outline: none;
     }
-    .content-wrap { padding: 18px 16px; max-width: 1280px; width: 100%; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
-    .grid-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+    .select-box:focus, .input-box:focus { border-color: var(--accent-primary); }
+    select, option {
+      background: var(--surface-elevated);
+      color: var(--ink-primary);
+    }
+    .content-wrap { padding: 14px 16px; max-width: 1200px; width: 100%; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+    .grid-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; }
     .card {
-      background: var(--surface-elevated); border: 1px solid var(--border-subtle);
-      border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 8px;
+      background: var(--surface-glass-panel); border: var(--border-hairline);
+      backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+      border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 6px;
     }
-    table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--border-subtle); }
-    th { font-weight: 700; color: var(--ink-muted); font-size: 12px; text-transform: uppercase; }
-    .table-scroll { overflow-x: auto; background: var(--surface-elevated); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 8px; }
-    .badge {
-      display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px;
-      border-radius: 999px; font-size: 12px; font-weight: 600; border: 1px solid var(--border-subtle);
-      max-width: 100%;
-    }
-    .badge.ok { color: var(--status-healthy); border-color: var(--status-healthy); }
-    .badge.warn { color: var(--status-degraded); border-color: var(--status-degraded); }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th, td { text-align: left; padding: 7px 8px; border-bottom: var(--border-hairline); }
+    th { font-weight: 600; color: var(--ink-muted); font-size: 11px; text-transform: uppercase; }
+    .table-scroll { overflow-x: auto; background: var(--surface-glass-panel); border: var(--border-hairline); border-radius: 8px; padding: 6px; }
     .tabular-nums { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 
-    @media (max-width: 720px) {
-      .nav-bar { padding: 8px 10px; gap: 8px; }
-      .nav-right { width: 100%; justify-content: space-between; align-items: center; gap: 6px; }
-      .nav-tabs { flex: 1 1 0; min-width: 0; gap: 4px; }
-      .nav-btn { padding: 6px 9px; font-size: 12px; }
-      .map-stage { height: 76vh; min-height: 500px; }
+    /* Responsive adjustments for smaller viewports */
+    @media (max-width: 768px) {
+      .nav-bar { padding: 0 8px; }
+      .brand-sub { display: none; }
+      .brand-divider { display: none; }
+      .nav-right { gap: 4px; }
+      .nav-tabs { gap: 2px; }
+      .nav-btn { padding: 0 7px; font-size: 11.5px; }
+      .map-stage { height: calc(100vh - 42px - 28px); }
       .top-left-hud, .map-stage.inspector-open .top-left-hud {
-        top: 8px; left: 8px; right: 8px; width: auto; max-width: none; gap: 6px;
+        top: 6px; left: 6px; right: 6px; width: auto; max-width: none; gap: 4px;
       }
-      .quick-bar { width: 100%; gap: 6px; }
-      .pill-select { flex: 1 1 140px; min-width: 0; max-width: 100%; font-size: 12px; padding: 8px 10px; }
-      .pill-btn { flex: 0 1 auto; padding: 8px 10px; font-size: 12px; }
-      .area-insight-pill { width: 100%; padding: 6px 10px; font-size: 11px; gap: 6px; }
-      .lens-dock-wrap { left: 8px; right: 8px; transform: none; width: auto; bottom: 8px; }
-      .lens-dock { width: 100%; padding: 7px 8px; gap: 5px; }
-      .lens-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; width: 100%; }
-      .lens-btn { min-width: 0; width: 100%; padding: 8px 6px; font-size: 12px; }
-      .tune-btn { grid-column: 1 / -1; min-width: 0; width: 100%; justify-content: center; }
-      .legend-wrap { gap: 4px; padding: 0 2px; }
-      .legend-head { flex-wrap: wrap; gap: 4px; }
-      .legend-caption { white-space: normal; font-size: 10px; }
-      .legend-tiers { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
-      .tier-chip { padding: 3px 4px; font-size: 10px; gap: 3px; }
-      .tier-text { flex-direction: column; align-items: center; gap: 1px; text-align: center; }
-      #map-stage .lautscan-marine-map .zoom-controls { bottom: 262px; left: 8px; }
-      #map-stage .lautscan-marine-map .map-hud { display: none; }
+      .quick-bar { width: 100%; gap: 4px; }
+      .pill-select { flex: 1 1 130px; max-width: 100%; }
+      .pill-btn { flex: 0 1 auto; padding: 0 8px; }
+      .area-insight-pill { width: 100%; padding: 4px 8px; font-size: 10.5px; }
+      .lens-dock-wrap { left: 6px; right: 6px; transform: none; width: auto; bottom: 6px; }
+      .lens-dock { padding: 6px; gap: 4px; }
+      .lens-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; width: 100%; }
+      .lens-btn { width: 100%; font-size: 11.5px; }
+      .tune-btn { grid-column: 1 / -1; width: 100%; justify-content: center; }
+      .legend-tiers { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3px; }
+      .tier-chip { padding: 2px 3px; font-size: 9.5px; }
       .inspector-card {
-        top: 8px; right: 8px; left: 8px; bottom: auto; width: auto;
-        max-height: calc(100% - 274px); z-index: 35; padding: 12px;
+        top: 6px; right: 6px; left: 6px; bottom: auto; width: auto; max-width: none;
+        max-height: calc(100% - 130px); z-index: 35;
       }
-      .map-footer { padding: 8px 10px; gap: 6px; }
     }
   </style>
 </head>
@@ -423,12 +551,13 @@
   <div class="app-shell">
     <header class="nav-bar">
       <div class="brand">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/>
         </svg>
-        <div>
-          <div class="brand-title">LAUT SCAN</div>
-          <div class="brand-sub">Peta Kondisi Laut Nusantara</div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span class="brand-title">LAUT SCAN</span>
+          <span class="brand-divider">/</span>
+          <span class="brand-sub">Peta Kondisi Laut Nusantara</span>
         </div>
       </div>
 
@@ -441,7 +570,7 @@
           <button class="nav-btn" data-tab="settings" type="button">Pengaturan</button>
         </nav>
         <button id="quick-theme-btn" class="btn" type="button" aria-label="Ubah mode siang atau malam" title="Mode Siang / Malam">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>
           </svg>
         </button>
@@ -492,23 +621,31 @@
         <!-- Bottom-Center Floating 4 Lensa Laut Dock -->
         <div class="lens-dock-wrap">
           <div id="tune-popover" class="tune-popover" role="dialog" aria-label="Pengaturan lapisan peta">
-            <div class="row-between">
-              <strong style="font-size:13px;" id="tune-layer-title">Ketebalan Zona Ikan</strong>
-              <span id="active-opacity-val" class="tabular-nums" style="font-size:13px;color:var(--ink-muted);">88%</span>
+            <div class="row-between" style="border-bottom: var(--border-hairline); padding-bottom: 5px;">
+              <span style="font-size:12px;font-weight:700;">Pengaturan Lapisan</span>
+              <button id="close-tune-btn" class="drawer-close-btn" type="button" aria-label="Tutup pengaturan lapisan">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
             </div>
-            <div style="display:flex;align-items:center;gap:8px;">
-              <button id="opacity-down-btn" class="btn" type="button" aria-label="Kurangi ketebalan warna">-</button>
-              <input id="active-opacity-slider" type="range" min="10" max="100" step="5" value="88" style="flex:1;min-height:44px;cursor:pointer;" aria-label="Atur ketebalan warna">
-              <button id="opacity-up-btn" class="btn" type="button" aria-label="Tambah ketebalan warna">+</button>
+            <div class="row-between">
+              <span style="font-size:11.5px;font-weight:600;" id="tune-layer-title">Ketebalan Zona Ikan</span>
+              <span id="active-opacity-val" class="tabular-nums" style="font-size:11.5px;color:var(--ink-muted);">88%</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <button id="opacity-down-btn" class="btn" type="button" aria-label="Kurangi ketebalan warna" style="width:26px;min-width:26px;padding:0;">-</button>
+              <input id="active-opacity-slider" type="range" min="10" max="100" step="5" value="88" style="flex:1;height:24px;cursor:pointer;" aria-label="Atur ketebalan warna">
+              <button id="opacity-up-btn" class="btn" type="button" aria-label="Tambah ketebalan warna" style="width:26px;min-width:26px;padding:0;">+</button>
             </div>
             <div class="preset-row" role="group" aria-label="Pilihan cepat transparansi">
               <button class="preset-btn" type="button" data-opacity-preset="0.4" aria-pressed="false">Tipis (40%)</button>
               <button class="preset-btn" type="button" data-opacity-preset="0.7" aria-pressed="false">Seimbang (70%)</button>
               <button class="preset-btn" type="button" data-opacity-preset="0.9" aria-pressed="false">Jelas (90%)</button>
             </div>
-            <div class="row-between">
-              <label for="date-select" style="font-size:12px;font-weight:600;color:var(--ink-muted);">Tanggal Data (WIB)</label>
-              <select id="date-select" class="select-box" style="max-width:210px;">
+            <div class="row-between" style="border-top: var(--border-hairline); padding-top: 5px;">
+              <label for="date-select" style="font-size:11.5px;font-weight:600;color:var(--ink-muted);">Tanggal Data</label>
+              <select id="date-select" class="select-box" style="max-width:180px;height:26px;min-height:26px;font-size:11px;">
                 <option value="latest">Terbaru (Hari Ini · WIB)</option>
                 <option value="2026-11-10">10 Nov 2026 (WIB)</option>
                 <option value="2026-11-01">01 Nov 2026 (WIB)</option>
@@ -520,31 +657,31 @@
           <div class="lens-dock" role="region" aria-label="Pilihan Lensa Peta Laut">
             <div class="lens-row">
               <button class="lens-btn active" data-lens="potential" type="button" aria-pressed="true">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                   <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
                 </svg>
                 <span>Zona Ikan</span>
               </button>
               <button class="lens-btn" data-lens="sst" type="button" aria-pressed="false">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                   <path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/>
                 </svg>
                 <span>Suhu Air</span>
               </button>
               <button class="lens-btn" data-lens="chlorophyll" type="button" aria-pressed="false">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                   <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/>
                 </svg>
                 <span>Pakan Alami</span>
               </button>
               <button class="lens-btn" data-lens="currents" type="button" aria-pressed="false">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                   <path d="M17.7 7.7a2.5 2.5 0 1 1 1.8 4.3H2"/><path d="M9.6 4.6A2 2 0 1 1 11 8H2"/><path d="M12.6 19.4A2 2 0 1 0 14 16H2"/>
                 </svg>
                 <span>Arus Laut</span>
               </button>
               <button id="toggle-tune-btn" class="tune-btn" type="button" aria-expanded="false" aria-label="Atur transparansi dan tanggal">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                   <line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/>
                   <line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/>
                   <line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/>
@@ -558,28 +695,28 @@
 
         <!-- Right Floating Kondisi Titik Ini Card -->
         <aside id="inspector-drawer" class="inspector-card" aria-label="Kondisi Titik Ini">
-          <div class="row-between">
-            <div style="display:flex;align-items:center;gap:8px;">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cta)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <div class="drawer-header row-between">
+            <div style="display:flex;align-items:center;gap:6px;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cta)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <circle cx="12" cy="12" r="10"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/>
               </svg>
-              <strong style="font-size:16px;">Kondisi Titik Ini</strong>
+              <strong style="font-size:13px;letter-spacing:0.02em;">Kondisi Titik Ini</strong>
             </div>
-            <button id="close-inspector-btn" class="btn" type="button" aria-label="Tutup kartu kondisi">
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <button id="close-inspector-btn" class="drawer-close-btn" type="button" aria-label="Tutup kartu kondisi">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
               </svg>
             </button>
           </div>
-          <div id="inspector-body" style="display:flex;flex-direction:column;gap:10px;"></div>
+          <div id="inspector-body" style="display:flex;flex-direction:column;gap:8px;"></div>
         </aside>
       </div>
 
       <footer class="map-footer">
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:8px;">
           <span id="freshness-badge" class="badge ok">Menghubungkan data laut...</span>
         </div>
-        <div style="max-width:560px;">
+        <div class="footer-disclaimer">
           Data satelit &amp; riwayat untuk referensi. Keselamatan pelayaran wajib mengikuti informasi BMKG, Pushidrosal, dan Basarnas.
         </div>
       </footer>
@@ -636,39 +773,39 @@
     <section id="tab-settings" class="view-panel">
       <div class="content-wrap">
         <div>
-          <h2 style="margin:0;">Pengaturan Tampilan &amp; Satuan</h2>
-          <div style="font-size:13px;color:var(--ink-muted);">Sesuaikan tampilan layar siang/malam dan satuan ukuran sesuai kebiasaan melaut.</div>
+          <h2 style="margin:0;font-size:18px;">Pengaturan Tampilan &amp; Satuan</h2>
+          <div style="font-size:12px;color:var(--ink-muted);">Sesuaikan tema tampilan siang/malam dan preferensi satuan ukuran data kelautan.</div>
         </div>
         <div class="card" style="max-width:520px;">
           <div class="row-between">
-            <span>Tampilan Layar</span>
-            <select id="theme-select" class="select-box" style="max-width:240px;">
-              <option value="night">Malam Gelap (Night Maritime) - Premium</option>
-              <option value="daylight">Siang Terang (Daylight)</option>
+            <span style="font-size:12px;font-weight:500;">Tema Tampilan</span>
+            <select id="theme-select" class="select-box" style="max-width:220px;">
+              <option value="night">Mode Malam (Night Maritime)</option>
+              <option value="daylight">Mode Siang (Daylight)</option>
             </select>
           </div>
           <div class="row-between">
-            <span>Satuan Suhu Air</span>
+            <span style="font-size:12px;font-weight:500;">Satuan Suhu Air</span>
             <select id="temp-unit-select" class="select-box" style="max-width:220px;">
-              <option value="C">Celsius (C)</option>
-              <option value="F">Fahrenheit (F)</option>
+              <option value="C">Celsius (°C)</option>
+              <option value="F">Fahrenheit (°F)</option>
             </select>
           </div>
           <div class="row-between">
-            <span>Satuan Kecepatan Arus</span>
+            <span style="font-size:12px;font-weight:500;">Satuan Kecepatan Arus</span>
             <select id="speed-unit-select" class="select-box" style="max-width:220px;">
-              <option value="knots">Knot (umum di kapal)</option>
-              <option value="ms">Meter/detik (m/s)</option>
+              <option value="knots">Knot (kt)</option>
+              <option value="ms">Meter / detik (m/s)</option>
             </select>
           </div>
-          <div style="border-top:1px solid var(--border-subtle);margin-top:10px;padding-top:12px;">
-            <div style="font-weight:600;font-size:13px;margin-bottom:4px;">API Endpoint URL</div>
-            <div style="font-size:12px;color:var(--ink-muted);margin-bottom:8px;">Alamat server backend data laut (contoh: <code>http://127.0.0.1:8080</code>). Kosongkan untuk menggunakan URL asal hosting.</div>
-            <div style="display:flex;gap:8px;align-items:center;">
-              <input id="api-endpoint-input" class="input-box" style="flex:1;font-size:13px;" placeholder="http://127.0.0.1:8080">
-              <button id="api-endpoint-save-btn" class="pill-btn" type="button" style="padding:8px 16px;">Terapkan</button>
+          <div style="border-top:var(--border-hairline);margin-top:6px;padding-top:10px;">
+            <div style="font-weight:600;font-size:12px;margin-bottom:3px;">Koneksi Layanan Data (API Endpoint)</div>
+            <div style="font-size:11px;color:var(--ink-muted);margin-bottom:8px;">Alamat server data laut. Kosongkan untuk menggunakan server saat ini secara otomatis.</div>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <input id="api-endpoint-input" class="input-box" style="flex:1;" placeholder="Default (otomatis)">
+              <button id="api-endpoint-save-btn" class="btn" type="button">Terapkan</button>
             </div>
-            <div id="api-endpoint-feedback" style="font-size:12px;margin-top:6px;min-height:18px;"></div>
+            <div id="api-endpoint-feedback" style="font-size:11px;margin-top:4px;min-height:16px;"></div>
           </div>
         </div>
       </div>
@@ -1740,6 +1877,11 @@
       const pop = document.getElementById('tune-popover');
       const open = pop.classList.toggle('open');
       document.getElementById('toggle-tune-btn').setAttribute('aria-expanded', String(open));
+    });
+
+    document.getElementById('close-tune-btn')?.addEventListener('click', () => {
+      document.getElementById('tune-popover')?.classList.remove('open');
+      document.getElementById('toggle-tune-btn')?.setAttribute('aria-expanded', 'false');
     });
 
     document.getElementById('toggle-species-btn').addEventListener('click', () => {
