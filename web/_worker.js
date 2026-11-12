@@ -420,14 +420,27 @@ function getCoastalShelfFactor(lat, lon) {
   return Math.min(1.0, hits / 4.2);
 }
 
+function wrapLonDelta(lon, centerLon) {
+  let d = ((lon - centerLon + 180) % 360 + 360) % 360 - 180;
+  return d;
+}
+
+function gauss2d(lat, lon, cLat, cLon, sLat, sLon) {
+  const dLat = (lat - cLat) / sLat;
+  const dLon = wrapLonDelta(lon, cLon) / sLon;
+  const r2 = dLat * dLat + dLon * dLon;
+  return r2 > 18 ? 0 : Math.exp(-r2);
+}
+
 function organicEddy(lat, lon, seed = 0) {
-  const x = (lon * Math.PI) / 180 + seed;
-  const y = (lat * Math.PI) / 180 - seed * 0.7;
-  const wx = x + 0.25 * Math.sin(y * 6.0) * Math.cos(x * 5.0);
-  const wy = y + 0.25 * Math.cos(x * 5.5) * Math.sin(y * 7.0);
-  const n1 = Math.sin(wx * 4.5) * Math.cos(wy * 5.5);
-  const n2 = 0.55 * Math.sin(wx * 10.5 + 1.4) * Math.sin(wy * 12.0 + 0.8);
-  const n3 = 0.30 * Math.cos(wx * 20.0 - 0.9) * Math.sin(wy * 18.0 + 1.9);
+  // Strictly integer longitude frequencies guarantee 100% seamless wrap at +-180 deg
+  const x = (lon * Math.PI) / 180;
+  const y = (lat * Math.PI) / 180;
+  const wx = x + 0.22 * Math.sin(y * 6.0 + seed) * Math.cos(x * 4.0 - seed * 0.5);
+  const wy = y + 0.22 * Math.cos(x * 5.0 - seed * 0.7) * Math.sin(y * 7.0 + seed);
+  const n1 = Math.sin(wx * 4.0 + seed) * Math.cos(wy * 5.0 - seed * 0.4);
+  const n2 = 0.55 * Math.sin(wx * 9.0 + 1.4 - seed * 0.8) * Math.sin(wy * 11.0 + 0.8);
+  const n3 = 0.30 * Math.cos(wx * 16.0 - 0.9 + seed * 1.1) * Math.sin(wy * 17.0 + 1.9);
   return (n1 + n2 + n3) / 1.85;
 }
 
@@ -552,32 +565,15 @@ async function encodeRgbaToPngCompressed(width, height, rgbaBuffer) {
 
 function computeGlobalSst(lat, lon) {
   const latFactor = Math.cos((lat * Math.PI) / 155);
-  let sst = 30.0 * Math.pow(Math.max(0, latFactor), 1.45) - 1.2;
+  let sst = 29.8 * Math.pow(Math.max(0, latFactor), 1.45) - 1.2;
 
-  if (lon >= 90 && lon <= 165 && lat >= -18 && lat <= 18) {
-    const dLon = (lon - 125) / 28; const dLat = (lat + 2) / 12;
-    sst += 1.3 * Math.exp(-(dLon * dLon + dLat * dLat));
-  }
-  if (lon >= -85 && lon <= -15 && lat >= 25 && lat <= 60) {
-    const dLon = (lon + 50) / 20; const dLat = (lat - 40) / 15;
-    sst += 4.5 * Math.exp(-(dLon * dLon + dLat * dLat));
-  }
-  if (lon >= 125 && lon <= 165 && lat >= 20 && lat <= 45) {
-    const dLon = (lon - 142) / 15; const dLat = (lat - 32) / 10;
-    sst += 3.8 * Math.exp(-(dLon * dLon + dLat * dLat));
-  }
-  if (lon >= -90 && lon <= -70 && lat >= -45 && lat <= -5) {
-    const dLon = (lon + 78) / 8; const dLat = (lat + 22) / 18;
-    sst -= 5.2 * Math.exp(-(dLon * dLon + dLat * dLat));
-  }
-  if (lon >= -135 && lon <= -115 && lat >= 22 && lat <= 48) {
-    const dLon = (lon + 124) / 8; const dLat = (lat - 35) / 12;
-    sst -= 4.0 * Math.exp(-(dLon * dLon + dLat * dLat));
-  }
-  if (lon >= 8 && lon <= 20 && lat >= -36 && lat <= -14) {
-    const dLon = (lon - 14) / 5; const dLat = (lat + 25) / 10;
-    sst -= 4.8 * Math.exp(-(dLon * dLon + dLat * dLat));
-  }
+  // Smooth wrapped 2D Gaussian ocean basins & currents (zero rectangular seams)
+  sst += 1.35 * gauss2d(lat, lon, -2, 125, 13, 30);    // Indo-Pacific Warm Pool
+  sst += 4.50 * gauss2d(lat, lon, 40, -50, 15, 22);    // Gulf Stream
+  sst += 3.80 * gauss2d(lat, lon, 32, 142, 10, 16);    // Kuroshio Current
+  sst -= 5.20 * gauss2d(lat, lon, -22, -78, 18, 9);    // Humboldt / Peru Cold Upwelling
+  sst -= 4.00 * gauss2d(lat, lon, 35, -124, 12, 9);    // California Current
+  sst -= 4.80 * gauss2d(lat, lon, -25, 14, 10, 6);     // Benguela Cold Upwelling
 
   sst += 1.65 * organicEddy(lat, lon, 0.0);
   return Math.max(-1.8, Math.min(32.5, Math.round(sst * 100) / 100));
@@ -585,25 +581,23 @@ function computeGlobalSst(lat, lon) {
 
 function computeGlobalChlorophyll(lat, lon, coastalFactor = -1) {
   const cf = coastalFactor >= 0 ? coastalFactor : getCoastalShelfFactor(lat, lon);
-  let chl = 0.14;
+  let chl = 0.12;
   const absLat = Math.abs(lat);
-  if (absLat >= 38 && absLat <= 68) {
-    chl += 0.55 * Math.exp(-(((absLat - 52) / 10) ** 2));
-  }
-  if (absLat <= 12) {
-    chl += 0.25 * Math.exp(-((lat / 5.5) ** 2));
-  }
-  if (lon >= 94 && lon <= 145 && lat >= -14 && lat <= 10) {
-    chl += 0.28 * Math.exp(-(((lat + 3) / 7) ** 2));
-  }
-  if (lon >= -88 && lon <= -70 && lat >= -40 && lat <= -4) chl += 1.45 * Math.exp(-(((lon + 76) / 5) ** 2));
-  if (lon >= 8 && lon <= 18 && lat >= -34 && lat <= -15) chl += 1.35 * Math.exp(-(((lon - 13) / 4) ** 2));
-  if (lon >= -22 && lon <= -12 && lat >= 12 && lat <= 32) chl += 1.10 * Math.exp(-(((lon + 17) / 4) ** 2));
-  if (lon >= 48 && lon <= 65 && lat >= 5 && lat <= 24) chl += 0.95 * Math.exp(-(((lon - 55) / 6) ** 2));
+  // Subpolar nutrient belts
+  chl += 0.52 * Math.exp(-(((absLat - 52) / 11) ** 2));
+  // Equatorial upwelling belt
+  chl += 0.22 * Math.exp(-((lat / 5.5) ** 2));
+  // Smooth Nusantara / Coral Triangle shelf enrichment (no hard lon box)
+  chl += 0.28 * gauss2d(lat, lon, -3, 120, 8, 24);
+  // Major eastern boundary & monsoon upwelling plumes
+  chl += 1.45 * gauss2d(lat, lon, -18, -76, 14, 6);    // Peru / Humboldt
+  chl += 1.35 * gauss2d(lat, lon, -24, 13, 10, 5);     // Benguela
+  chl += 1.10 * gauss2d(lat, lon, 21, -17, 10, 5);     // Canary
+  chl += 0.95 * gauss2d(lat, lon, 13, 55, 10, 8);      // Somali / Arabian Sea
 
-  chl += cf * 0.68;
+  chl += cf * 0.65;
   const eddy = organicEddy(lat, lon, 2.3);
-  chl = chl * (0.85 + 0.55 * eddy) + 0.12 * Math.max(0, organicEddy(lat, lon, 4.1));
+  chl = chl * (0.85 + 0.52 * eddy) + 0.11 * Math.max(0, organicEddy(lat, lon, 4.1));
 
   return Math.max(0.03, Math.min(5.0, Math.round(chl * 10000) / 10000));
 }
@@ -643,7 +637,12 @@ function resolveGlobalSeaName(lat, lon) {
   return "Perairan Internasional";
 }
 
-function sstToRgb(sst) {
+function smoothstep(edge0, edge1, x) {
+  const t = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0)));
+  return t * t * (3 - 2 * t);
+}
+
+function sstToRgba(sst) {
   let u;
   if (sst < 18.0) {
     u = Math.max(0, (sst + 2.0) / 20.0) * 0.42;
@@ -652,140 +651,194 @@ function sstToRgb(sst) {
   } else {
     u = 0.65 + Math.min(1, (sst - 26.0) / 5.2) * 0.35;
   }
+  const a = Math.round(145 + 65 * smoothstep(0.15, 0.85, u));
   if (u < 0.25) {
     const t = u / 0.25;
-    return [Math.round(13 + (106 - 13) * t), Math.round(8 + (0 - 8) * t), Math.round(135 + (168 - 135) * t)];
+    return [Math.round(13 + (106 - 13) * t), Math.round(8 + (0 - 8) * t), Math.round(135 + (168 - 135) * t), a];
   } else if (u < 0.50) {
     const t = (u - 0.25) / 0.25;
-    return [Math.round(106 + (185 - 106) * t), Math.round(0 + (50 - 0) * t), Math.round(168 + (137 - 168) * t)];
+    return [Math.round(106 + (192 - 106) * t), Math.round(0 + (54 - 0) * t), Math.round(168 + (132 - 168) * t), a];
   } else if (u < 0.72) {
     const t = (u - 0.50) / 0.22;
-    return [Math.round(185 + (230 - 185) * t), Math.round(50 + (108 - 50) * t), Math.round(137 + (92 - 137) * t)];
+    return [Math.round(192 + (232 - 192) * t), Math.round(54 + (108 - 54) * t), Math.round(132 + (90 - 132) * t), a];
   } else if (u < 0.88) {
     const t = (u - 0.72) / 0.16;
-    return [Math.round(230 + (252 - 230) * t), Math.round(108 + (166 - 108) * t), Math.round(92 + (54 - 92) * t)];
+    return [Math.round(232 + (252 - 232) * t), Math.round(108 + (168 - 108) * t), Math.round(90 + (52 - 90) * t), a];
   } else {
     const t = (u - 0.88) / 0.12;
-    return [Math.round(252 + (240 - 252) * t), Math.round(166 + (249 - 166) * t), Math.round(54 + (33 - 54) * t)];
+    return [Math.round(252 + (245 - 252) * t), Math.round(168 + (246 - 168) * t), Math.round(52 + (42 - 52) * t), a];
   }
 }
 
-function chlorophyllToRgb(chl) {
+function chlorophyllToRgba(chl) {
   const logVal = Math.log10(Math.max(0.03, chl) / 0.03) / Math.log10(2.2 / 0.03);
   const u = Math.max(0, Math.min(1, logVal));
-  if (u < 0.25) {
-    const t = u / 0.25;
-    return [Math.round(68 + (59 - 68) * t), Math.round(1 + (82 - 1) * t), Math.round(84 + (139 - 84) * t)];
-  } else if (u < 0.55) {
-    const t = (u - 0.25) / 0.30;
-    return [Math.round(59 + (33 - 59) * t), Math.round(82 + (145 - 82) * t), Math.round(139 + (140 - 139) * t)];
+  // Low-chlorophyll open ocean stays subtle & translucent; blooms glow vividly
+  const a = Math.round(48 + 185 * smoothstep(0.18, 0.88, u));
+  if (u < 0.28) {
+    const t = u / 0.28;
+    return [Math.round(56 + (52 - 56) * t), Math.round(10 + (82 - 10) * t), Math.round(88 + (139 - 88) * t), a];
+  } else if (u < 0.56) {
+    const t = (u - 0.28) / 0.28;
+    return [Math.round(52 + (28 - 52) * t), Math.round(82 + (152 - 82) * t), Math.round(139 + (142 - 139) * t), a];
   } else if (u < 0.80) {
-    const t = (u - 0.55) / 0.25;
-    return [Math.round(33 + (94 - 33) * t), Math.round(145 + (201 - 145) * t), Math.round(140 + (98 - 140) * t)];
+    const t = (u - 0.56) / 0.24;
+    return [Math.round(28 + (94 - 28) * t), Math.round(152 + (206 - 152) * t), Math.round(142 + (96 - 142) * t), a];
   } else {
     const t = (u - 0.80) / 0.20;
-    return [Math.round(94 + (253 - 94) * t), Math.round(201 + (231 - 201) * t), Math.round(98 + (37 - 98) * t)];
+    return [Math.round(94 + (250 - 94) * t), Math.round(206 + (232 - 206) * t), Math.round(96 + (42 - 96) * t), a];
   }
 }
 
-function potentialToRgb(pot) {
-  const u = Math.max(0, Math.min(1, (pot - 20) / 72));
-  if (u < 0.38) {
-    const t = u / 0.38;
-    return [Math.round(13 + (20 - 13) * t), Math.round(95 + (184 - 95) * t), Math.round(115 + (166 - 115) * t), Math.round(125 + 60 * t)];
+function potentialToRgba(pot) {
+  const u = Math.max(0, Math.min(1, (pot - 22) / 68));
+  // Quiet open water (<45%) stays subtle so hotspots (>=72%) pop unmistakably
+  const a = Math.round(40 + 195 * smoothstep(0.12, 0.85, u));
+  if (u < 0.36) {
+    const t = u / 0.36;
+    return [Math.round(12 + (20 - 12) * t), Math.round(85 + (178 - 85) * t), Math.round(110 + (162 - 110) * t), a];
   } else if (u < 0.68) {
-    const t = (u - 0.38) / 0.30;
-    return [Math.round(20 + (34 - 20) * t), Math.round(184 + (197 - 184) * t), Math.round(166 + (94 - 166) * t), Math.round(185 + 25 * t)];
+    const t = (u - 0.36) / 0.32;
+    return [Math.round(20 + (34 - 20) * t), Math.round(178 + (197 - 178) * t), Math.round(162 + (94 - 162) * t), a];
   } else {
     const t = (u - 0.68) / 0.32;
-    return [Math.round(34 + (245 - 34) * t), Math.round(197 + (158 - 197) * t), Math.round(94 + (11 - 94) * t), Math.round(210 + 30 * t)];
+    return [Math.round(34 + (248 - 34) * t), Math.round(197 + (168 - 197) * t), Math.round(94 + (18 - 94) * t), a];
   }
 }
 
 function buildRasterTileRgba(layer, z, x, y) {
   const size = 256;
-  const half = 128;
-  const step = 4; // 4 in 128-space = 33x33 physics grid
-  const gSize = half / step + 1;
+  const step = 4; // 65x65 scalar physics grid for full 256x256 output
+  const gSize = size / step + 1;
   const n = 1 << z;
-  const gR = new Float32Array(gSize * gSize);
-  const gG = new Float32Array(gSize * gSize);
-  const gB = new Float32Array(gSize * gSize);
-  const gA = new Float32Array(gSize * gSize);
+  const gVal = new Float32Array(gSize * gSize);
 
-  const lats = new Float32Array(half);
-  for (let hy = 0; hy < half; hy++) {
-    const wy = y + (hy + 0.5) / half;
-    lats[hy] = (Math.atan(Math.sinh(Math.PI * (1 - (2 * wy) / n))) * 180) / Math.PI;
+  const lats = new Float32Array(size);
+  const maskR0 = new Int32Array(size);
+  const maskR1 = new Int32Array(size);
+  const maskTy = new Float32Array(size);
+  for (let py = 0; py < size; py++) {
+    const wy = y + (py + 0.5) / size;
+    const lat = (Math.atan(Math.sinh(Math.PI * (1 - (2 * wy) / n))) * 180) / Math.PI;
+    lats[py] = lat;
+    const fy = ((90 - lat) / 180) * LAND_MASK_H - 0.5;
+    const r0 = Math.max(0, Math.min(LAND_MASK_H - 1, Math.floor(fy)));
+    maskR0[py] = r0 * LAND_MASK_W;
+    maskR1[py] = Math.max(0, Math.min(LAND_MASK_H - 1, r0 + 1)) * LAND_MASK_W;
+    maskTy[py] = Math.max(0, Math.min(1, fy - r0));
   }
-  const lons = new Float32Array(half);
-  for (let hx = 0; hx < half; hx++) {
-    const wx = x + (hx + 0.5) / half;
-    lons[hx] = (wx / n) * 360 - 180;
+
+  const lons = new Float32Array(size);
+  const maskC0 = new Int32Array(size);
+  const maskC1 = new Int32Array(size);
+  const maskTx = new Float32Array(size);
+  for (let px = 0; px < size; px++) {
+    const wx = x + (px + 0.5) / size;
+    const lon = (wx / n) * 360 - 180;
+    lons[px] = lon;
+    const fx = ((((lon + 180) % 360 + 360) % 360) / 360) * LAND_MASK_W - 0.5;
+    const c0 = Math.floor(fx);
+    const wc0 = ((c0 % LAND_MASK_W) + LAND_MASK_W) % LAND_MASK_W;
+    maskC0[px] = wc0;
+    maskC1[px] = (wc0 + 1) % LAND_MASK_W;
+    maskTx[px] = fx - c0;
   }
 
   for (let gy = 0; gy < gSize; gy++) {
-    const hy = Math.min(half - 1, gy * step);
-    const lat = lats[hy];
+    const py = Math.min(size - 1, gy * step);
+    const lat = lats[py];
     for (let gx = 0; gx < gSize; gx++) {
-      const hx = Math.min(half - 1, gx * step);
-      const lon = lons[hx];
-      const cf = getCoastalShelfFactor(lat, lon);
-      const sst = computeGlobalSst(lat, lon);
-      const chl = computeGlobalChlorophyll(lat, lon, cf);
+      const px = Math.min(size - 1, gx * step);
+      const lon = lons[px];
       const gi = gy * gSize + gx;
       if (layer === "sst") {
-        const [r, g, b] = sstToRgb(sst);
-        gR[gi] = r; gG[gi] = g; gB[gi] = b; gA[gi] = 205;
+        gVal[gi] = computeGlobalSst(lat, lon);
       } else if (layer === "chlorophyll") {
-        const [r, g, b] = chlorophyllToRgb(chl);
-        gR[gi] = r; gG[gi] = g; gB[gi] = b; gA[gi] = 205;
+        const cf = getCoastalShelfFactor(lat, lon);
+        const chl = computeGlobalChlorophyll(lat, lon, cf);
+        // Store log10(chl) for ultra-smooth perceptual interpolation & log isolines
+        gVal[gi] = Math.log10(Math.max(0.03, chl));
       } else {
-        const pot = computeGlobalPotentialScore(sst, chl, lat, lon, cf);
-        const [r, g, b, a] = potentialToRgb(pot);
-        gR[gi] = r; gG[gi] = g; gB[gi] = b; gA[gi] = a;
+        const cf = getCoastalShelfFactor(lat, lon);
+        const sst = computeGlobalSst(lat, lon);
+        const chl = computeGlobalChlorophyll(lat, lon, cf);
+        gVal[gi] = computeGlobalPotentialScore(sst, chl, lat, lon, cf);
       }
     }
   }
 
+  const grid = getGlobalLandGrid();
   const rgba = new Uint8Array(size * size * 4);
-  for (let hy = 0; hy < half; hy++) {
-    const lat = lats[hy];
-    const gy = (hy / step) | 0;
-    const ty = (hy - gy * step) / step;
+  const invStep = 1 / step;
+  const contourInterval = layer === "sst" ? 1.5 : layer === "chlorophyll" ? 0.25 : 12.0;
+
+  for (let py = 0; py < size; py++) {
+    const gy = Math.min(gSize - 2, (py / step) | 0);
+    const tyRaw = (py - gy * step) * invStep;
+    const ty = tyRaw * tyRaw * (3 - 2 * tyRaw);
     const rowOff0 = gy * gSize;
     const rowOff1 = (gy + 1) * gSize;
-    const py0 = hy * 2;
-    const py1 = py0 + 1;
+    const mr0 = maskR0[py];
+    const mr1 = maskR1[py];
+    const mty = maskTy[py];
+    const pyRow = py * size;
 
-    for (let hx = 0; hx < half; hx++) {
-      const lon = lons[hx];
-      const land = getLandFraction(lat, lon);
+    for (let px = 0; px < size; px++) {
+      const mc0 = maskC0[px];
+      const mc1 = maskC1[px];
+      const mtx = maskTx[px];
+      const l00 = grid[mr0 + mc0];
+      const l01 = grid[mr0 + mc1];
+      const l10 = grid[mr1 + mc0];
+      const l11 = grid[mr1 + mc1];
+      const landRaw = (1 - mtx) * (1 - mty) * l00 + mtx * (1 - mty) * l01 + (1 - mtx) * mty * l10 + mtx * mty * l11;
+      const land = smoothstep(0.18, 0.82, landRaw);
       if (land >= 0.999) continue;
 
-      const gx = (hx / step) | 0;
-      const tx = (hx - gx * step) / step;
+      const gx = Math.min(gSize - 2, (px / step) | 0);
+      const txRaw = (px - gx * step) * invStep;
+      const tx = txRaw * txRaw * (3 - 2 * txRaw);
+
       const i00 = rowOff0 + gx, i01 = i00 + 1;
       const i10 = rowOff1 + gx, i11 = i10 + 1;
-      const w00 = (1 - tx) * (1 - ty), w01 = tx * (1 - ty);
-      const w10 = (1 - tx) * ty, w11 = tx * ty;
+      const v00 = gVal[i00], v01 = gVal[i01], v10 = gVal[i10], v11 = gVal[i11];
 
-      const r = (w00 * gR[i00] + w01 * gR[i01] + w10 * gR[i10] + w11 * gR[i11]) | 0;
-      const g = (w00 * gG[i00] + w01 * gG[i01] + w10 * gG[i10] + w11 * gG[i11]) | 0;
-      const b = (w00 * gB[i00] + w01 * gB[i01] + w10 * gB[i10] + w11 * gB[i11]) | 0;
-      const baseA = w00 * gA[i00] + w01 * gA[i01] + w10 * gA[i10] + w11 * gA[i11];
-      const a = (baseA * (1 - land)) | 0;
+      const topV = v00 + (v01 - v00) * tx;
+      const botV = v10 + (v11 - v10) * tx;
+      const val = topV + (botV - topV) * ty;
 
-      const px0 = hx * 2;
-      const idx00 = (py0 * size + px0) * 4;
-      const idx01 = idx00 + 4;
-      const idx10 = (py1 * size + px0) * 4;
-      const idx11 = idx10 + 4;
+      // Linear gradient in pixel space for continuous, unbroken contour isolines
+      const dvdx = ((v01 - v00) * (1 - ty) + (v11 - v10) * ty) * invStep;
+      const dvdy = (botV - topV) * invStep;
+      const grad = Math.hypot(dvdx, dvdy);
 
-      rgba[idx00] = r; rgba[idx00 + 1] = g; rgba[idx00 + 2] = b; rgba[idx00 + 3] = a;
-      rgba[idx01] = r; rgba[idx01 + 1] = g; rgba[idx01 + 2] = b; rgba[idx01 + 3] = a;
-      rgba[idx10] = r; rgba[idx10 + 1] = g; rgba[idx10 + 2] = b; rgba[idx10 + 3] = a;
-      rgba[idx11] = r; rgba[idx11 + 1] = g; rgba[idx11 + 2] = b; rgba[idx11 + 3] = a;
+      let r, g, b, a;
+      if (layer === "sst") {
+        [r, g, b, a] = sstToRgba(val);
+      } else if (layer === "chlorophyll") {
+        [r, g, b, a] = chlorophyllToRgba(Math.pow(10, val));
+      } else {
+        [r, g, b, a] = potentialToRgba(val);
+      }
+
+      if (grad > 1e-4) {
+        const phase = ((val / contourInterval) % 1 + 1) % 1;
+        const distUnits = Math.min(phase, 1 - phase) * contourInterval;
+        const distPx = distUnits / grad;
+        if (distPx < 1.35) {
+          const lineStrength = (1 - smoothstep(0.25, 1.35, distPx)) * 0.28;
+          r = Math.min(255, Math.round(r + (255 - r) * lineStrength));
+          g = Math.min(255, Math.round(g + (255 - g) * lineStrength));
+          b = Math.min(255, Math.round(b + (255 - b) * lineStrength));
+          a = Math.min(245, Math.round(a + 42 * lineStrength));
+        }
+      }
+
+      const idx = (pyRow + px) * 4;
+      rgba[idx] = r;
+      rgba[idx + 1] = g;
+      rgba[idx + 2] = b;
+      rgba[idx + 3] = (a * (1 - land)) | 0;
     }
   }
   return rgba;

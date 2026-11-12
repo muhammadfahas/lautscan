@@ -1293,7 +1293,7 @@ export class MarineMap {
   overlayTileUrl(layer, z, x, y) {
     const rawDate = this.selectedDate || 'latest';
     const effectiveDate = rawDate === 'latest' ? new Date().toISOString().slice(0, 10) : rawDate;
-    const safeDate = encodeURIComponent(`${effectiveDate}-v4`);
+    const safeDate = encodeURIComponent(`${effectiveDate}-v5`);
     const path = `/v1/tiles/${encodeURIComponent(layer)}/${safeDate}/${z}/${x}/${y}.png`;
     return this.tileBaseUrl ? `${this.tileBaseUrl}${path}` : path;
   }
