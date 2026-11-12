@@ -295,14 +295,24 @@ const STYLE = `
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.75), 0 0 16px rgba(249, 115, 22, 0.55);
 }
 .lautscan-marine-map .species-marker-dot {
-  width: 20px;
-  height: 20px;
+  width: 19px;
+  height: 19px;
   border-radius: 999px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   color: #FFFFFF;
   flex-shrink: 0;
+}
+.lautscan-marine-map .species-fish-icon {
+  display: block;
+  width: 13px;
+  height: 13px;
+  object-fit: contain;
+  pointer-events: none;
+}
+.lautscan-marine-map .species-marker[aria-pressed="true"] .species-fish-icon {
+  filter: brightness(0) saturate(100%) invert(56%) sepia(89%) saturate(2154%) hue-rotate(349deg) brightness(99%) contrast(97%);
 }
 .lautscan-marine-map .species-marker:hover .species-marker-pill {
   transform: scale(1.06);
@@ -503,7 +513,7 @@ function buildZoomOutSvg() {
 }
 
 function buildSpeciesSvg() {
-  return '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 12c.94-3.46 4.94-6 8.5-6 3.56 0 6.06 2.54 7 6-.94 3.46-3.44 6-7 6-3.56 0-7.56-2.54-8.5-6Z"/><path d="M18 12v.5"/><path d="M7 10.67C7 8 5.58 5.97 2.73 5.5c-1 1.5-1 5 .23 6.5-1.24 1.5-1.24 5-.23 6.5C5.58 18.03 7 16 7 13.33"/></svg>';
+  return '<img class="species-fish-icon" src="/assets/icons/fish_2d.png" alt="" width="13" height="13" decoding="async" />';
 }
 
 function shortFishLabel(commonName, sciName) {

@@ -672,10 +672,7 @@
               <option value="udang">Udang</option>
             </select>
             <button id="toggle-species-btn" class="pill-btn" type="button" aria-pressed="true" aria-label="Tampilkan pin titik ikan">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M6.5 12c.94-3.46 4.94-6 8.5-6 3.56 0 6.06 2.54 7 6-.94 3.46-3.44 6-7 6-3.56 0-7.56-2.54-8.5-6Z"/>
-                <circle cx="9" cy="11" r="1" fill="currentColor"/>
-              </svg>
+              <img src="/assets/icons/fish_2d.png" alt="" width="14" height="14" style="display:block;object-fit:contain;" />
               <span>Titik Ikan</span>
             </button>
             <button id="inspect-center-btn" class="pill-btn" type="button" aria-label="Periksa kondisi di wilayah aktif">
@@ -890,7 +887,7 @@
   </div>
 
   <script type="module">
-    import { create, setProps } from '/modules/marine-map/web/index.js?v=20261113e';
+    import { create, setProps } from '/modules/marine-map/web/index.js?v=20261113f';
 
     const urlParams = new URLSearchParams(window.location.search);
     const rawApiParam = (urlParams.get('api') || '').trim();
