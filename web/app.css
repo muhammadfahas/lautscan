@@ -377,6 +377,15 @@ html, body {
   height: 18px;
   flex-shrink: 0;
 }
+.fish-2d-icon {
+  display: inline-block;
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  background-color: currentColor;
+  -webkit-mask: url('/assets/icons/fish_2d.png') center / contain no-repeat;
+  mask: url('/assets/icons/fish_2d.png') center / contain no-repeat;
+}
 .tune-btn {
   height: 30px; min-height: 30px; padding: 0 8px;
   border-radius: 6px; border: var(--border-hairline);
