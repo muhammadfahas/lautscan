@@ -917,6 +917,25 @@
       return idPart.replace(/\b\w/g, (c) => c.toUpperCase());
     }
 
+    function getSpeciesImageKey(item) {
+      const sci = String(item?.scientific_name || '').toLowerCase();
+      if (sci.includes('albacares')) return 'thunnus_albacares';
+      if (sci.includes('obesus')) return 'thunnus_obesus';
+      if (sci.includes('pelamis') || sci.includes('cakalang')) return 'katsuwonus_pelamis';
+      if (sci.includes('affinis') || sci.includes('tongkol')) return 'euthynnus_affinis';
+      if (sci.includes('kanagurta') || sci.includes('kembung')) return 'rastrelliger_kanagurta';
+      if (sci.includes('russelli') || sci.includes('layang')) return 'decapterus_russelli';
+      if (sci.includes('commerson') || sci.includes('tenggiri')) return 'scomberomorus_commerson';
+      if (sci.includes('malabaricus') || sci.includes('lutjanus') || sci.includes('kakap')) return 'lutjanus_malabaricus';
+      if (sci.includes('coioides') || sci.includes('epinephelus') || sci.includes('kerapu')) return 'epinephelus_coioides';
+      if (sci.includes('lemuru') || sci.includes('sardinella')) return 'sardinella_lemuru';
+      if (sci.includes('hippurus') || sci.includes('coryphaena') || sci.includes('lemadang')) return 'coryphaena_hippurus';
+      if (sci.includes('undulatus') || sci.includes('cheilinus') || sci.includes('napoleon')) return 'cheilinus_undulatus';
+      if (sci.includes('monodon') || sci.includes('penaeus') || sci.includes('udang')) return 'penaeus_monodon';
+      return 'thunnus_albacares';
+    }
+    window.getSpeciesImageKey = getSpeciesImageKey;
+
     function depthCategoryLabel(depthM) {
       if (depthM == null) return 'Perairan umum';
       if (depthM < 40) return `${Math.round(depthM)} m · Laut Dangkal`;
@@ -1728,24 +1747,7 @@
           window.scrollTo({ top: 0, behavior: 'smooth' });
         };
 
-        // --- Helper: Map Species Record to Uniform Generated Illustration Key ---
-        function getSpeciesImageKey(item) {
-          const sci = String(item?.scientific_name || '').toLowerCase();
-          if (sci.includes('albacares')) return 'thunnus_albacares';
-          if (sci.includes('obesus')) return 'thunnus_obesus';
-          if (sci.includes('pelamis') || sci.includes('cakalang')) return 'katsuwonus_pelamis';
-          if (sci.includes('affinis') || sci.includes('tongkol')) return 'euthynnus_affinis';
-          if (sci.includes('kanagurta') || sci.includes('kembung')) return 'rastrelliger_kanagurta';
-          if (sci.includes('russelli') || sci.includes('layang')) return 'decapterus_russelli';
-          if (sci.includes('commerson') || sci.includes('tenggiri')) return 'scomberomorus_commerson';
-          if (sci.includes('malabaricus') || sci.includes('lutjanus') || sci.includes('kakap')) return 'lutjanus_malabaricus';
-          if (sci.includes('coioides') || sci.includes('epinephelus') || sci.includes('kerapu')) return 'epinephelus_coioides';
-          if (sci.includes('lemuru') || sci.includes('sardinella')) return 'sardinella_lemuru';
-          if (sci.includes('hippurus') || sci.includes('coryphaena') || sci.includes('lemadang')) return 'coryphaena_hippurus';
-          if (sci.includes('undulatus') || sci.includes('cheilinus') || sci.includes('napoleon')) return 'cheilinus_undulatus';
-          if (sci.includes('monodon') || sci.includes('penaeus') || sci.includes('udang')) return 'penaeus_monodon';
-          return 'thunnus_albacares';
-        }
+        // getSpeciesImageKey is defined in top-level module scope
 
         // --- Tab 2: Jenis Ikan Catalog Controller (Cards Default + Table View + Search + Filter + Sort + Paging) ---
         const speciesCatalog = {
