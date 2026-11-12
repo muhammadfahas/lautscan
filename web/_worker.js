@@ -282,51 +282,6 @@ const DEFAULT_SOURCES_CATALOG = {
       attribution: "Ocean Biodiversity Information System (OBIS) & original data providers",
       license_summary: "Open Access (CC0 / CC-BY per dataset provider attribution).",
       official_url: "https://api.obis.org/"
-    },
-    {
-      source_key: "copernicus_marine",
-      display_name: "Copernicus Marine Service",
-      priority: "P1",
-      enabled: false,
-      requires_credentials: true,
-      non_commercial_only: false,
-      status: "unconfigured",
-      last_sync_utc: null,
-      latest_data_timestamp_utc: null,
-      last_error: null,
-      attribution: "E.U. Copernicus Marine Service Information (CMEMS)",
-      license_summary: "Free account registration required; open redistribution with attribution.",
-      official_url: "https://marine.copernicus.eu/"
-    },
-    {
-      source_key: "kkp_pdpi",
-      display_name: "KKP PDPI (Prakiraan Daerah Penangkapan Ikan)",
-      priority: "P2",
-      enabled: false,
-      requires_credentials: false,
-      non_commercial_only: false,
-      status: "unconfigured",
-      last_sync_utc: null,
-      latest_data_timestamp_utc: null,
-      last_error: null,
-      attribution: "Pusat Riset Kelautan & Balai Riset dan Observasi Laut (BROL) KKP RI",
-      license_summary: "Prakiraan harian daerah tangkapan ikan; non-komersial.",
-      official_url: "https://kkp.go.id/"
-    },
-    {
-      source_key: "gfw",
-      display_name: "Global Fishing Watch",
-      priority: "P2",
-      enabled: false,
-      requires_credentials: true,
-      non_commercial_only: true,
-      status: "disabled",
-      last_sync_utc: null,
-      latest_data_timestamp_utc: null,
-      last_error: null,
-      attribution: "Global Fishing Watch (CC-BY-NC 4.0)",
-      license_summary: "Akses riset non-komersial via API token.",
-      official_url: "https://globalfishingwatch.org/"
     }
   ],
   recent_logs: [

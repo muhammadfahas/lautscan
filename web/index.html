@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/app.css?v=20261113i">
+  <link rel="stylesheet" href="/app.css?v=20261113j">
 </head>
 <body>
   <div class="app-shell">
@@ -1295,7 +1295,8 @@
           Basis Data: ${health.db_ok ? 'Terhubung' : 'Mode Mandiri (Lokal)'} |
           Dicek: ${formatWibDateTime(health.timestamp_utc, '-')}
         `;
-        document.getElementById('sources-grid').innerHTML = sources.sources.map((src) => `
+        const activeSources = (sources.sources || []).filter((src) => src.enabled !== false && src.status === 'healthy');
+        document.getElementById('sources-grid').innerHTML = activeSources.map((src) => `
           <div class="card">
             <div class="row-between"><strong>${src.display_name}</strong><span class="badge ${src.status === 'healthy' ? 'ok' : 'warn'}">${src.status}</span></div>
             <div style="font-size:13px;">Prioritas: ${src.priority}</div>
