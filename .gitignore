@@ -10,5 +10,6 @@ obj/
 *.user
 *.suo
 .env
+.wrangler/
 *.db
 *.sqlite

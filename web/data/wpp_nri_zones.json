@@ -1,0 +1,385 @@
+{
+  "type": "FeatureCollection",
+  "name": "wpp_nri_zones_p0_seed",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "571",
+      "properties": {
+        "wpp_code": "571",
+        "name": "WPP-NRI 571",
+        "waters_id": "Perairan Selat Malaka dan Laut Andaman",
+        "waters_en": "Malacca Strait and Andaman Sea",
+        "legal_basis": "Permen-KP No. 18/PERMEN-KP/2014",
+        "geometry_source": "p0_seed",
+        "centroid_lat": 3.9604,
+        "centroid_lon": 99.3605,
+        "min_lon": 95.0,
+        "min_lat": 1.2,
+        "max_lon": 103.5,
+        "max_lat": 6.5,
+        "area_km2": 285186.0
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [95.0, 5.5],
+            [98.0, 3.0],
+            [100.5, 1.5],
+            [103.5, 1.2],
+            [103.5, 2.5],
+            [100.2, 5.5],
+            [97.5, 6.5],
+            [95.0, 6.5],
+            [95.0, 5.5]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "572",
+      "properties": {
+        "wpp_code": "572",
+        "name": "WPP-NRI 572",
+        "waters_id": "Perairan Samudera Hindia sebelah Barat Sumatera dan Selat Sunda",
+        "waters_en": "Indian Ocean West of Sumatra and Sunda Strait",
+        "legal_basis": "Permen-KP No. 18/PERMEN-KP/2014",
+        "geometry_source": "p0_seed",
+        "centroid_lat": -3.2373,
+        "centroid_lon": 97.8677,
+        "min_lon": 92.0,
+        "min_lat": -10.0,
+        "max_lon": 106.0,
+        "max_lat": 6.0,
+        "area_km2": 1610475.0
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [92.0, 6.0],
+            [92.0, -4.0],
+            [98.0, -10.0],
+            [105.5, -10.0],
+            [106.0, -6.0],
+            [105.2, -5.8],
+            [100.5, -1.0],
+            [95.2, 5.6],
+            [92.0, 6.0]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "573",
+      "properties": {
+        "wpp_code": "573",
+        "name": "WPP-NRI 573",
+        "waters_id": "Perairan Samudera Hindia sebelah Selatan Jawa hingga sebelah Selatan Nusa Tenggara, Laut Sawu, dan Laut Timor bagian Barat",
+        "waters_en": "Indian Ocean South of Java to South of Nusa Tenggara, Savu Sea, and West Timor Sea",
+        "legal_basis": "Permen-KP No. 18/PERMEN-KP/2014",
+        "geometry_source": "p0_seed",
+        "centroid_lat": -10.342,
+        "centroid_lon": 116.2171,
+        "min_lon": 105.5,
+        "min_lat": -13.0,
+        "max_lon": 127.5,
+        "max_lat": -6.8,
+        "area_km2": 1108247.0
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [105.5, -6.8],
+            [105.5, -12.0],
+            [115.0, -12.5],
+            [123.0, -13.0],
+            [127.5, -11.5],
+            [127.5, -8.5],
+            [123.5, -8.3],
+            [119.0, -8.6],
+            [114.5, -8.7],
+            [108.0, -7.7],
+            [105.5, -6.8]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "711",
+      "properties": {
+        "wpp_code": "711",
+        "name": "WPP-NRI 711",
+        "waters_id": "Perairan Selat Karimata, Laut Natuna, dan Laut Cina Selatan",
+        "waters_en": "Karimata Strait, Natuna Sea, and South China Sea",
+        "legal_basis": "Permen-KP No. 18/PERMEN-KP/2014",
+        "geometry_source": "p0_seed",
+        "centroid_lat": 0.954,
+        "centroid_lon": 106.9615,
+        "min_lon": 103.5,
+        "min_lat": -3.5,
+        "max_lon": 110.5,
+        "max_lat": 6.0,
+        "area_km2": 729802.0
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [103.5, 2.0],
+            [103.5, -3.5],
+            [110.0, -3.5],
+            [110.5, 1.5],
+            [109.8, 5.5],
+            [105.0, 6.0],
+            [103.5, 2.0]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "712",
+      "properties": {
+        "wpp_code": "712",
+        "name": "WPP-NRI 712",
+        "waters_id": "Perairan Laut Jawa",
+        "waters_en": "Java Sea",
+        "legal_basis": "Permen-KP No. 18/PERMEN-KP/2014",
+        "geometry_source": "p0_seed",
+        "centroid_lat": -5.1233,
+        "centroid_lon": 111.3205,
+        "min_lon": 105.8,
+        "min_lat": -7.2,
+        "max_lon": 116.5,
+        "max_lat": -3.2,
+        "area_km2": 463531.0
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [105.8, -5.8],
+            [106.0, -6.5],
+            [114.5, -7.2],
+            [116.5, -7.0],
+            [116.5, -3.5],
+            [110.0, -3.2],
+            [105.8, -3.5],
+            [105.8, -5.8]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "713",
+      "properties": {
+        "wpp_code": "713",
+        "name": "WPP-NRI 713",
+        "waters_id": "Perairan Selat Makassar, Teluk Bone, Laut Flores, dan Laut Bali",
+        "waters_en": "Makassar Strait, Gulf of Bone, Flores Sea, and Bali Sea",
+        "legal_basis": "Permen-KP No. 18/PERMEN-KP/2014",
+        "geometry_source": "p0_seed",
+        "centroid_lat": -4.781,
+        "centroid_lon": 119.137,
+        "min_lon": 115.0,
+        "min_lat": -8.5,
+        "max_lon": 123.5,
+        "max_lat": 1.5,
+        "area_km2": 668794.0
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [115.0, -7.0],
+            [115.0, -8.5],
+            [123.5, -8.5],
+            [123.5, -5.0],
+            [121.5, -2.6],
+            [119.5, -2.5],
+            [119.3, 1.5],
+            [117.0, 1.5],
+            [116.5, -3.5],
+            [115.0, -7.0]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "714",
+      "properties": {
+        "wpp_code": "714",
+        "name": "WPP-NRI 714",
+        "waters_id": "Perairan Teluk Tolo dan Laut Banda",
+        "waters_en": "Gulf of Tolo and Banda Sea",
+        "legal_basis": "Permen-KP No. 18/PERMEN-KP/2014",
+        "geometry_source": "p0_seed",
+        "centroid_lat": -5.1824,
+        "centroid_lon": 127.0168,
+        "min_lon": 121.5,
+        "min_lat": -8.2,
+        "max_lon": 132.5,
+        "max_lat": -1.5,
+        "area_km2": 733968.0
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [121.5, -1.5],
+            [121.5, -4.5],
+            [123.5, -8.2],
+            [132.5, -8.2],
+            [132.5, -3.0],
+            [125.0, -2.5],
+            [123.5, -1.5],
+            [121.5, -1.5]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "715",
+      "properties": {
+        "wpp_code": "715",
+        "name": "WPP-NRI 715",
+        "waters_id": "Perairan Teluk Tomini, Laut Maluku, Laut Halmahera, Laut Seram, dan Teluk Berau",
+        "waters_en": "Tomini Bay, Molucca Sea, Halmahera Sea, Seram Sea, and Berau Bay",
+        "legal_basis": "Permen-KP No. 18/PERMEN-KP/2014",
+        "geometry_source": "p0_seed",
+        "centroid_lat": -0.7729,
+        "centroid_lon": 127.3656,
+        "min_lon": 120.0,
+        "min_lat": -3.5,
+        "max_lon": 134.0,
+        "max_lat": 1.8,
+        "area_km2": 644607.0
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [120.0, 0.8],
+            [120.0, -1.2],
+            [124.5, -1.5],
+            [126.0, -3.5],
+            [134.0, -3.2],
+            [134.0, -1.5],
+            [130.5, 1.5],
+            [124.5, 1.8],
+            [120.0, 0.8]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "716",
+      "properties": {
+        "wpp_code": "716",
+        "name": "WPP-NRI 716",
+        "waters_id": "Perairan Laut Sulawesi dan sebelah Utara Pulau Halmahera",
+        "waters_en": "Sulawesi Sea and North of Halmahera Island",
+        "legal_basis": "Permen-KP No. 18/PERMEN-KP/2014",
+        "geometry_source": "p0_seed",
+        "centroid_lat": 3.3728,
+        "centroid_lon": 123.6341,
+        "min_lon": 117.5,
+        "min_lat": 1.2,
+        "max_lon": 129.5,
+        "max_lat": 5.5,
+        "area_km2": 575047.0
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [117.5, 4.5],
+            [117.5, 1.2],
+            [124.5, 1.5],
+            [129.5, 1.5],
+            [129.5, 5.5],
+            [122.0, 5.5],
+            [117.5, 4.5]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "717",
+      "properties": {
+        "wpp_code": "717",
+        "name": "WPP-NRI 717",
+        "waters_id": "Perairan Teluk Cendrawasih dan Samudera Pasifik",
+        "waters_en": "Cenderawasih Bay and Pacific Ocean",
+        "legal_basis": "Permen-KP No. 18/PERMEN-KP/2014",
+        "geometry_source": "p0_seed",
+        "centroid_lat": 1.4993,
+        "centroid_lon": 135.5468,
+        "min_lon": 129.5,
+        "min_lat": -3.5,
+        "max_lon": 141.0,
+        "max_lat": 5.5,
+        "area_km2": 1112321.0
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [129.5, 5.5],
+            [129.5, 0.5],
+            [134.2, -3.5],
+            [137.0, -3.0],
+            [141.0, -2.5],
+            [141.0, 5.5],
+            [129.5, 5.5]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "718",
+      "properties": {
+        "wpp_code": "718",
+        "name": "WPP-NRI 718",
+        "waters_id": "Perairan Laut Aru, Laut Arafuru, dan Laut Timor bagian Timur",
+        "waters_en": "Aru Sea, Arafura Sea, and East Timor Sea",
+        "legal_basis": "Permen-KP No. 18/PERMEN-KP/2014",
+        "geometry_source": "p0_seed",
+        "centroid_lat": -8.115,
+        "centroid_lon": 134.457,
+        "min_lon": 127.5,
+        "min_lat": -11.5,
+        "max_lon": 141.0,
+        "max_lat": -4.0,
+        "area_km2": 919084.0
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [127.5, -8.2],
+            [127.5, -11.5],
+            [138.0, -11.0],
+            [141.0, -9.2],
+            [141.0, -5.5],
+            [134.0, -4.0],
+            [132.5, -5.0],
+            [127.5, -8.2]
+          ]
+        ]
+      }
+    }
+  ]
+}

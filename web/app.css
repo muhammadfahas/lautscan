@@ -1,0 +1,52 @@
+/* LAUT SCAN Maritime Dual Theme Tokens (Daylight and Night Maritime) */
+
+:root {
+  color-scheme: light dark;
+  --font-sans: 'Fira Sans', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Fira Code', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --AccentColor: #3B82F6;
+  --surface-canvas: #F8FAFC;
+  --surface-elevated: #FFFFFF;
+  --ink-primary: #1E293B;
+  --ink-muted: #475569;
+  --border-subtle: #E2E8F0;
+  --accent-primary: #3B82F6;
+  --accent-cta: #F97316;
+  --status-healthy: #16A34A;
+  --status-degraded: #D97706;
+  --status-error: #DC2626;
+}
+
+[data-theme="daylight"] {
+  color-scheme: light;
+  --font-sans: 'Fira Sans', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Fira Code', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --AccentColor: #3B82F6;
+  --surface-canvas: #F8FAFC;
+  --surface-elevated: #FFFFFF;
+  --ink-primary: #1E293B;
+  --ink-muted: #475569;
+  --border-subtle: #E2E8F0;
+  --accent-primary: #3B82F6;
+  --accent-cta: #F97316;
+  --status-healthy: #16A34A;
+  --status-degraded: #D97706;
+  --status-error: #DC2626;
+}
+
+[data-theme="night"] {
+  color-scheme: dark;
+  --font-sans: 'Fira Sans', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Fira Code', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --AccentColor: #60A5FA;
+  --surface-canvas: #0A0E27;
+  --surface-elevated: #0D1117;
+  --ink-primary: #E6EDF3;
+  --ink-muted: #94A3B8;
+  --border-subtle: #30363D;
+  --accent-primary: #60A5FA;
+  --accent-cta: #F97316;
+  --status-healthy: #22C55E;
+  --status-degraded: #F59E0B;
+  --status-error: #EF4444;
+}

@@ -1,0 +1,1855 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="daylight">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LAUT SCAN | Peta Kondisi Laut Nusantara</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/app.css">
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0; width: 100%; max-width: 100%; overflow-x: hidden;
+      font-family: var(--font-sans); background: var(--surface-canvas); color: var(--ink-primary);
+    }
+    .app-shell {
+      display: flex; flex-direction: column; min-height: 100vh; width: 100%; max-width: 100%; overflow-x: hidden;
+    }
+
+    /* Top Header & Navigation */
+    .nav-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 10px; padding: 8px 16px;
+      background: var(--surface-elevated); border-bottom: 1px solid var(--border-subtle);
+      position: sticky; top: 0; z-index: 40; width: 100%; max-width: 100%;
+    }
+    .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .brand-title { font-size: 16px; font-weight: 700; letter-spacing: 0.04em; line-height: 1.15; }
+    .brand-sub { font-size: 12px; color: var(--ink-muted); line-height: 1.25; }
+    .nav-right { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; max-width: 100%; min-width: 0; }
+    .nav-tabs { display: flex; gap: 4px; flex-wrap: wrap; max-width: 100%; min-width: 0; }
+    .nav-btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+      min-height: 44px; min-width: 44px; padding: 8px 12px;
+      border-radius: 10px; border: 1px solid transparent;
+      background: transparent; color: var(--ink-primary);
+      font: 600 14px var(--font-sans); cursor: pointer;
+      transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+    }
+    .nav-btn:hover { background: color-mix(in srgb, var(--accent-primary) 8%, transparent); }
+    .nav-btn.active {
+      background: color-mix(in srgb, var(--accent-primary) 14%, transparent);
+      border-color: var(--accent-primary); color: var(--accent-primary);
+    }
+
+    .view-panel { display: none; flex: 1; flex-direction: column; width: 100%; max-width: 100%; min-width: 0; }
+    .view-panel.active { display: flex; }
+
+    /* Full-bleed Map Workspace */
+    .map-stage {
+      position: relative; height: 79vh; min-height: 520px; flex: 1; width: 100%; max-width: 100%;
+      background: var(--surface-canvas); overflow: hidden;
+    }
+    .map-host { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+    /* Top-left Quick Controls + Zoom & Area Insight Pill */
+    .top-left-hud {
+      position: absolute; top: 12px; left: 12px; z-index: 20;
+      max-width: calc(100% - 24px);
+      display: flex; flex-direction: column; align-items: flex-start; gap: 8px;
+      pointer-events: none;
+    }
+    .map-stage.inspector-open .top-left-hud {
+      max-width: calc(100% - 404px);
+    }
+    .top-left-hud > * { pointer-events: auto; }
+    .quick-bar {
+      display: flex; align-items: center; flex-wrap: wrap; gap: 8px; max-width: 100%;
+    }
+    .pill-select, .pill-btn {
+      min-height: 44px; border-radius: 999px;
+      border: 1px solid var(--border-subtle);
+      background: color-mix(in srgb, var(--surface-elevated) 92%, transparent);
+      backdrop-filter: blur(10px);
+      color: var(--ink-primary); font: 600 13px var(--font-sans);
+      box-shadow: 0 4px 16px rgba(15, 23, 42, 0.12);
+      cursor: pointer; transition: border-color 160ms ease, background-color 160ms ease, color 160ms ease;
+    }
+    .pill-select { padding: 8px 14px; max-width: 245px; min-width: 0; }
+    .pill-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      min-width: 44px; padding: 8px 14px;
+    }
+    .pill-btn:hover, .pill-select:hover { border-color: var(--accent-primary); }
+    .pill-btn[aria-pressed="true"] {
+      background: var(--accent-primary); border-color: var(--accent-primary); color: #FFFFFF;
+    }
+
+    .area-insight-pill {
+      display: inline-flex; align-items: center; flex-wrap: wrap; gap: 8px;
+      max-width: min(680px, 100%); padding: 7px 12px; border-radius: 12px;
+      border: 1px solid var(--border-subtle);
+      background: color-mix(in srgb, var(--surface-elevated) 90%, transparent);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 4px 14px rgba(15, 23, 42, 0.10);
+      font-size: 12px; line-height: 1.35; color: var(--ink-primary);
+    }
+    .insight-scale-tag {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 2px 8px; border-radius: 999px;
+      background: color-mix(in srgb, var(--accent-primary) 14%, transparent);
+      color: var(--accent-primary); font-weight: 700; font-size: 11px; white-space: nowrap;
+    }
+    .insight-summary-text {
+      color: var(--ink-muted); font-weight: 500; min-width: 0;
+    }
+    .insight-summary-text strong { color: var(--ink-primary); font-weight: 700; }
+
+    /* Bottom-center Floating 4 Lensa Laut Dock */
+    .lens-dock-wrap {
+      position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%);
+      z-index: 22; width: min(650px, calc(100% - 140px));
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+      pointer-events: none;
+    }
+    .lens-dock-wrap > * { pointer-events: auto; }
+    .lens-dock {
+      width: 100%; padding: 9px 11px; border-radius: 16px;
+      background: color-mix(in srgb, var(--surface-elevated) 94%, transparent);
+      backdrop-filter: blur(10px); border: 1px solid var(--border-subtle);
+      box-shadow: 0 10px 28px rgba(15, 23, 42, 0.16);
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .lens-row {
+      display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+    }
+    .lens-btn {
+      flex: 1 1 92px; min-height: 44px; padding: 8px 10px;
+      border-radius: 10px; border: 1px solid transparent;
+      background: var(--surface-canvas); color: var(--ink-primary);
+      font: 700 13px var(--font-sans); cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease;
+      white-space: nowrap;
+    }
+    .lens-btn:hover { border-color: var(--border-subtle); }
+    .lens-btn[data-lens="potential"].active {
+      background: var(--accent-cta); border-color: var(--accent-cta); color: #FFFFFF;
+    }
+    .lens-btn:not([data-lens="potential"]).active {
+      background: var(--accent-primary); border-color: var(--accent-primary); color: #FFFFFF;
+    }
+    .tune-btn {
+      min-height: 44px; min-width: 44px; padding: 8px 11px;
+      border-radius: 10px; border: 1px solid var(--border-subtle);
+      background: transparent; color: var(--ink-primary);
+      font: 600 12px var(--font-sans); cursor: pointer;
+      display: inline-flex; align-items: center; gap: 5px;
+    }
+    .tune-btn[aria-expanded="true"] {
+      background: var(--surface-canvas); border-color: var(--accent-primary); color: var(--accent-primary);
+    }
+
+    /* Qualitative + Numeric Tiered Legend */
+    .legend-wrap {
+      display: flex; flex-direction: column; gap: 6px; padding: 2px 4px 0; width: 100%;
+    }
+    .legend-head {
+      display: flex; align-items: center; gap: 10px; width: 100%;
+    }
+    .legend-caption {
+      font-size: 11px; font-weight: 600; color: var(--ink-muted); white-space: nowrap;
+    }
+    .scale-bar { flex: 1; height: 8px; border-radius: 999px; min-width: 60px; }
+    .scale-potential { background: linear-gradient(90deg, rgba(20,184,166,0.16) 0%, #14B8A6 42%, #22C55E 72%, #F59E0B 100%); }
+    .scale-sst { background: linear-gradient(90deg, #0d0887 0%, #6a00a8 25%, #b12a90 50%, #e16462 72%, #fca636 88%, #f0f921 100%); }
+    .scale-chlorophyll { background: linear-gradient(90deg, #440154 0%, #3b528b 25%, #21918c 55%, #5ec962 80%, #fde725 100%); }
+    .legend-tiers {
+      display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; width: 100%;
+    }
+    .tier-chip {
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 4px 7px; border-radius: 8px; min-width: 0;
+      background: var(--surface-canvas); border: 1px solid var(--border-subtle);
+      font-size: 11px; line-height: 1.25; color: var(--ink-primary);
+    }
+    .tier-swatch {
+      width: 10px; height: 10px; border-radius: 999px; flex-shrink: 0;
+      border: 1px solid rgba(15, 23, 42, 0.16);
+    }
+    .tier-flow {
+      width: 14px; height: 3px; border-radius: 2px; flex-shrink: 0;
+    }
+    .tier-text {
+      display: flex; align-items: baseline; gap: 4px; flex-wrap: wrap; justify-content: center; min-width: 0;
+    }
+    .tier-name { font-weight: 700; color: var(--ink-primary); }
+    .tier-range {
+      font-family: var(--font-mono); font-variant-numeric: tabular-nums;
+      font-size: 10px; color: var(--ink-muted);
+    }
+
+    /* Compact Atur Popover */
+    .tune-popover {
+      width: min(380px, 100%); padding: 12px; border-radius: 14px;
+      background: color-mix(in srgb, var(--surface-elevated) 96%, transparent);
+      backdrop-filter: blur(10px); border: 1px solid var(--border-subtle);
+      box-shadow: 0 10px 28px rgba(15, 23, 42, 0.18);
+      display: none; flex-direction: column; gap: 10px;
+    }
+    .tune-popover.open { display: flex; }
+    .preset-row {
+      display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; width: 100%;
+    }
+    .preset-btn {
+      min-height: 44px; min-width: 44px; padding: 6px 8px; border-radius: 8px;
+      border: 1px solid var(--border-subtle); background: var(--surface-canvas);
+      color: var(--ink-primary); font: 600 12px var(--font-sans); cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center; text-align: center;
+      transition: border-color 160ms ease, background-color 160ms ease, color 160ms ease;
+    }
+    .preset-btn:hover { border-color: var(--accent-primary); }
+    .preset-btn[aria-pressed="true"] {
+      background: color-mix(in srgb, var(--accent-primary) 14%, transparent);
+      border-color: var(--accent-primary); color: var(--accent-primary);
+    }
+
+    /* Kondisi Titik Ini Inspector Card */
+    .inspector-card {
+      position: absolute; top: 12px; right: 12px; z-index: 30;
+      width: min(380px, calc(100% - 24px)); max-height: calc(100% - 58px); overflow-y: auto;
+      background: color-mix(in srgb, var(--surface-elevated) 96%, transparent);
+      backdrop-filter: blur(10px); border: 1px solid var(--border-subtle);
+      border-radius: 14px; padding: 14px; display: none; flex-direction: column; gap: 10px;
+      box-shadow: 0 12px 32px rgba(15, 23, 42, 0.20);
+    }
+    .inspector-card.open { display: flex; }
+    .row-between { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    .zone-summary {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      padding: 10px; border-radius: 10px; background: var(--surface-canvas);
+      border: 1px solid var(--border-subtle);
+    }
+    .takeaway-box {
+      padding: 10px 12px; border-radius: 10px;
+      background: color-mix(in srgb, var(--accent-primary) 8%, var(--surface-canvas));
+      border: 1px solid color-mix(in srgb, var(--accent-primary) 26%, var(--border-subtle));
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .takeaway-title {
+      font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+      color: var(--accent-primary);
+    }
+    .takeaway-text {
+      font-size: 13px; line-height: 1.45; font-weight: 500; color: var(--ink-primary);
+    }
+    .fish-banner {
+      display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+      border-radius: 10px; background: color-mix(in srgb, var(--accent-cta) 8%, var(--surface-canvas));
+      border: 1px solid color-mix(in srgb, var(--accent-cta) 28%, var(--border-subtle));
+    }
+    .fish-banner-icon {
+      width: 38px; height: 38px; border-radius: 999px; flex-shrink: 0;
+      background: var(--accent-cta); color: #FFFFFF;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .profile-badge {
+      display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px;
+      background: var(--surface-elevated); border: 1px solid var(--border-subtle);
+      font-size: 11px; font-weight: 700; color: var(--ink-primary); white-space: nowrap;
+    }
+    .nearby-fish-box {
+      padding: 10px; border-radius: 10px; background: var(--surface-canvas);
+      border: 1px solid var(--border-subtle); display: flex; flex-direction: column; gap: 6px;
+    }
+    .nearby-fish-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .nearby-fish-chip {
+      min-height: 44px; min-width: 44px; padding: 6px 11px; border-radius: 999px;
+      font-size: 12px; font-weight: 600;
+      background: var(--surface-elevated); border: 1px solid var(--border-subtle);
+      color: var(--ink-primary); cursor: pointer;
+    }
+    .nearby-fish-chip:hover { border-color: var(--accent-primary); color: var(--accent-primary); }
+    .potential-box {
+      padding: 10px 12px; border-radius: 10px; background: var(--surface-canvas);
+      border: 1px solid var(--border-subtle); display: flex; flex-direction: column; gap: 6px;
+    }
+    .score-sub-row {
+      display: flex; flex-wrap: wrap; gap: 6px; font-size: 11px; color: var(--ink-muted);
+    }
+    .score-pill {
+      padding: 2px 7px; border-radius: 6px; background: var(--surface-elevated);
+      border: 1px solid var(--border-subtle);
+    }
+    .fish-detail-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 4px;
+      font-size: 12px;
+    }
+    .fish-detail-item {
+      padding: 6px 8px; border-radius: 8px; background: var(--surface-elevated);
+      border: 1px solid var(--border-subtle); display: flex; flex-direction: column; gap: 2px;
+    }
+    .verdict-pill {
+      padding: 5px 10px; border-radius: 999px; font-size: 12px; font-weight: 700;
+      white-space: nowrap; color: #FFFFFF;
+    }
+    .verdict-high { background: #16A34A; }
+    .verdict-mid { background: #0284C7; }
+    .verdict-low { background: #64748B; }
+    .tiles-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .metric-tile {
+      padding: 10px; border-radius: 10px; background: var(--surface-canvas);
+      border: 1px solid var(--border-subtle); display: flex; flex-direction: column; gap: 4px; min-width: 0;
+    }
+    .metric-label { display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; color: var(--ink-muted); }
+    .metric-value { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 17px; font-weight: 700; }
+    .metric-status { font-size: 12px; font-weight: 600; color: var(--accent-primary); }
+    .meter-track { width: 100%; height: 6px; border-radius: 999px; background: var(--border-subtle); overflow: hidden; }
+    .meter-fill { height: 100%; border-radius: 999px; background: var(--status-healthy); }
+    .current-tile {
+      padding: 10px 12px; border-radius: 10px; background: var(--surface-canvas);
+      border: 1px solid var(--border-subtle);
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    }
+    .compass-ring {
+      width: 44px; height: 44px; flex-shrink: 0; border-radius: 999px;
+      background: var(--surface-elevated); border: 1px solid var(--border-subtle);
+      display: flex; align-items: center; justify-content: center;
+      transition: transform 220ms ease;
+    }
+    .tech-toggle {
+      width: 100%; min-height: 44px; padding: 8px 12px; border-radius: 8px;
+      border: 1px solid var(--border-subtle); background: var(--surface-canvas);
+      color: var(--ink-primary); font: 600 13px var(--font-sans); cursor: pointer;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .tech-panel {
+      display: none; flex-direction: column; gap: 4px; padding: 10px;
+      border-radius: 8px; background: var(--surface-canvas); border: 1px solid var(--border-subtle);
+      font-size: 12px; color: var(--ink-muted);
+    }
+    .tech-panel.open { display: flex; }
+
+    /* Shared UI primitives for other tabs */
+    .map-footer {
+      display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center;
+      gap: 10px; padding: 8px 16px; width: 100%; max-width: 100%;
+      background: var(--surface-elevated); border-top: 1px solid var(--border-subtle);
+      font-size: 12px; color: var(--ink-muted);
+    }
+    .map-footer > div { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+    .btn {
+      min-height: 44px; min-width: 44px; padding: 8px 12px; border-radius: 8px;
+      border: 1px solid var(--border-subtle); background: var(--surface-canvas);
+      color: var(--ink-primary); font: 600 13px var(--font-sans); cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .btn.cta { background: var(--accent-cta); color: #FFFFFF; border-color: var(--accent-cta); }
+    .select-box, .input-box {
+      width: 100%; min-height: 44px; padding: 8px 10px; border-radius: 8px;
+      border: 1px solid var(--border-subtle); background: var(--surface-canvas);
+      color: var(--ink-primary); font: 500 14px var(--font-sans);
+    }
+    .content-wrap { padding: 18px 16px; max-width: 1280px; width: 100%; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+    .grid-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+    .card {
+      background: var(--surface-elevated); border: 1px solid var(--border-subtle);
+      border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 8px;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--border-subtle); }
+    th { font-weight: 700; color: var(--ink-muted); font-size: 12px; text-transform: uppercase; }
+    .table-scroll { overflow-x: auto; background: var(--surface-elevated); border: 1px solid var(--border-subtle); border-radius: 12px; padding: 8px; }
+    .badge {
+      display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px;
+      border-radius: 999px; font-size: 12px; font-weight: 600; border: 1px solid var(--border-subtle);
+      max-width: 100%;
+    }
+    .badge.ok { color: var(--status-healthy); border-color: var(--status-healthy); }
+    .badge.warn { color: var(--status-degraded); border-color: var(--status-degraded); }
+    .tabular-nums { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+    @media (max-width: 720px) {
+      .nav-bar { padding: 8px 10px; gap: 8px; }
+      .nav-right { width: 100%; justify-content: space-between; align-items: center; gap: 6px; }
+      .nav-tabs { flex: 1 1 0; min-width: 0; gap: 4px; }
+      .nav-btn { padding: 6px 9px; font-size: 12px; }
+      .map-stage { height: 76vh; min-height: 500px; }
+      .top-left-hud, .map-stage.inspector-open .top-left-hud {
+        top: 8px; left: 8px; right: 8px; width: auto; max-width: none; gap: 6px;
+      }
+      .quick-bar { width: 100%; gap: 6px; }
+      .pill-select { flex: 1 1 140px; min-width: 0; max-width: 100%; font-size: 12px; padding: 8px 10px; }
+      .pill-btn { flex: 0 1 auto; padding: 8px 10px; font-size: 12px; }
+      .area-insight-pill { width: 100%; padding: 6px 10px; font-size: 11px; gap: 6px; }
+      .lens-dock-wrap { left: 8px; right: 8px; transform: none; width: auto; bottom: 8px; }
+      .lens-dock { width: 100%; padding: 7px 8px; gap: 5px; }
+      .lens-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; width: 100%; }
+      .lens-btn { min-width: 0; width: 100%; padding: 8px 6px; font-size: 12px; }
+      .tune-btn { grid-column: 1 / -1; min-width: 0; width: 100%; justify-content: center; }
+      .legend-wrap { gap: 4px; padding: 0 2px; }
+      .legend-head { flex-wrap: wrap; gap: 4px; }
+      .legend-caption { white-space: normal; font-size: 10px; }
+      .legend-tiers { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
+      .tier-chip { padding: 3px 4px; font-size: 10px; gap: 3px; }
+      .tier-text { flex-direction: column; align-items: center; gap: 1px; text-align: center; }
+      #map-stage .lautscan-marine-map .zoom-controls { bottom: 262px; left: 8px; }
+      #map-stage .lautscan-marine-map .map-hud { display: none; }
+      .inspector-card {
+        top: 8px; right: 8px; left: 8px; bottom: auto; width: auto;
+        max-height: calc(100% - 274px); z-index: 35; padding: 12px;
+      }
+      .map-footer { padding: 8px 10px; gap: 6px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="nav-bar">
+      <div class="brand">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/>
+        </svg>
+        <div>
+          <div class="brand-title">LAUT SCAN</div>
+          <div class="brand-sub">Peta Kondisi Laut Nusantara</div>
+        </div>
+      </div>
+
+      <div class="nav-right">
+        <nav class="nav-tabs" aria-label="Navigasi Utama">
+          <button class="nav-btn active" data-tab="ocean_map" type="button">Peta Laut</button>
+          <button class="nav-btn" data-tab="species" type="button">Jenis Ikan</button>
+          <button class="nav-btn" data-tab="trends" type="button">Tren</button>
+          <button class="nav-btn" data-tab="sources" type="button">Sumber Data</button>
+          <button class="nav-btn" data-tab="settings" type="button">Pengaturan</button>
+        </nav>
+        <button id="quick-theme-btn" class="btn" type="button" aria-label="Ubah mode siang atau malam" title="Mode Siang / Malam">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Tab 1: Peta Laut (4 Lensa Laut) -->
+    <section id="tab-ocean_map" class="view-panel active">
+      <div id="map-stage" class="map-stage">
+        <div id="marine-map-host" class="map-host"></div>
+
+        <!-- Top-Left Quick Controls + Lightweight Zoom & Area Insight Pill -->
+        <div class="top-left-hud">
+          <div class="quick-bar">
+            <select id="wpp-select" class="pill-select" aria-label="Pilih wilayah perairan">
+              <option value="">Semua Perairan Indonesia</option>
+            </select>
+            <select id="fish-filter-select" class="pill-select" aria-label="Filter jenis ikan di peta">
+              <option value="">Semua Jenis Ikan</option>
+              <option value="tuna">Tuna &amp; Cakalang</option>
+              <option value="kembung">Kembung &amp; Layang</option>
+              <option value="tongkol">Tongkol &amp; Tenggiri</option>
+              <option value="kakap">Kakap &amp; Kerapu</option>
+              <option value="lemuru">Lemuru &amp; Lemadang</option>
+              <option value="udang">Udang</option>
+            </select>
+            <button id="toggle-species-btn" class="pill-btn" type="button" aria-pressed="true" aria-label="Tampilkan pin titik ikan">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M6.5 12c.94-3.46 4.94-6 8.5-6 3.56 0 6.06 2.54 7 6-.94 3.46-3.44 6-7 6-3.56 0-7.56-2.54-8.5-6Z"/>
+                <path d="M18 12v.5"/>
+              </svg>
+              <span>Titik Ikan</span>
+            </button>
+            <button id="inspect-center-btn" class="pill-btn" type="button" aria-label="Periksa kondisi di wilayah aktif">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cta)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="10"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/>
+              </svg>
+              <span>Cek Titik</span>
+            </button>
+          </div>
+
+          <div id="area-insight-pill" class="area-insight-pill" role="status" aria-live="polite">
+            <span id="insight-scale-tag" class="insight-scale-tag tabular-nums">Skala Nusantara · Z5</span>
+            <span id="insight-summary-text" class="insight-summary-text">Memuat ringkasan perairan...</span>
+          </div>
+        </div>
+
+        <!-- Bottom-Center Floating 4 Lensa Laut Dock -->
+        <div class="lens-dock-wrap">
+          <div id="tune-popover" class="tune-popover" role="dialog" aria-label="Pengaturan lapisan peta">
+            <div class="row-between">
+              <strong style="font-size:13px;" id="tune-layer-title">Ketebalan Zona Ikan</strong>
+              <span id="active-opacity-val" class="tabular-nums" style="font-size:13px;color:var(--ink-muted);">88%</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <button id="opacity-down-btn" class="btn" type="button" aria-label="Kurangi ketebalan warna">-</button>
+              <input id="active-opacity-slider" type="range" min="10" max="100" step="5" value="88" style="flex:1;min-height:44px;cursor:pointer;" aria-label="Atur ketebalan warna">
+              <button id="opacity-up-btn" class="btn" type="button" aria-label="Tambah ketebalan warna">+</button>
+            </div>
+            <div class="preset-row" role="group" aria-label="Pilihan cepat transparansi">
+              <button class="preset-btn" type="button" data-opacity-preset="0.4" aria-pressed="false">Tipis (40%)</button>
+              <button class="preset-btn" type="button" data-opacity-preset="0.7" aria-pressed="false">Seimbang (70%)</button>
+              <button class="preset-btn" type="button" data-opacity-preset="0.9" aria-pressed="false">Jelas (90%)</button>
+            </div>
+            <div class="row-between">
+              <label for="date-select" style="font-size:12px;font-weight:600;color:var(--ink-muted);">Tanggal Data (WIB)</label>
+              <select id="date-select" class="select-box" style="max-width:210px;">
+                <option value="latest">Terbaru (Hari Ini · WIB)</option>
+                <option value="2026-11-10">10 Nov 2026 (WIB)</option>
+                <option value="2026-11-01">01 Nov 2026 (WIB)</option>
+                <option value="2026-10-15">15 Okt 2026 (WIB)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="lens-dock" role="region" aria-label="Pilihan Lensa Peta Laut">
+            <div class="lens-row">
+              <button class="lens-btn active" data-lens="potential" type="button" aria-pressed="true">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                </svg>
+                <span>Zona Ikan</span>
+              </button>
+              <button class="lens-btn" data-lens="sst" type="button" aria-pressed="false">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/>
+                </svg>
+                <span>Suhu Air</span>
+              </button>
+              <button class="lens-btn" data-lens="chlorophyll" type="button" aria-pressed="false">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/>
+                </svg>
+                <span>Pakan Alami</span>
+              </button>
+              <button class="lens-btn" data-lens="currents" type="button" aria-pressed="false">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M17.7 7.7a2.5 2.5 0 1 1 1.8 4.3H2"/><path d="M9.6 4.6A2 2 0 1 1 11 8H2"/><path d="M12.6 19.4A2 2 0 1 0 14 16H2"/>
+                </svg>
+                <span>Arus Laut</span>
+              </button>
+              <button id="toggle-tune-btn" class="tune-btn" type="button" aria-expanded="false" aria-label="Atur transparansi dan tanggal">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/>
+                  <line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/>
+                  <line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/>
+                </svg>
+                <span>Atur</span>
+              </button>
+            </div>
+            <div id="active-legend" class="legend-wrap"></div>
+          </div>
+        </div>
+
+        <!-- Right Floating Kondisi Titik Ini Card -->
+        <aside id="inspector-drawer" class="inspector-card" aria-label="Kondisi Titik Ini">
+          <div class="row-between">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cta)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="10"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/>
+              </svg>
+              <strong style="font-size:16px;">Kondisi Titik Ini</strong>
+            </div>
+            <button id="close-inspector-btn" class="btn" type="button" aria-label="Tutup kartu kondisi">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
+          <div id="inspector-body" style="display:flex;flex-direction:column;gap:10px;"></div>
+        </aside>
+      </div>
+
+      <footer class="map-footer">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <span id="freshness-badge" class="badge ok">Menghubungkan data laut...</span>
+        </div>
+        <div style="max-width:560px;">
+          Data satelit &amp; riwayat untuk referensi. Keselamatan pelayaran wajib mengikuti informasi BMKG, Pushidrosal, dan Basarnas.
+        </div>
+      </footer>
+    </section>
+
+    <!-- Tab 2: Jenis Ikan -->
+    <section id="tab-species" class="view-panel">
+      <div class="content-wrap">
+        <div class="row-between" style="flex-wrap:wrap;">
+          <div>
+            <h2 style="margin:0;">Catatan Jenis Ikan (OBIS)</h2>
+            <div style="font-size:13px;color:var(--ink-muted);">Daftar jenis ikan dan biota laut yang pernah tercatat di perairan Indonesia.</div>
+          </div>
+          <input id="species-search" class="input-box" style="max-width:300px;" placeholder="Cari nama ikan atau nama ilmiah...">
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>Nama Ilmiah</th><th>Nama Umum</th><th>Wilayah</th><th>Kedalaman (m)</th><th>Waktu Survei (WIB)</th><th>Habitat</th><th>Sumber</th></tr></thead>
+            <tbody id="species-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tab 3: Tren -->
+    <section id="tab-trends" class="view-panel">
+      <div class="content-wrap">
+        <div>
+          <h2 style="margin:0;">Ringkasan Wilayah Perairan Nusantara (WPP-NRI)</h2>
+          <div style="font-size:13px;color:var(--ink-muted);">11 zona pengelolaan perikanan nasional dari Selat Malaka hingga Laut Arafura.</div>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>Kode</th><th>Wilayah</th><th>Nama Perairan</th><th>Titik Tengah</th><th>Luas (km2)</th><th>Update Terakhir (WIB)</th></tr></thead>
+            <tbody id="wpp-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tab 4: Sumber Data -->
+    <section id="tab-sources" class="view-panel">
+      <div class="content-wrap">
+        <div>
+          <h2 style="margin:0;">Status Sistem &amp; Sumber Data</h2>
+          <div style="font-size:13px;color:var(--ink-muted);">Ketersediaan layanan peta dan penyedia data kelautan terbuka.</div>
+        </div>
+        <div id="health-banner" class="card"></div>
+        <div id="sources-grid" class="grid-cards"></div>
+      </div>
+    </section>
+
+    <!-- Tab 5: Pengaturan -->
+    <section id="tab-settings" class="view-panel">
+      <div class="content-wrap">
+        <div>
+          <h2 style="margin:0;">Pengaturan Tampilan &amp; Satuan</h2>
+          <div style="font-size:13px;color:var(--ink-muted);">Sesuaikan tampilan layar siang/malam dan satuan ukuran sesuai kebiasaan melaut.</div>
+        </div>
+        <div class="card" style="max-width:520px;">
+          <div class="row-between">
+            <span>Tampilan Layar</span>
+            <select id="theme-select" class="select-box" style="max-width:220px;">
+              <option value="daylight">Siang Terang (Daylight)</option>
+              <option value="night">Malam Gelap (Night)</option>
+            </select>
+          </div>
+          <div class="row-between">
+            <span>Satuan Suhu Air</span>
+            <select id="temp-unit-select" class="select-box" style="max-width:220px;">
+              <option value="C">Celsius (C)</option>
+              <option value="F">Fahrenheit (F)</option>
+            </select>
+          </div>
+          <div class="row-between">
+            <span>Satuan Kecepatan Arus</span>
+            <select id="speed-unit-select" class="select-box" style="max-width:220px;">
+              <option value="knots">Knot (umum di kapal)</option>
+              <option value="ms">Meter/detik (m/s)</option>
+            </select>
+          </div>
+          <div style="border-top:1px solid var(--border-subtle);margin-top:10px;padding-top:12px;">
+            <div style="font-weight:600;font-size:13px;margin-bottom:4px;">API Endpoint URL</div>
+            <div style="font-size:12px;color:var(--ink-muted);margin-bottom:8px;">Alamat server backend data laut (contoh: <code>http://127.0.0.1:8080</code>). Kosongkan untuk menggunakan URL asal hosting.</div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <input id="api-endpoint-input" class="input-box" style="flex:1;font-size:13px;" placeholder="http://127.0.0.1:8080">
+              <button id="api-endpoint-save-btn" class="pill-btn" type="button" style="padding:8px 16px;">Terapkan</button>
+            </div>
+            <div id="api-endpoint-feedback" style="font-size:12px;margin-top:6px;min-height:18px;"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script type="module">
+    import { create, setProps } from '/modules/marine-map/web/index.js';
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const rawApiParam = (urlParams.get('api') || '').trim();
+    const API = /^https?:\/\/[a-zA-Z0-9._-]+(:\d+)?$/i.test(rawApiParam) ? rawApiParam : (window.location.origin.startsWith('http') ? window.location.origin : '');
+
+    const LENS_META = {
+      potential: { label: 'Ketebalan Zona Ikan', defaultOpacity: 0.88 },
+      sst: { label: 'Ketebalan Suhu Air', defaultOpacity: 0.62 },
+      chlorophyll: { label: 'Ketebalan Pakan Alami', defaultOpacity: 0.65 },
+      currents: { label: 'Ketebalan Gelombang Arus', defaultOpacity: 0.88 },
+    };
+
+    const FISH_FILTER_LABELS = {
+      tuna: 'Tuna & Cakalang',
+      kembung: 'Kembung & Layang',
+      tongkol: 'Tongkol & Tenggiri',
+      kakap: 'Kakap & Kerapu',
+      lemuru: 'Lemuru & Lemadang',
+      udang: 'Udang',
+    };
+
+    const COMPASS_ID = {
+      N: 'Utara', NNE: 'Timur Laut', NE: 'Timur Laut', ENE: 'Timur Laut',
+      E: 'Timur', ESE: 'Tenggara', SE: 'Tenggara', SSE: 'Tenggara',
+      S: 'Selatan', SSW: 'Barat Daya', SW: 'Barat Daya', WSW: 'Barat Daya',
+      W: 'Barat', WNW: 'Barat Laut', NW: 'Barat Laut', NNW: 'Barat Laut',
+    };
+
+    const initialLens = LENS_META[urlParams.get('lens')] ? urlParams.get('lens') : 'potential';
+    const initialInspect = urlParams.get('inspect') === '1';
+    const rawZoomStr = urlParams.get('z') ?? urlParams.get('zoom');
+    const rawLatStr = urlParams.get('lat');
+    const rawLonStr = urlParams.get('lon');
+    const rawZoomParam = rawZoomStr !== null && rawZoomStr.trim() !== '' ? Number(rawZoomStr) : NaN;
+    const rawLatParam = rawLatStr !== null && rawLatStr.trim() !== '' ? Number(rawLatStr) : NaN;
+    const rawLonParam = rawLonStr !== null && rawLonStr.trim() !== '' ? Number(rawLonStr) : NaN;
+    const initialZoom = Number.isFinite(rawZoomParam) && rawZoomParam >= 2 && rawZoomParam <= 12
+      ? rawZoomParam
+      : 5;
+    const initialLat = Number.isFinite(rawLatParam) && rawLatParam >= -85 && rawLatParam <= 85
+      ? rawLatParam
+      : -2.5;
+    const initialLon = Number.isFinite(rawLonParam) && rawLonParam >= -180 && rawLonParam <= 180
+      ? rawLonParam
+      : 118.0;
+    const initialWpp = /^\d{3}$/.test((urlParams.get('wpp') || '').trim())
+      ? urlParams.get('wpp').trim()
+      : '';
+
+    const state = {
+      theme: urlParams.get('theme') === 'night' ? 'night' : 'daylight',
+      tempUnit: 'C',
+      speedUnit: 'knots',
+      selectedWpp: initialWpp,
+      fishFilter: urlParams.get('fish') || '',
+      selectedDate: 'latest',
+      centerLat: initialLat,
+      centerLon: initialLon,
+      zoom: initialZoom,
+      activeLens: initialLens,
+      opacities: { potential: 0.88, sst: 0.62, chlorophyll: 0.65, currents: 0.88 },
+      showSpeciesPins: urlParams.get('pins') !== '0',
+      techDetailsOpen: false,
+      wppZones: [],
+      wppGeoJson: '',
+      species: [],
+      selectedFish: null,
+      lastPoint: null,
+    };
+
+    const host = document.getElementById('marine-map-host');
+    const mapStageEl = document.getElementById('map-stage');
+    const inspectorDrawerEl = document.getElementById('inspector-drawer');
+    let mapHandle = null;
+    let inspectAbort = null;
+
+    const FISH_GUIDE = {
+      'thunnus albacares': {
+        nameId: 'Tuna Sirip Kuning (Madidihang)',
+        group: 'Pelagis Besar',
+        depthRange: '20 - 250 m',
+        idealTemp: [24, 30.5],
+        desc: 'Perenang cepat laut lepas yang sering berkumpul di jalur arus naik dan pertemuan arus hangat kaya pakan.',
+      },
+      'thunnus obesus': {
+        nameId: 'Tuna Mata Besar',
+        group: 'Pelagis Laut Dalam',
+        depthRange: '80 - 300 m',
+        idealTemp: [20, 29],
+        desc: 'Umumnya berada lebih dalam di lapisan air sejuk perairan Samudra Hindia selatan Jawa hingga Bali.',
+      },
+      'katsuwonus pelamis': {
+        nameId: 'Ikan Cakalang',
+        group: 'Pelagis Perairan Terbuka',
+        depthRange: '10 - 150 m',
+        idealTemp: [25, 30.5],
+        desc: 'Bergerombol besar mengikuti arus lintas Selat Makassar, Halmahera, dan Laut Banda.',
+      },
+      'euthynnus affinis': {
+        nameId: 'Ikan Tongkol Komo',
+        group: 'Pelagis Pesisir & Selat',
+        depthRange: '10 - 80 m',
+        idealTemp: [25, 30.8],
+        desc: 'Banyak dijumpai di perairan pesisir hangat hingga batas paparan benua yang kaya ikan kecil.',
+      },
+      'rastrelliger kanagurta': {
+        nameId: 'Ikan Kembung Lelaki',
+        group: 'Pelagis Kecil',
+        depthRange: '10 - 60 m',
+        idealTemp: [26, 31],
+        desc: 'Hidup bergerombol dekat permukaan dan perairan dangkal subur pemakan plankton di Selat Malaka hingga Jawa.',
+      },
+      'rastrelliger brachysoma': {
+        nameId: 'Ikan Kembung Perempuan',
+        group: 'Pelagis Pesisir',
+        depthRange: '5 - 50 m',
+        idealTemp: [26, 31],
+        desc: 'Menyukai perairan pantai kaya klorofil dan muara paparan Sunda seperti Laut Jawa.',
+      },
+      'decapterus russelli': {
+        nameId: 'Ikan Layang Deles',
+        group: 'Pelagis Kecil',
+        depthRange: '20 - 80 m',
+        idealTemp: [25.5, 30.8],
+        desc: 'Hidup bergerombol padat di paparan Laut Jawa dan sekitarnya terutama saat pakan plankton melimpah.',
+      },
+      'scomberomorus commerson': {
+        nameId: 'Ikan Tenggiri',
+        group: 'Predator Pelagis',
+        depthRange: '10 - 70 m',
+        idealTemp: [25, 30.8],
+        desc: 'Predator lincah di sekitar terumbu karang tepi dan selat berarus seperti Karimata dan Laut Jawa.',
+      },
+      'lutjanus malabaricus': {
+        nameId: 'Kakap Merah Malabar',
+        group: 'Demersal / Dasar',
+        depthRange: '25 - 100 m',
+        idealTemp: [24, 30.8],
+        desc: 'Menghuni dasar pasir berlumpur dan tepian karang paparan Natuna, Jawa, hingga Laut Arafura.',
+      },
+      'epinephelus coioides': {
+        nameId: 'Kerapu Lumpur',
+        group: 'Ikan Karang & Muara',
+        depthRange: '5 - 60 m',
+        idealTemp: [25, 31],
+        desc: 'Menetap di dasar terumbu pantai dan estuari terlindung di perairan Nusantara.',
+      },
+      'sardinella lemuru': {
+        nameId: 'Ikan Lemuru',
+        group: 'Pelagis Permukaan',
+        depthRange: '5 - 50 m',
+        idealTemp: [24, 29.8],
+        desc: 'Membentuk gerombolan besar musiman terutama di Selat Bali dan perairan subur selatan Jawa.',
+      },
+      'coryphaena hippurus': {
+        nameId: 'Ikan Lemadang (Mahi-mahi)',
+        group: 'Pelagis Permukaan',
+        depthRange: '0 - 40 m',
+        idealTemp: [25, 30.8],
+        desc: 'Banyak berenang dekat permukaan di perairan terbuka Pasifik Utara Papua hingga Laut Banda.',
+      },
+      'cheilinus undulatus': {
+        nameId: 'Ikan Napoleon',
+        group: 'Ikan Karang Dilindungi',
+        depthRange: '5 - 60 m',
+        idealTemp: [25, 30.5],
+        desc: 'Ikan karang berukuran besar berstatus dilindungi di lereng terumbu jernih kawasan Timur Indonesia.',
+      },
+      'penaeus monodon': {
+        nameId: 'Udang Windu',
+        group: 'Krustasea Dasar',
+        depthRange: '10 - 60 m',
+        idealTemp: [26, 31],
+        desc: 'Hidup di dasar perairan dangkal berpasir-lumpur terutama paparan Laut Arafura dan pesisir Kalimantan.',
+      },
+    };
+
+    function getFishProfile(item) {
+      const sci = String(item?.scientific_name || '').toLowerCase();
+      if (FISH_GUIDE[sci]) return FISH_GUIDE[sci];
+      const text = `${sci} ${item?.common_name || ''} ${item?.family || ''}`.toLowerCase();
+      if (text.includes('thunnus') || text.includes('tuna')) return FISH_GUIDE['thunnus albacares'];
+      if (text.includes('katsuwonus') || text.includes('cakalang')) return FISH_GUIDE['katsuwonus pelamis'];
+      if (text.includes('euthynnus') || text.includes('tongkol') || text.includes('bonito')) return FISH_GUIDE['euthynnus affinis'];
+      if (text.includes('rastrelliger') || text.includes('kembung')) return FISH_GUIDE['rastrelliger kanagurta'];
+      if (text.includes('decapterus') || text.includes('layang')) return FISH_GUIDE['decapterus russelli'];
+      if (text.includes('scomberomorus') || text.includes('tenggiri')) return FISH_GUIDE['scomberomorus commerson'];
+      if (text.includes('lutjanus') || text.includes('kakap')) return FISH_GUIDE['lutjanus malabaricus'];
+      if (text.includes('epinephelus') || text.includes('kerapu') || text.includes('grouper')) return FISH_GUIDE['epinephelus coioides'];
+      if (text.includes('sardinella') || text.includes('lemuru')) return FISH_GUIDE['sardinella lemuru'];
+      if (text.includes('coryphaena') || text.includes('lemadang') || text.includes('dolphin')) return FISH_GUIDE['coryphaena hippurus'];
+      if (text.includes('cheilinus') || text.includes('napoleon')) return FISH_GUIDE['cheilinus undulatus'];
+      if (text.includes('penaeus') || text.includes('udang')) return FISH_GUIDE['penaeus monodon'];
+      return {
+        nameId: extractFishNameId(item),
+        group: item?.family ? `Biota ${item.family}` : 'Biota Laut Tropis',
+        depthRange: item?.depth_m != null ? `${Math.max(1, Math.round(item.depth_m * 0.6))} - ${Math.round(item.depth_m * 1.4)} m` : 'Permukaan - 100 m',
+        idealTemp: [25, 30.8],
+        desc: item?.habitat_note || 'Tercatat pada basis data survei biodiversitas laut global OBIS di perairan Indonesia.',
+      };
+    }
+
+    function extractFishNameId(item) {
+      const sci = String(item?.scientific_name || '').toLowerCase();
+      if (FISH_GUIDE[sci]) return FISH_GUIDE[sci].nameId.replace(/\s*\([^)]*\)/, '');
+      if (sci.includes('thunnus')) return 'Tuna';
+      if (sci.includes('katsuwonus')) return 'Ikan Cakalang';
+      if (sci.includes('euthynnus')) return 'Ikan Tongkol';
+      if (sci.includes('rastrelliger')) return 'Ikan Kembung';
+      if (sci.includes('decapterus')) return 'Ikan Layang';
+      if (sci.includes('scomberomorus')) return 'Ikan Tenggiri';
+      if (sci.includes('lutjanus')) return 'Kakap Merah';
+      if (sci.includes('epinephelus')) return 'Kerapu';
+      if (sci.includes('sardinella')) return 'Ikan Lemuru';
+      if (sci.includes('coryphaena')) return 'Ikan Lemadang';
+      if (sci.includes('cheilinus')) return 'Ikan Napoleon';
+      if (sci.includes('penaeus')) return 'Udang Windu';
+      const raw = String(item?.common_name || item?.scientific_name || 'Ikan');
+      const parenMatch = raw.match(/\(([^)]+)\)/);
+      let idPart = raw;
+      if (raw.includes('/')) idPart = raw.split('/').pop().trim();
+      else if (parenMatch) idPart = parenMatch[1].trim();
+      return idPart.replace(/\b\w/g, (c) => c.toUpperCase());
+    }
+
+    function depthCategoryLabel(depthM) {
+      if (depthM == null) return 'Perairan umum';
+      if (depthM < 40) return `${Math.round(depthM)} m · Laut Dangkal`;
+      if (depthM < 90) return `${Math.round(depthM)} m · Laut Sedang`;
+      return `${Math.round(depthM)} m · Laut Dalam`;
+    }
+
+    function formatTempValue(tempC) {
+      if (tempC == null) return '-';
+      if (state.tempUnit === 'F') {
+        return `${((tempC * 9) / 5 + 32).toFixed(1)} °F`;
+      }
+      return `${tempC.toFixed(1)} °C`;
+    }
+
+    const WIB_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+
+    function formatWibDateTime(raw, fallback = 'Basis data lokal') {
+      if (!raw) return fallback;
+      const s = String(raw).trim();
+      if (!s) return fallback;
+      if (s === 'latest') return 'Terbaru (Hari Ini · WIB)';
+      if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+        const [y, m, d] = s.split('-').map(Number);
+        const mon = WIB_MONTHS[(m - 1 + 12) % 12] || String(m);
+        return `${String(d).padStart(2, '0')} ${mon} ${y} (WIB)`;
+      }
+      const hasZone = /([Zz]|[+-]\d{2}:?\d{2})$/.test(s);
+      const normalized = hasZone ? s.replace(' ', 'T') : `${s.replace(' ', 'T')}Z`;
+      const ms = Date.parse(normalized);
+      if (!Number.isFinite(ms)) return s;
+      const wib = new Date(ms + 7 * 3600000);
+      const dd = String(wib.getUTCDate()).padStart(2, '0');
+      const mon = WIB_MONTHS[wib.getUTCMonth()];
+      const yyyy = wib.getUTCFullYear();
+      const hh = String(wib.getUTCHours()).padStart(2, '0');
+      const mm = String(wib.getUTCMinutes()).padStart(2, '0');
+      return `${dd} ${mon} ${yyyy}, ${hh}:${mm} WIB`;
+    }
+
+    function sstTierLabel(sstC) {
+      if (sstC == null) return 'Tidak terukur';
+      if (sstC < 26.0) return 'Sejuk';
+      if (sstC <= 30.0) return 'Nyaman';
+      return 'Hangat';
+    }
+
+    function chlTierLabel(chl) {
+      if (chl == null) return 'Berawan / Pesisir';
+      if (chl >= 0.45) return 'Subur Plankton';
+      if (chl >= 0.18) return 'Cukup';
+      return 'Jernih';
+    }
+
+    function currentTierLabel(kn) {
+      if (kn == null) return 'Tidak terukur';
+      if (kn >= 0.9) return 'Deras';
+      if (kn >= 0.3) return 'Mengalir';
+      return 'Tenang';
+    }
+
+    function zoomScaleName(zoom) {
+      if (zoom < 4.5) return 'Skala Regional';
+      if (zoom < 6.0) return 'Skala Nusantara';
+      if (zoom < 7.8) return 'Perairan Wilayah';
+      return 'Detail Perairan Selat';
+    }
+
+    function shortWatersName(zone) {
+      if (!zone) return 'Semua Perairan';
+      const raw = String(zone.waters_id || zone.name || '');
+      return raw.replace(/^Perairan\s+/i, '').split(',')[0].trim();
+    }
+
+    function filteredSpeciesList() {
+      const f = state.fishFilter;
+      if (!f) return state.species;
+      return state.species.filter((s) => {
+        const text = `${s.common_name || ''} ${s.scientific_name || ''}`.toLowerCase();
+        if (f === 'tuna') return text.includes('tuna') || text.includes('thunnus') || text.includes('cakalang') || text.includes('katsuwonus');
+        if (f === 'kembung') return text.includes('kembung') || text.includes('rastrelliger') || text.includes('layang') || text.includes('decapterus');
+        if (f === 'tongkol') return text.includes('tongkol') || text.includes('euthynnus') || text.includes('tenggiri') || text.includes('scomberomorus');
+        if (f === 'kakap') return text.includes('kakap') || text.includes('lutjanus') || text.includes('kerapu') || text.includes('epinephelus') || text.includes('napoleon') || text.includes('cheilinus');
+        if (f === 'lemuru') return text.includes('lemuru') || text.includes('sardinella') || text.includes('lemadang') || text.includes('coryphaena');
+        if (f === 'udang') return text.includes('udang') || text.includes('penaeus');
+        return true;
+      });
+    }
+
+    function buildProps() {
+      return {
+        centerLat: state.centerLat,
+        centerLon: state.centerLon,
+        zoom: state.zoom,
+        baseStyle: state.theme,
+        potentialVisible: state.activeLens === 'potential',
+        potentialOpacity: state.opacities.potential,
+        sstVisible: state.activeLens === 'sst',
+        sstOpacity: state.opacities.sst,
+        chlorophyllVisible: state.activeLens === 'chlorophyll',
+        chlorophyllOpacity: state.opacities.chlorophyll,
+        currentsVisible: state.activeLens === 'currents',
+        currentsOpacity: state.opacities.currents,
+        showSpeciesPins: state.showSpeciesPins,
+        selectedDate: state.selectedDate,
+        tileBaseUrl: API,
+        wppGeoJsonCollection: state.wppGeoJson,
+        selectedWppCode: state.selectedWpp,
+        speciesMarkers: JSON.stringify(filteredSpeciesList()),
+      };
+    }
+
+    function renderInsightPill() {
+      const scaleEl = document.getElementById('insight-scale-tag');
+      const summaryEl = document.getElementById('insight-summary-text');
+      if (!scaleEl || !summaryEl) return;
+
+      const zLabel = Math.round(state.zoom * 10) / 10;
+      scaleEl.textContent = `${zoomScaleName(state.zoom)} · Z${zLabel}`;
+
+      const zone = state.wppZones.find((z) => z.wpp_code === state.selectedWpp);
+      const areaPrefix = zone ? `<strong>${shortWatersName(zone)} (WPP ${zone.wpp_code})</strong>` : '<strong>Semua Perairan</strong>';
+      const fishSuffix = state.fishFilter && FISH_FILTER_LABELS[state.fishFilter]
+        ? ` · Filter: ${FISH_FILTER_LABELS[state.fishFilter]}`
+        : '';
+
+      let detail = '';
+      if (state.activeLens === 'potential') {
+        if (zone && zone.chlorophyll_mean_mg_m3 != null) {
+          const chl = zone.chlorophyll_mean_mg_m3;
+          const chlNote = chl >= 0.55 ? 'pakan plankton tinggi, area potensial padat' : (chl >= 0.3 ? 'kesuburan cukup merata' : 'perairan lebih jernih dan tersebar');
+          detail = `${chlNote} (warna emas menandai titik paling potensial)`;
+        } else {
+          detail = 'Warna keemasan menandai pertemuan suhu nyaman dan pakan plankton subur';
+        }
+      } else if (state.activeLens === 'sst') {
+        if (zone && zone.sst_mean_c != null) {
+          detail = `Suhu rata-rata ${formatTempValue(zone.sst_mean_c)} (${sstTierLabel(zone.sst_mean_c)} untuk ikan)`;
+        } else if (state.tempUnit === 'F') {
+          detail = 'Rentang nyaman ikan pelagis di kisaran 81 hingga 85 °F (merah jambu hangat)';
+        } else {
+          detail = 'Rentang nyaman ikan pelagis di kisaran 27 hingga 29.5 °C (ungu muda ke jingga)';
+        }
+      } else if (state.activeLens === 'chlorophyll') {
+        if (zone && zone.chlorophyll_mean_mg_m3 != null) {
+          detail = `Klorofil rata-rata ${zone.chlorophyll_mean_mg_m3.toFixed(2)} mg/m3 (${chlTierLabel(zone.chlorophyll_mean_mg_m3)})`;
+        } else {
+          detail = 'Warna hijau terang menandai perairan subur plankton makanan ikan kecil';
+        }
+      } else if (state.speedUnit === 'ms') {
+        detail = 'Aliran biru tenang (<0.15 m/s), hijau mengalir (0.15-0.46 m/s), jingga deras (>0.46 m/s)';
+      } else {
+        detail = 'Aliran biru tenang (<0.3 kt), hijau mengalir (0.3-0.9 kt), jingga deras (>0.9 kt)';
+      }
+
+      summaryEl.innerHTML = `${areaPrefix}: ${detail}${fishSuffix}`;
+    }
+
+    function syncMap() {
+      if (mapHandle) setProps(mapHandle, buildProps());
+      renderLensUI();
+      renderInsightPill();
+    }
+
+    function renderLensUI() {
+      document.querySelectorAll('.lens-btn').forEach((btn) => {
+        const active = btn.dataset.lens === state.activeLens;
+        btn.classList.toggle('active', active);
+        btn.setAttribute('aria-pressed', String(active));
+      });
+
+      const activeOpacity = state.opacities[state.activeLens] ?? 0.85;
+      const pct = Math.round(activeOpacity * 100);
+      document.getElementById('tune-layer-title').textContent = LENS_META[state.activeLens].label;
+      document.getElementById('active-opacity-val').textContent = `${pct}%`;
+      document.getElementById('active-opacity-slider').value = String(pct);
+
+      document.querySelectorAll('[data-opacity-preset]').forEach((btn) => {
+        const presetVal = Number(btn.dataset.opacityPreset);
+        const isMatch = Math.abs(activeOpacity - presetVal) <= 0.02;
+        btn.setAttribute('aria-pressed', String(isMatch));
+      });
+
+      const legendEl = document.getElementById('active-legend');
+      if (state.activeLens === 'potential') {
+        legendEl.innerHTML = `
+          <div class="legend-head">
+            <span class="legend-caption">Gabungan suhu nyaman &amp; pakan plankton</span>
+            <div class="scale-bar scale-potential" aria-hidden="true"></div>
+          </div>
+          <div class="legend-tiers">
+            <div class="tier-chip">
+              <span class="tier-swatch" style="background:rgba(20,184,166,0.22);"></span>
+              <span class="tier-text"><span class="tier-name">Sepi</span><span class="tier-range">&lt;45%</span></span>
+            </div>
+            <div class="tier-chip">
+              <span class="tier-swatch" style="background:#22C55E;"></span>
+              <span class="tier-text"><span class="tier-name">Sedang</span><span class="tier-range">45-71%</span></span>
+            </div>
+            <div class="tier-chip">
+              <span class="tier-swatch" style="background:#F59E0B;"></span>
+              <span class="tier-text"><span class="tier-name">Padat Potensi</span><span class="tier-range">&gt;=72%</span></span>
+            </div>
+          </div>
+        `;
+      } else if (state.activeLens === 'sst') {
+        const t1 = state.tempUnit === 'F' ? '&lt;79 °F' : '&lt;26 °C';
+        const t2 = state.tempUnit === 'F' ? '81-85 °F' : '27-29.5 °C';
+        const t3 = state.tempUnit === 'F' ? '&gt;86 °F' : '&gt;30 °C';
+        legendEl.innerHTML = `
+          <div class="legend-head">
+            <span class="legend-caption">Suhu permukaan laut untuk aktivitas ikan</span>
+            <div class="scale-bar scale-sst" aria-hidden="true"></div>
+          </div>
+          <div class="legend-tiers">
+            <div class="tier-chip">
+              <span class="tier-swatch" style="background:#4c02a1;"></span>
+              <span class="tier-text"><span class="tier-name">Sejuk</span><span class="tier-range">${t1}</span></span>
+            </div>
+            <div class="tier-chip">
+              <span class="tier-swatch" style="background:#cc4778;"></span>
+              <span class="tier-text"><span class="tier-name">Nyaman</span><span class="tier-range">${t2}</span></span>
+            </div>
+            <div class="tier-chip">
+              <span class="tier-swatch" style="background:#f89540;"></span>
+              <span class="tier-text"><span class="tier-name">Hangat</span><span class="tier-range">${t3}</span></span>
+            </div>
+          </div>
+        `;
+      } else if (state.activeLens === 'chlorophyll') {
+        legendEl.innerHTML = `
+          <div class="legend-head">
+            <span class="legend-caption">Kadar klorofil penanda plankton makanan ikan</span>
+            <div class="scale-bar scale-chlorophyll" aria-hidden="true"></div>
+          </div>
+          <div class="legend-tiers">
+            <div class="tier-chip">
+              <span class="tier-swatch" style="background:#440154;"></span>
+              <span class="tier-text"><span class="tier-name">Jernih</span><span class="tier-range">&lt;0.18</span></span>
+            </div>
+            <div class="tier-chip">
+              <span class="tier-swatch" style="background:#21918c;"></span>
+              <span class="tier-text"><span class="tier-name">Cukup</span><span class="tier-range">0.18-0.45</span></span>
+            </div>
+            <div class="tier-chip">
+              <span class="tier-swatch" style="background:#5ec962;"></span>
+              <span class="tier-text"><span class="tier-name">Subur Plankton</span><span class="tier-range">&gt;0.45 mg/m3</span></span>
+            </div>
+          </div>
+        `;
+      } else {
+        const c1 = state.speedUnit === 'ms' ? '&lt;0.15 m/s' : '&lt;0.3 kt';
+        const c2 = state.speedUnit === 'ms' ? '0.15-0.46 m/s' : '0.3-0.9 kt';
+        const c3 = state.speedUnit === 'ms' ? '&gt;0.46 m/s' : '&gt;0.9 kt';
+        legendEl.innerHTML = `
+          <div class="legend-head">
+            <span class="legend-caption">Arah garis mengikuti aliran arus permukaan laut</span>
+          </div>
+          <div class="legend-tiers">
+            <div class="tier-chip">
+              <span class="tier-flow" style="background:#0284C7;"></span>
+              <span class="tier-text"><span class="tier-name">Tenang</span><span class="tier-range">${c1}</span></span>
+            </div>
+            <div class="tier-chip">
+              <span class="tier-flow" style="background:#0D9488;"></span>
+              <span class="tier-text"><span class="tier-name">Mengalir</span><span class="tier-range">${c2}</span></span>
+            </div>
+            <div class="tier-chip">
+              <span class="tier-flow" style="background:#D97706;"></span>
+              <span class="tier-text"><span class="tier-name">Deras</span><span class="tier-range">${c3}</span></span>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    function computePotentialBreakdown(pt) {
+      const sst = pt.sst_c;
+      const chl = pt.chlorophyll_mg_m3;
+      const curKn = pt.current_speed_knots;
+      if (sst == null && chl == null) {
+        return { pct: 0, label: 'Titik Daratan', cls: 'verdict-low', sstPct: null, chlPct: null, curPct: null };
+      }
+      const sstPct = sst != null
+        ? Math.round(Math.max(10, Math.min(100, Math.exp(-(((sst - 28.5) / 3.0) ** 2)) * 100)))
+        : 65;
+      const logMin = Math.log10(0.03);
+      const logMax = Math.log10(1.6);
+      const chlPct = chl != null
+        ? Math.round(Math.max(12, Math.min(100, ((Math.log10(Math.max(chl, 0.01)) - logMin) / (logMax - logMin)) * 100)))
+        : 55;
+      const curPct = curKn == null ? 80 : (curKn <= 0.8 ? 94 : (curKn <= 1.4 ? 75 : 48));
+      const pct = Math.round(0.40 * sstPct + 0.45 * chlPct + 0.15 * curPct);
+      if (pct >= 72) return { pct, label: `${pct}% · Padat Potensi`, cls: 'verdict-high', sstPct, chlPct, curPct };
+      if (pct >= 46) return { pct, label: `${pct}% · Potensi Sedang`, cls: 'verdict-mid', sstPct, chlPct, curPct };
+      return { pct, label: `${pct}% · Area Sepi`, cls: 'verdict-low', sstPct, chlPct, curPct };
+    }
+
+    function buildActionableTakeaway(pt, verdict, fishProfile) {
+      const sst = pt.sst_c;
+      const chl = pt.chlorophyll_mg_m3;
+      const curKn = pt.current_speed_knots;
+      const sstTxt = sst != null ? formatTempValue(sst) : 'stabil';
+      const sstLabel = sst != null ? sstTierLabel(sst).toLowerCase() : 'stabil';
+      const chlLabel = chlTierLabel(chl).toLowerCase();
+      const curSpeedStr = curKn != null
+        ? (state.speedUnit === 'ms' ? `${pt.current_speed_ms.toFixed(2)} m/s` : `${curKn.toFixed(2)} kt`)
+        : '';
+      const curLabel = curKn != null ? currentTierLabel(curKn).toLowerCase() : 'tenang';
+      const curTxt = curSpeedStr ? `${curLabel} (${curSpeedStr})` : curLabel;
+      const isStrongCurrent = curKn != null && curKn >= 0.9;
+
+      if (fishProfile && sst != null) {
+        const inIdeal = sst >= fishProfile.idealTemp[0] && sst <= fishProfile.idealTemp[1];
+        const fishShort = fishProfile.nameId.replace(/\s*\([^)]*\)/, '');
+        const chlPhrase = chl == null ? 'data plankton pesisir berawan' : `pakan ${chlLabel}`;
+        const curTail = isStrongCurrent
+          ? `, namun waspadai arus deras (${curSpeedStr})`
+          : ` dengan arus ${curTxt}`;
+        if (inIdeal && (chl == null || chl >= 0.18)) {
+          return `Sesuai habitat ${fishShort} (${fishProfile.group}): suhu ${sstTxt} (${sstLabel}) dan ${chlPhrase}${curTail}.`;
+        }
+        if (inIdeal) {
+          return `Suhu ${sstTxt} (${sstLabel}) sesuai habitat ${fishShort} (${fishProfile.group}), namun pakan ${chlLabel} sehingga gerombolan cenderung menyebar${isStrongCurrent ? ` (waspadai arus deras ${curSpeedStr})` : ''}.`;
+        }
+        return `Suhu ${sstTxt} (${sstLabel}) agak di luar zona favorit ${fishShort} (${fishProfile.group}); perhatikan kedalaman ${fishProfile.depthRange}${isStrongCurrent ? ` dan arus deras (${curSpeedStr})` : ''}.`;
+      }
+
+      if (chl == null) {
+        const curClause = isStrongCurrent
+          ? `, waspadai arus deras (${curSpeedStr})`
+          : ` dengan arus ${curTxt}`;
+        return `Suhu ${sstTxt} (${sstLabel})${curClause}; data plankton pesisir sedang berawan sehingga estimasi potensi bersifat awal.`;
+      }
+
+      const chlDetail = `${chlLabel} (${chl.toFixed(2)} mg/m3)`;
+      const curClause = isStrongCurrent
+        ? `, namun waspadai arus deras (${curSpeedStr})`
+        : ` dengan arus ${curTxt}`;
+
+      if (verdict.pct >= 72) {
+        return `Potensi padat: suhu ${sstTxt} (${sstLabel}) bertemu pakan ${chlDetail}${curClause}.`;
+      }
+      if (verdict.pct >= 46) {
+        if (chl < 0.18) {
+          return `Suhu ${sstTxt} (${sstLabel}) mendukung, namun pakan masih ${chlDetail} sehingga ikan cenderung tersebar${isStrongCurrent ? ` dan arus deras (${curSpeedStr}) perlu diwaspadai` : ''}.`;
+        }
+        return `Peluang sedang: suhu ${sstTxt} (${sstLabel}) dan pakan ${chlDetail}${curClause}.`;
+      }
+      return `Perairan relatif sepi: suhu ${sstTxt} (${sstLabel}) dengan pakan ${chlDetail}${curClause}, lebih cocok untuk pelayaran transit.`;
+    }
+
+    function openInspectorDrawer() {
+      inspectorDrawerEl.classList.add('open');
+      mapStageEl.classList.add('inspector-open');
+    }
+
+    function closeInspectorDrawer() {
+      inspectorDrawerEl.classList.remove('open');
+      mapStageEl.classList.remove('inspector-open');
+    }
+
+    async function inspectPoint(lat, lon, markerId = '') {
+      const body = document.getElementById('inspector-body');
+      state.techDetailsOpen = false;
+      state.selectedFish = markerId ? (state.species.find((s) => s.id === markerId) || null) : null;
+      openInspectorDrawer();
+      body.innerHTML = `<div class="tabular-nums" style="font-size:13px;color:var(--ink-muted);">Membaca kondisi titik (${lat.toFixed(2)}, ${lon.toFixed(2)})...</div>`;
+
+      inspectAbort?.abort();
+      const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
+      inspectAbort = ctrl;
+
+      try {
+        const res = await fetch(
+          `${API}/v1/map/point?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}&date=${encodeURIComponent(state.selectedDate)}`,
+          ctrl ? { signal: ctrl.signal } : undefined,
+        );
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const pt = await res.json();
+        if (inspectAbort !== ctrl) return;
+        state.lastPoint = pt;
+        renderInspector(pt);
+      } catch (err) {
+        if (err && err.name === 'AbortError') return;
+        const fish = markerId ? state.species.find((s) => s.id === markerId) : null;
+        if (fish) {
+          const fallbackPt = {
+            lat: fish.lat,
+            lon: fish.lon,
+            wpp_code: fish.wpp_code,
+            wpp_name: state.wppZones.find((z) => z.wpp_code === fish.wpp_code)?.waters_id || `WPP-NRI ${fish.wpp_code}`,
+            potential_score: 75,
+            potential_tier: 'padat',
+            sst_c: 28.5,
+            sst_f: 83.3,
+            chlorophyll_mg_m3: 0.35,
+            current_speed_knots: 0.6,
+            current_speed_ms: 0.31,
+            current_direction_deg: 120,
+            current_compass: 'ESE',
+            confidence: 0.85,
+            selected_fish_id: fish.id,
+          };
+          state.lastPoint = fallbackPt;
+          renderInspector(fallbackPt);
+          return;
+        }
+        body.innerHTML = `
+          <div class="zone-summary">
+            <div>
+              <div style="font-weight:700;font-size:14px;">Belum dapat membaca titik ini</div>
+              <div style="font-size:12px;color:var(--ink-muted);">Pastikan layanan data laut aktif lalu coba lagi.</div>
+            </div>
+            <span class="verdict-pill verdict-low">Terputus</span>
+          </div>
+          <button id="retry-inspect-btn" class="btn cta" type="button">Coba Baca Ulang</button>
+        `;
+        document.getElementById('retry-inspect-btn')?.addEventListener('click', () => inspectPoint(lat, lon, markerId));
+      }
+    }
+
+    function renderInspector(pt) {
+      if (!pt) return;
+      const body = document.getElementById('inspector-body');
+      const verdict = computePotentialBreakdown(pt);
+      const isWater = pt.sst_c != null || pt.chlorophyll_mg_m3 != null || pt.current_speed_ms != null;
+
+      if (!isWater) {
+        body.innerHTML = `
+          <div class="zone-summary">
+            <div>
+              <div style="font-weight:700;font-size:14px;">${pt.wpp_name ?? 'Daratan / Luar Jangkauan'}</div>
+              <div style="font-size:12px;color:var(--ink-muted);">Tidak ada data perairan laut di titik ini.</div>
+            </div>
+            <span class="verdict-pill verdict-low">Luar Laut</span>
+          </div>
+          <div style="font-size:13px;color:var(--ink-muted);">Ketuk area perairan biru di peta atau klik pin ikan untuk melihat potensi tangkap dan detail kondisi laut.</div>
+        `;
+        return;
+      }
+
+      const sstVal = pt.sst_c == null ? '-' : (state.tempUnit === 'F' ? `${pt.sst_f.toFixed(1)} °F` : `${pt.sst_c.toFixed(1)} °C`);
+      const sstStatus = sstTierLabel(pt.sst_c);
+
+      const chlNum = pt.chlorophyll_mg_m3;
+      const chlStatus = chlTierLabel(chlNum);
+      const chlPct = chlNum == null ? 0 : Math.max(12, Math.min(100, Math.round((chlNum / 1.2) * 100)));
+
+      const spdVal = pt.current_speed_ms == null ? '-' : (state.speedUnit === 'ms' ? `${pt.current_speed_ms.toFixed(2)} m/s` : `${pt.current_speed_knots.toFixed(2)} knot`);
+      const spdStatus = currentTierLabel(pt.current_speed_knots);
+      const compassText = COMPASS_ID[pt.current_compass] || pt.current_compass || 'Arah variabel';
+      const dirDeg = Math.round(pt.current_direction_deg ?? 0);
+
+      const zoneSpecies = pt.wpp_code
+        ? state.species.filter((s) => s.wpp_code === pt.wpp_code)
+        : state.species.filter((s) => Math.hypot(s.lat - pt.lat, s.lon - pt.lon) <= 3.0);
+      const totalIndividuals = zoneSpecies.reduce((acc, s) => acc + (Number(s.individual_count) || 0), 0);
+      const uniqueTypes = [];
+      const seenNames = new Set();
+      for (const s of zoneSpecies) {
+        const label = extractFishNameId(s);
+        if (!seenNames.has(label)) {
+          seenNames.add(label);
+          uniqueTypes.push(s);
+        }
+      }
+
+      const fish = state.selectedFish;
+      const fishProfile = fish ? getFishProfile(fish) : null;
+      const takeawaySentence = buildActionableTakeaway(pt, verdict, fishProfile);
+
+      let fishCardHtml = '';
+      if (fish && fishProfile) {
+        const minT = state.tempUnit === 'F' ? `${Math.round((fishProfile.idealTemp[0] * 9) / 5 + 32)}` : `${fishProfile.idealTemp[0]}`;
+        const maxT = state.tempUnit === 'F' ? `${Math.round((fishProfile.idealTemp[1] * 9) / 5 + 32)} °F` : `${fishProfile.idealTemp[1]} °C`;
+        const tempMatch = pt.sst_c != null
+          ? (pt.sst_c >= fishProfile.idealTemp[0] && pt.sst_c <= fishProfile.idealTemp[1]
+            ? `Suhu titik ini masuk rentang nyaman (${minT}-${maxT})`
+            : `Sedikit di luar suhu favorit (${minT}-${maxT})`)
+          : `Suhu favorit: ${minT}-${maxT}`;
+        const obsDate = fish.event_date_utc ? formatWibDateTime(fish.event_date_utc, 'Arsip survei') : 'Arsip survei';
+        const obsCount = fish.individual_count != null && fish.individual_count > 0
+          ? `${fish.individual_count} ekor terdata`
+          : 'Tercatat di survei global';
+
+        fishCardHtml = `
+          <div class="fish-banner" style="flex-direction:column;align-items:stretch;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div class="fish-banner-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 12c.94-3.46 4.94-6 8.5-6 3.56 0 6.06 2.54 7 6-.94 3.46-3.44 6-7 6-3.56 0-7.56-2.54-8.5-6Z"/><path d="M18 12v.5"/><path d="M7 10.67C7 8 5.58 5.97 2.73 5.5c-1 1.5-1 5 .23 6.5-1.24 1.5-1.24 5-.23 6.5C5.58 18.03 7 16 7 13.33"/></svg>
+              </div>
+              <div style="min-width:0;flex:1;">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:wrap;">
+                  <div style="font-weight:700;font-size:15px;">${fishProfile.nameId}</div>
+                  <span class="profile-badge">${fishProfile.group}</span>
+                </div>
+                <div style="font-size:11px;color:var(--ink-muted);font-style:italic;">${fish.scientific_name}${fish.family ? ` · ${fish.family}` : ''}</div>
+              </div>
+            </div>
+            <div style="font-size:12px;line-height:1.45;margin-top:4px;">${fishProfile.desc}</div>
+            <div class="fish-detail-grid">
+              <div class="fish-detail-item">
+                <span style="font-size:11px;color:var(--ink-muted);">Kedalaman Titik / Hidup</span>
+                <strong>${depthCategoryLabel(fish.depth_m)} (${fishProfile.depthRange})</strong>
+              </div>
+              <div class="fish-detail-item">
+                <span style="font-size:11px;color:var(--ink-muted);">Survei OBIS Titik Ini</span>
+                <strong>${obsCount} (${obsDate})</strong>
+              </div>
+            </div>
+            <div style="font-size:11px;color:var(--accent-primary);font-weight:600;margin-top:2px;">${tempMatch}</div>
+          </div>
+        `;
+      } else if (uniqueTypes.length > 0) {
+        fishCardHtml = `
+          <div class="nearby-fish-box">
+            <div style="font-size:12px;font-weight:600;color:var(--ink-muted);">Ikan yang pernah tercatat di sekitar sini (ketuk untuk detail):</div>
+            <div class="nearby-fish-chips">
+              ${uniqueTypes.slice(0, 6).map((s) => `<button type="button" class="nearby-fish-chip" data-jump-fish="${s.id}">${extractFishNameId(s)}</button>`).join('')}
+            </div>
+          </div>
+        `;
+      }
+
+      const barColor = verdict.pct >= 72 ? '#16A34A' : (verdict.pct >= 46 ? '#0284C7' : '#64748B');
+      const countSummary = totalIndividuals > 0
+        ? `${zoneSpecies.length} titik temuan OBIS (${totalIndividuals.toLocaleString('id-ID')} ekor terdata)`
+        : `${zoneSpecies.length} titik catatan OBIS di wilayah ini`;
+      const chlScoreLabel = chlNum == null ? 'Pakan (estimasi awal)' : `Pakan ${verdict.chlPct}%`;
+
+      body.innerHTML = `
+        <div class="zone-summary">
+          <div style="min-width:0;">
+            <div style="font-weight:700;font-size:14px;">${pt.wpp_name ?? 'Perairan Lepas'}</div>
+            <div style="font-size:12px;color:var(--ink-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${pt.wpp_waters_id ?? 'Perairan Nusantara'}</div>
+          </div>
+          <span class="verdict-pill ${verdict.cls}">${verdict.label}</span>
+        </div>
+
+        <div class="takeaway-box">
+          <span class="takeaway-title">Kesimpulan Kondisi</span>
+          <div class="takeaway-text">${takeawaySentence}</div>
+        </div>
+
+        ${fishCardHtml}
+
+        <div class="potential-box">
+          <div class="row-between">
+            <span style="font-size:12px;font-weight:700;">Perkiraan Indeks Potensi Ikan</span>
+            <strong class="tabular-nums" style="font-size:15px;color:${barColor};">${verdict.pct}%</strong>
+          </div>
+          <div class="meter-track"><div class="meter-fill" style="width:${verdict.pct}%;background:${barColor};"></div></div>
+          <div class="score-sub-row">
+            <span class="score-pill">Suhu ${verdict.sstPct ?? '-'}%</span>
+            <span class="score-pill">${chlScoreLabel}</span>
+            <span class="score-pill">Arus ${verdict.curPct ?? '-'}%</span>
+          </div>
+          <div style="font-size:11px;color:var(--ink-muted);">${countSummary}</div>
+        </div>
+
+        <div class="tiles-2col">
+          <div class="metric-tile">
+            <div class="metric-label">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cta)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/></svg>
+              <span>Suhu Air</span>
+            </div>
+            <div class="metric-value">${sstVal}</div>
+            <div class="metric-status">${sstStatus}</div>
+          </div>
+
+          <div class="metric-tile">
+            <div class="metric-label">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--status-healthy)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/></svg>
+              <span>Pakan Alami</span>
+            </div>
+            <div style="font-size:15px;font-weight:700;">${chlStatus}</div>
+            <div class="meter-track"><div class="meter-fill" style="width:${chlPct}%;"></div></div>
+            <div class="tabular-nums" style="font-size:11px;color:var(--ink-muted);">${chlNum != null ? `${chlNum.toFixed(2)} mg/m3` : 'Data warna laut tertutup awan'}</div>
+          </div>
+        </div>
+
+        <div class="current-tile">
+          <div style="display:flex;flex-direction:column;gap:3px;">
+            <span style="font-size:12px;font-weight:600;color:var(--ink-muted);">Arah &amp; Kuat Arus</span>
+            <span class="metric-value" style="font-size:16px;">${spdVal}</span>
+            <span class="metric-status">${spdStatus} ke ${compassText}</span>
+          </div>
+          <div class="compass-ring" style="transform:rotate(${dirDeg}deg);" title="Arah ${dirDeg} derajat (${compassText})">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="12" y1="19" x2="12" y2="5"/><polyline points="6 11 12 5 18 11"/>
+            </svg>
+          </div>
+        </div>
+
+        <button id="toggle-tech-btn" class="tech-toggle" type="button" aria-expanded="${state.techDetailsOpen}">
+          <span>Detail Teknis</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="${state.techDetailsOpen ? '18 15 12 9 6 15' : '6 9 12 15 18 9'}"/>
+          </svg>
+        </button>
+
+        <div id="tech-panel" class="tech-panel ${state.techDetailsOpen ? 'open' : ''}">
+          <div class="tabular-nums"><strong>Koordinat:</strong> ${pt.lat.toFixed(4)}, ${pt.lon.toFixed(4)}</div>
+          <div class="tabular-nums"><strong>Arah Kompas:</strong> ${dirDeg} deg (${pt.current_compass ?? 'N/A'})</div>
+          <div class="tabular-nums"><strong>Interpolasi:</strong> ${pt.interpolation_method} | Res ${pt.spatial_resolution_km ?? '-'} km</div>
+          <div class="tabular-nums"><strong>Waktu Data (WIB):</strong> ${formatWibDateTime(pt.acquired_at_utc, 'Basis data lokal')}</div>
+          <div><strong>Sumber:</strong> ${pt.attribution}</div>
+        </div>
+      `;
+
+      document.getElementById('toggle-tech-btn').addEventListener('click', () => {
+        state.techDetailsOpen = !state.techDetailsOpen;
+        renderInspector(state.lastPoint);
+      });
+      body.querySelectorAll('[data-jump-fish]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const targetFish = state.species.find((s) => s.id === btn.dataset.jumpFish);
+          if (targetFish) inspectPoint(targetFish.lat, targetFish.lon, targetFish.id);
+        });
+      });
+    }
+
+    mapHandle = create('marine-map', host, buildProps(), (evType, payload) => {
+      if (evType === 8 && payload) {
+        try {
+          const msg = JSON.parse(payload);
+          if (msg.type === 'pointclick') inspectPoint(msg.lat, msg.lon, msg.markerId || '');
+          else if (msg['exact:event'] === 'moveend' && msg.args?.[0]) {
+            const cam = JSON.parse(msg.args[0]);
+            if (Number.isFinite(cam.centerLat) && Number.isFinite(cam.centerLon) && Number.isFinite(cam.zoom)) {
+              state.centerLat = cam.centerLat;
+              state.centerLon = cam.centerLon;
+              state.zoom = cam.zoom;
+              renderInsightPill();
+            }
+          }
+        } catch {}
+      } else if (evType === 1) {
+        const val = String(payload || '').trim();
+        if (val === '' || /^\d{3}$/.test(val)) {
+          state.selectedWpp = val;
+          document.getElementById('wpp-select').value = state.selectedWpp;
+          const zone = state.wppZones.find((z) => z.wpp_code === state.selectedWpp);
+          if (zone) {
+            state.centerLat = zone.centroid_lat;
+            state.centerLon = zone.centroid_lon;
+            state.zoom = 6;
+          } else {
+            state.centerLat = -2.5;
+            state.centerLon = 118.0;
+            state.zoom = 5;
+          }
+          syncMap();
+        }
+      }
+    });
+
+    async function boot() {
+      renderLensUI();
+      renderInsightPill();
+      const badgeEl = document.getElementById('freshness-badge');
+      const fetchJson = async (url) => {
+        if (!url) return null;
+        try {
+          const res = await fetch(url);
+          if (res.ok) return await res.json();
+        } catch {}
+        return null;
+      };
+
+      const fetchWithFallback = async (primaryUrl, fallbackUrl) => {
+        const data = await fetchJson(primaryUrl);
+        if (data) return data;
+        if (fallbackUrl) {
+          const fallbackData = await fetchJson(fallbackUrl);
+          if (fallbackData) return fallbackData;
+        }
+        return null;
+      };
+
+      try {
+        const healthPromise = API ? fetchJson(`${API}/v1/health`) : Promise.resolve(null);
+        const wppPromise = fetchWithFallback(API ? `${API}/v1/wpp?include_geometry=true` : null, '/data/wpp_nri_zones.json');
+        const speciesPromise = fetchWithFallback(API ? `${API}/v1/species?limit=250` : null, '/data/species.json');
+        const sourcesPromise = fetchWithFallback(API ? `${API}/v1/sources` : null, '/data/sources.json');
+
+        const [healthRaw, wppRaw, speciesRaw, sourcesRaw] = await Promise.all([
+          healthPromise,
+          wppPromise,
+          speciesPromise,
+          sourcesPromise,
+        ]);
+
+        const health = healthRaw || {
+          status: 'standalone',
+          version: '1.0.0',
+          tile_cache_ok: true,
+          db_ok: false,
+          timestamp_utc: new Date().toISOString(),
+        };
+
+        if (!wppRaw || !speciesRaw || !sourcesRaw) {
+          throw new Error('Gagal memuat sebagian data layanan');
+        }
+
+        let wppZones = [];
+        let wppGeoJsonStr = '';
+        if (Array.isArray(wppRaw.items)) {
+          wppZones = wppRaw.items;
+          wppGeoJsonStr = JSON.stringify({
+            type: 'FeatureCollection',
+            features: wppZones.filter((z) => z.geometry_geojson).map((z) => ({
+              type: 'Feature',
+              properties: { wpp_code: z.wpp_code, name: z.name, waters_id: z.waters_id },
+              geometry: typeof z.geometry_geojson === 'string' ? JSON.parse(z.geometry_geojson) : z.geometry_geojson,
+            })),
+          });
+        } else if (Array.isArray(wppRaw.features)) {
+          wppZones = wppRaw.features.map((f) => ({
+            wpp_code: String(f.properties?.wpp_code || f.id || ''),
+            name: f.properties?.name || `WPP-NRI ${f.properties?.wpp_code || f.id}`,
+            waters_id: f.properties?.waters_id || '',
+            waters_en: f.properties?.waters_en || '',
+            centroid_lat: Number(f.properties?.centroid_lat || 0),
+            centroid_lon: Number(f.properties?.centroid_lon || 0),
+            area_km2: f.properties?.area_km2 ? Number(f.properties.area_km2) : null,
+            latest_observation_utc: f.properties?.latest_observation_utc || null,
+            sst_mean_c: f.properties?.sst_mean_c != null ? Number(f.properties.sst_mean_c) : null,
+            chlorophyll_mean_mg_m3: f.properties?.chlorophyll_mean_mg_m3 != null ? Number(f.properties.chlorophyll_mean_mg_m3) : null,
+            geometry_geojson: JSON.stringify(f.geometry),
+          }));
+          wppGeoJsonStr = JSON.stringify(wppRaw);
+        }
+
+        state.wppZones = wppZones;
+        state.wppGeoJson = wppGeoJsonStr;
+        state.species = Array.isArray(speciesRaw.items) ? speciesRaw.items : [];
+        const sources = sourcesRaw;
+
+        const wppSel = document.getElementById('wpp-select');
+        const wppTbody = document.getElementById('wpp-tbody');
+        state.wppZones.forEach((z) => {
+          const opt = document.createElement('option');
+          opt.value = z.wpp_code;
+          opt.textContent = `${z.name}: ${z.waters_id}`;
+          wppSel.appendChild(opt);
+          const tr = document.createElement('tr');
+          tr.innerHTML = `<td class="tabular-nums">${z.wpp_code}</td><td>${z.name}</td><td>${z.waters_id}</td><td class="tabular-nums">${z.centroid_lat.toFixed(2)}, ${z.centroid_lon.toFixed(2)}</td><td class="tabular-nums">${z.area_km2 ? Math.round(z.area_km2).toLocaleString('id-ID') : '-'}</td><td class="tabular-nums">${formatWibDateTime(z.latest_observation_utc, 'Data dasar')}</td>`;
+          wppTbody.appendChild(tr);
+        });
+
+        if (state.selectedWpp) {
+          wppSel.value = state.selectedWpp;
+          const selectedZone = state.wppZones.find((z) => z.wpp_code === state.selectedWpp);
+          if (selectedZone && !Number.isFinite(rawLatParam) && !Number.isFinite(rawLonParam)) {
+            state.centerLat = selectedZone.centroid_lat;
+            state.centerLon = selectedZone.centroid_lon;
+            if (!Number.isFinite(rawZoomParam)) state.zoom = 6;
+          }
+        }
+
+        const renderSpecies = (q = '') => {
+          const tbody = document.getElementById('species-tbody');
+          const query = q.toLowerCase();
+          tbody.innerHTML = state.species
+            .filter((s) => !query || s.scientific_name.toLowerCase().includes(query) || (s.common_name || '').toLowerCase().includes(query))
+            .map((s) => `<tr><td><em>${s.scientific_name}</em></td><td>${s.common_name ?? '-'}</td><td class="tabular-nums">${s.wpp_code ?? '-'}</td><td class="tabular-nums">${s.depth_m ?? '-'}</td><td class="tabular-nums">${formatWibDateTime(s.event_date_utc, 'Arsip survei')}</td><td>${s.habitat_note ?? '-'}</td><td>${s.attribution}</td></tr>`)
+            .join('');
+        };
+        renderSpecies();
+        document.getElementById('species-search').addEventListener('input', (e) => renderSpecies(e.target.value));
+
+        document.getElementById('health-banner').innerHTML = `
+          <strong>Status Layanan:</strong> ${health.status} (v${health.version}) |
+          Cache Peta: ${health.tile_cache_ok ? 'Siap' : 'Tidak tersedia'} |
+          Basis Data: ${health.db_ok ? 'Terhubung' : 'Mode Mandiri (Lokal)'} |
+          Dicek: ${formatWibDateTime(health.timestamp_utc, '-')}
+        `;
+        document.getElementById('sources-grid').innerHTML = sources.sources.map((src) => `
+          <div class="card">
+            <div class="row-between"><strong>${src.display_name}</strong><span class="badge ${src.status === 'healthy' ? 'ok' : 'warn'}">${src.status}</span></div>
+            <div style="font-size:13px;">Prioritas: ${src.priority}</div>
+            <div class="tabular-nums" style="font-size:12px;">Data Terbaru: ${formatWibDateTime(src.latest_data_timestamp_utc, 'Data awal')}</div>
+            <div class="tabular-nums" style="font-size:12px;color:var(--ink-muted);">Sinkron Terakhir: ${formatWibDateTime(src.last_sync_utc, 'Menunggu')}</div>
+            <div style="font-size:12px;color:var(--ink-muted);">${src.license_summary}</div>
+            <div style="font-size:12px;">${src.attribution}</div>
+          </div>
+        `).join('');
+
+        const noaaSrc = sources.sources?.find((s) => s.source_key === 'noaa_erddap');
+        const noaaDateWib = noaaSrc?.latest_data_timestamp_utc ? formatWibDateTime(noaaSrc.latest_data_timestamp_utc, 'Lokal') : 'Lokal';
+        const speciesTotal = speciesRaw.total || speciesRaw.total_cached || state.species.length || 0;
+        badgeEl.className = 'badge ok';
+        badgeEl.textContent = `Data Ikan 2020-2026 (${speciesTotal} titik) · NASA/NOAA (${noaaDateWib})`;
+        document.getElementById('toggle-species-btn').setAttribute('aria-pressed', String(state.showSpeciesPins));
+        document.getElementById('fish-filter-select').value = state.fishFilter;
+        if (state.theme === 'night') document.documentElement.setAttribute('data-theme', 'night');
+        syncMap();
+
+        if (initialInspect) {
+          const firstMarker = urlParams.get('marker')
+            ? state.species.find((s) => s.id === urlParams.get('marker'))
+            : state.species.find((s) => s.wpp_code === '712');
+          if (firstMarker && urlParams.get('inspect_fish') === '1') {
+            inspectPoint(firstMarker.lat, firstMarker.lon, firstMarker.id);
+          } else {
+            inspectPoint(-5.5, 111.5);
+          }
+        }
+      } catch {
+        badgeEl.className = 'badge warn';
+        badgeEl.textContent = 'Mode Peta Mandiri (menunggu sambungan data laut)';
+        syncMap();
+      }
+    }
+
+    document.querySelectorAll('.nav-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.nav-btn').forEach((b) => b.classList.remove('active'));
+        document.querySelectorAll('.view-panel').forEach((p) => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
+      });
+    });
+
+    document.querySelectorAll('.lens-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        state.activeLens = btn.dataset.lens;
+        syncMap();
+      });
+    });
+
+    document.getElementById('toggle-tune-btn').addEventListener('click', () => {
+      const pop = document.getElementById('tune-popover');
+      const open = pop.classList.toggle('open');
+      document.getElementById('toggle-tune-btn').setAttribute('aria-expanded', String(open));
+    });
+
+    document.getElementById('toggle-species-btn').addEventListener('click', () => {
+      state.showSpeciesPins = !state.showSpeciesPins;
+      document.getElementById('toggle-species-btn').setAttribute('aria-pressed', String(state.showSpeciesPins));
+      syncMap();
+    });
+
+    document.getElementById('fish-filter-select').addEventListener('change', (e) => {
+      state.fishFilter = e.target.value;
+      if (!state.showSpeciesPins) {
+        state.showSpeciesPins = true;
+        document.getElementById('toggle-species-btn').setAttribute('aria-pressed', 'true');
+      }
+      syncMap();
+    });
+
+    document.getElementById('inspect-center-btn').addEventListener('click', () => {
+      const zone = state.wppZones.find((z) => z.wpp_code === state.selectedWpp);
+      if (zone) inspectPoint(zone.centroid_lat, zone.centroid_lon);
+      else inspectPoint(state.centerLat, state.centerLon);
+    });
+
+    document.getElementById('close-inspector-btn').addEventListener('click', () => {
+      closeInspectorDrawer();
+    });
+
+    document.getElementById('wpp-select').addEventListener('change', (e) => {
+      state.selectedWpp = e.target.value;
+      const zone = state.wppZones.find((z) => z.wpp_code === state.selectedWpp);
+      if (zone) {
+        state.centerLat = zone.centroid_lat;
+        state.centerLon = zone.centroid_lon;
+        state.zoom = 6;
+      } else {
+        state.centerLat = -2.5;
+        state.centerLon = 118.0;
+        state.zoom = 5;
+      }
+      syncMap();
+    });
+
+    document.getElementById('date-select').addEventListener('change', (e) => {
+      state.selectedDate = e.target.value;
+      syncMap();
+      if (state.lastPoint && inspectorDrawerEl.classList.contains('open')) {
+        inspectPoint(state.lastPoint.lat, state.lastPoint.lon, state.selectedFish?.id || '');
+      }
+    });
+
+    const stepOpacity = (deltaPct) => {
+      const cur = Math.round((state.opacities[state.activeLens] ?? 0.85) * 100);
+      const next = Math.max(10, Math.min(100, cur + deltaPct));
+      state.opacities[state.activeLens] = next / 100;
+      syncMap();
+    };
+    document.getElementById('opacity-down-btn').addEventListener('click', () => stepOpacity(-10));
+    document.getElementById('opacity-up-btn').addEventListener('click', () => stepOpacity(10));
+    document.getElementById('active-opacity-slider').addEventListener('input', (e) => {
+      state.opacities[state.activeLens] = Number(e.target.value) / 100;
+      syncMap();
+    });
+    document.querySelectorAll('[data-opacity-preset]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        state.opacities[state.activeLens] = Number(btn.dataset.opacityPreset);
+        syncMap();
+      });
+    });
+
+    const setTheme = (nextTheme) => {
+      state.theme = nextTheme === 'night' ? 'night' : 'daylight';
+      document.documentElement.setAttribute('data-theme', state.theme);
+      document.getElementById('theme-select').value = state.theme;
+      syncMap();
+    };
+    document.getElementById('theme-select').addEventListener('change', (e) => setTheme(e.target.value));
+    document.getElementById('quick-theme-btn').addEventListener('click', () => setTheme(state.theme === 'daylight' ? 'night' : 'daylight'));
+
+    document.getElementById('temp-unit-select').addEventListener('change', (e) => {
+      state.tempUnit = e.target.value;
+      renderLensUI();
+      renderInsightPill();
+      if (state.lastPoint) renderInspector(state.lastPoint);
+    });
+    document.getElementById('speed-unit-select').addEventListener('change', (e) => {
+      state.speedUnit = e.target.value;
+      renderLensUI();
+      renderInsightPill();
+      if (state.lastPoint) renderInspector(state.lastPoint);
+    });
+
+    const apiInput = document.getElementById('api-endpoint-input');
+    const apiSaveBtn = document.getElementById('api-endpoint-save-btn');
+    const apiFeedback = document.getElementById('api-endpoint-feedback');
+
+    if (apiInput) {
+      apiInput.value = rawApiParam || (API && API !== window.location.origin ? API : '');
+      const handleApiSave = () => {
+        const val = apiInput.value.trim();
+        if (val && !/^https?:\/\/[a-zA-Z0-9._-]+(:\d+)?$/i.test(val)) {
+          if (apiFeedback) {
+            apiFeedback.style.color = 'var(--status-error)';
+            apiFeedback.textContent = 'Format URL tidak valid. Gunakan format http://127.0.0.1:8080 atau https://api.domain.com';
+          }
+          return;
+        }
+        if (apiFeedback) {
+          apiFeedback.style.color = 'var(--status-healthy)';
+          apiFeedback.textContent = 'Menyimpan dan memuat ulang...';
+        }
+        const nextUrl = new URL(window.location.href);
+        if (val) {
+          nextUrl.searchParams.set('api', val);
+        } else {
+          nextUrl.searchParams.delete('api');
+        }
+        window.location.href = nextUrl.toString();
+      };
+      apiSaveBtn?.addEventListener('click', handleApiSave);
+      apiInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') handleApiSave();
+      });
+    }
+
+    boot();
+  </script>
+</body>
+</html>
