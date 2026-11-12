@@ -25,8 +25,6 @@ const REST_MS = 250;
 const DRAG_THRESHOLD_PX = 5;
 const DEFAULT_OSM_TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 const DEFAULT_ATTRIBUTION = '© OpenStreetMap contributors';
-const DEFAULT_DARK_TILES = 'https://basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}.png';
-const DEFAULT_DARK_ATTRIBUTION = '© OpenStreetMap contributors, © CARTO';
 const INDONESIA_BOUNDS = { minLon: 88, minLat: -16, maxLon: 148, maxLat: 12 };
 const MAX_RENDERED_MARKERS = 150;
 
@@ -94,10 +92,7 @@ const STYLE = `
   z-index: 1;
 }
 .lautscan-marine-map.theme-night .base-layer img.tile {
-  filter: contrast(1.04) brightness(0.96);
-}
-.lautscan-marine-map.theme-night .base-layer img.tile[src*="tile.openstreetmap.org"] {
-  filter: invert(92%) hue-rotate(180deg) brightness(0.82) contrast(1.08) saturate(0.65);
+  filter: invert(100%) hue-rotate(180deg) brightness(82%) contrast(115%) saturate(60%);
 }
 .lautscan-marine-map .overlay-layer {
   z-index: 2;
@@ -768,8 +763,6 @@ export class MarineMap {
     this.maxZoom = parseNum(this.config.maxZoom, DEFAULT_MAX_ZOOM);
     this.osmTemplate = parseStr(this.config.tiles, DEFAULT_OSM_TILES) || DEFAULT_OSM_TILES;
     this.attributionText = parseStr(this.config.attribution, DEFAULT_ATTRIBUTION) || DEFAULT_ATTRIBUTION;
-    this.darkTemplate = parseStr(this.config.darkTiles, DEFAULT_DARK_TILES) || DEFAULT_DARK_TILES;
-    this.darkAttribution = parseStr(this.config.darkAttribution, DEFAULT_DARK_ATTRIBUTION) || DEFAULT_DARK_ATTRIBUTION;
 
     const computedPos =
       typeof getComputedStyle === 'function'
@@ -854,7 +847,7 @@ export class MarineMap {
     this.hudCoords.className = 'hud-coords';
     this.hudCredit = doc.createElement('span');
     this.hudCredit.className = 'hud-credit';
-    this.hudCredit.textContent = this.plain ? 'Plain tiles' : this.darkAttribution;
+    this.hudCredit.textContent = this.plain ? 'Plain tiles' : this.attributionText;
     this.hud.append(this.hudCoords, this.hudCredit);
 
     this.map.append(
@@ -982,11 +975,6 @@ export class MarineMap {
         this.baseStyle = style;
         this.map.classList.toggle('theme-night', style === 'night');
         this.map.classList.toggle('theme-daylight', style !== 'night');
-        if (this.hudCredit) {
-          this.hudCredit.textContent = this.plain
-            ? 'Plain tiles'
-            : (style === 'night' ? this.darkAttribution : this.attributionText);
-        }
       }
     }
 
@@ -1308,13 +1296,6 @@ export class MarineMap {
   }
 
   osmTileUrl(z, x, y) {
-    if (this.baseStyle === 'night') {
-      const template = this.darkTemplate || 'https://basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}.png';
-      return template
-        .replace('{z}', String(z))
-        .replace('{x}', String(x))
-        .replace('{y}', String(y));
-    }
     return this.osmTemplate
       .replace('{z}', String(z))
       .replace('{x}', String(x))
@@ -1474,14 +1455,6 @@ export class MarineMap {
                 this.pruneStaleTiles(tileMap, getActiveZ ? getActiveZ() : z);
               });
               tile.addEventListener('error', () => {
-                if (this.baseStyle === 'night' && !tile.dataset.fallback) {
-                  tile.dataset.fallback = '1';
-                  tile.src = this.osmTemplate
-                    .replace('{z}', String(z))
-                    .replace('{x}', String(wx))
-                    .replace('{y}', String(ty));
-                  return;
-                }
                 tile.dataset.loaded = '0';
                 tile.dataset.error = '1';
                 tile.style.visibility = 'hidden';
@@ -1567,7 +1540,7 @@ export class MarineMap {
       left,
       top,
       n,
-      keyPrefix: `${this.baseStyle}:`,
+      keyPrefix: '',
       plainClass: 'tile plain',
       layerName: '',
       urlFor: (tz, wx, ty) => this.osmTileUrl(tz, wx, ty),
