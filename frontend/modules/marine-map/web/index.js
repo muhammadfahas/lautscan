@@ -1644,10 +1644,12 @@ export class MarineMap {
     const tileScreenSize = TILE_SIZE * srcK;
     if (tileScreenSize <= 0) return;
 
-    const sx = clamp(((dstX0 - tileScreenX0) / tileScreenSize) * TILE_SIZE, 0, TILE_SIZE);
-    const sy = clamp(((dstY0 - tileScreenY0) / tileScreenSize) * TILE_SIZE, 0, TILE_SIZE);
-    const sx2 = clamp(((dstX1 - tileScreenX0) / tileScreenSize) * TILE_SIZE, 0, TILE_SIZE);
-    const sy2 = clamp(((dstY1 - tileScreenY0) / tileScreenSize) * TILE_SIZE, 0, TILE_SIZE);
+    const imgW = img.naturalWidth || img.width || TILE_SIZE;
+    const imgH = img.naturalHeight || img.height || TILE_SIZE;
+    const sx = clamp(((dstX0 - tileScreenX0) / tileScreenSize) * imgW, 0, imgW);
+    const sy = clamp(((dstY0 - tileScreenY0) / tileScreenSize) * imgH, 0, imgH);
+    const sx2 = clamp(((dstX1 - tileScreenX0) / tileScreenSize) * imgW, 0, imgW);
+    const sy2 = clamp(((dstY1 - tileScreenY0) / tileScreenSize) * imgH, 0, imgH);
     const sw = sx2 - sx;
     const sh = sy2 - sy;
 
