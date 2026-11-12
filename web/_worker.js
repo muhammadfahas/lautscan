@@ -398,26 +398,34 @@ function isLandApprox(lat, lon) {
   return getLandFraction(lat, lon) >= 0.5;
 }
 
-const SHELF_OFFSETS = [
-  [0.35, 0, 1.5], [-0.35, 0, 1.5], [0, 0.35, 1.5], [0, -0.35, 1.5],
-  [0.85, 0.85, 1.0], [-0.85, 0.85, 1.0], [0.85, -0.85, 1.0], [-0.85, -0.85, 1.0],
-  [1.6, 0, 0.6], [-1.6, 0, 0.6], [0, 1.6, 0.6], [0, -1.6, 0.6]
+// 24 isotropic radial samples (3 rings x 8 directions) using continuous bilinear getLandFraction
+// Eliminates all axis-aligned square/stair-step coastal halos
+const SHELF_RINGS = [
+  { r: 0.45, w: 0.52 },
+  { r: 1.05, w: 0.32 },
+  { r: 2.00, w: 0.16 }
 ];
+const SHELF_DIRS = [];
+for (let a = 0; a < 8; a++) {
+  const ang = (a * Math.PI) / 4;
+  SHELF_DIRS.push([Math.sin(ang), Math.cos(ang)]);
+}
 
 function getCoastalShelfFactor(lat, lon) {
-  const grid = getGlobalLandGrid();
-  let hits = 0;
-  for (let i = 0; i < SHELF_OFFSETS.length; i++) {
-    const off = SHELF_OFFSETS[i];
-    const sLat = Math.max(-89, Math.min(89, lat + off[0]));
-    const sLon = lon + off[1];
-    const r = Math.max(0, Math.min(LAND_MASK_H - 1, (((90 - sLat) / 180) * LAND_MASK_H) | 0));
-    const c = (((((sLon + 180) % 360 + 360) % 360) / 360) * LAND_MASK_W) | 0;
-    if (grid[r * LAND_MASK_W + c]) {
-      hits += off[2];
+  let sum = 0;
+  let wSum = 0;
+  for (let ri = 0; ri < SHELF_RINGS.length; ri++) {
+    const ring = SHELF_RINGS[ri];
+    for (let di = 0; di < 8; di++) {
+      const dir = SHELF_DIRS[di];
+      const sLat = Math.max(-84.5, Math.min(84.5, lat + ring.r * dir[0]));
+      const sLon = lon + ring.r * dir[1];
+      sum += getLandFraction(sLat, sLon) * ring.w;
+      wSum += ring.w;
     }
   }
-  return Math.min(1.0, hits / 4.2);
+  // Normalize so shelf factor peaks smoothly ~1.0 right along coastlines and fades gently into open ocean
+  return Math.min(1.0, (sum / wSum) * 2.1);
 }
 
 function wrapLonDelta(lon, centerLon) {
@@ -768,6 +776,70 @@ function buildRasterTileRgba(layer, z, x, y) {
   }
 
   const grid = getGlobalLandGrid();
+  const pad = 2;
+  const pSize = size + pad * 2; // 260x260 padded land mask for seamless 5-tap coastal Gaussian blur
+  const landRaw = new Float32Array(pSize * pSize);
+  const landH = new Float32Array(size * pSize);
+  const landSmooth = new Float32Array(size * size);
+
+  const pRow0 = new Int32Array(pSize);
+  const pRow1 = new Int32Array(pSize);
+  const pTy = new Float32Array(pSize);
+  for (let i = 0; i < pSize; i++) {
+    const py = i - pad;
+    const wy = y + (py + 0.5) / size;
+    const lat = (Math.atan(Math.sinh(Math.PI * (1 - (2 * wy) / n))) * 180) / Math.PI;
+    const fy = ((90 - lat) / 180) * LAND_MASK_H - 0.5;
+    const r0 = Math.max(0, Math.min(LAND_MASK_H - 1, Math.floor(fy)));
+    pRow0[i] = r0 * LAND_MASK_W;
+    pRow1[i] = Math.max(0, Math.min(LAND_MASK_H - 1, r0 + 1)) * LAND_MASK_W;
+    pTy[i] = Math.max(0, Math.min(1, fy - r0));
+  }
+  const pCol0 = new Int32Array(pSize);
+  const pCol1 = new Int32Array(pSize);
+  const pTx = new Float32Array(pSize);
+  for (let j = 0; j < pSize; j++) {
+    const px = j - pad;
+    const wx = x + (px + 0.5) / size;
+    const lon = (wx / n) * 360 - 180;
+    const fx = ((((lon + 180) % 360 + 360) % 360) / 360) * LAND_MASK_W - 0.5;
+    const c0 = Math.floor(fx);
+    const wc0 = ((c0 % LAND_MASK_W) + LAND_MASK_W) % LAND_MASK_W;
+    pCol0[j] = wc0;
+    pCol1[j] = (wc0 + 1) % LAND_MASK_W;
+    pTx[j] = fx - c0;
+  }
+
+  for (let i = 0; i < pSize; i++) {
+    const mr0 = pRow0[i], mr1 = pRow1[i], mty = pTy[i];
+    const rowOff = i * pSize;
+    for (let j = 0; j < pSize; j++) {
+      const mc0 = pCol0[j], mc1 = pCol1[j], mtx = pTx[j];
+      landRaw[rowOff + j] = (1 - mtx) * (1 - mty) * grid[mr0 + mc0] + mtx * (1 - mty) * grid[mr0 + mc1] +
+                            (1 - mtx) * mty * grid[mr1 + mc0] + mtx * mty * grid[mr1 + mc1];
+    }
+  }
+  // Horizontal 5-tap Gaussian [1, 4, 6, 4, 1] / 16
+  for (let i = 0; i < pSize; i++) {
+    const srcOff = i * pSize;
+    const dstOff = i * size;
+    for (let px = 0; px < size; px++) {
+      const j = px + pad;
+      landH[dstOff + px] = (landRaw[srcOff + j - 2] + 4 * landRaw[srcOff + j - 1] + 6 * landRaw[srcOff + j] +
+                            4 * landRaw[srcOff + j + 1] + landRaw[srcOff + j + 2]) * 0.0625;
+    }
+  }
+  // Vertical 5-tap Gaussian [1, 4, 6, 4, 1] / 16
+  for (let py = 0; py < size; py++) {
+    const i = py + pad;
+    const rM2 = (i - 2) * size, rM1 = (i - 1) * size, r0 = i * size, rP1 = (i + 1) * size, rP2 = (i + 2) * size;
+    const dstOff = py * size;
+    for (let px = 0; px < size; px++) {
+      landSmooth[dstOff + px] = (landH[rM2 + px] + 4 * landH[rM1 + px] + 6 * landH[r0 + px] +
+                                 4 * landH[rP1 + px] + landH[rP2 + px]) * 0.0625;
+    }
+  }
+
   const rgba = new Uint8Array(size * size * 4);
   const invStep = 1 / step;
   const contourInterval = layer === "sst" ? 1.5 : layer === "chlorophyll" ? 0.25 : 12.0;
@@ -778,21 +850,10 @@ function buildRasterTileRgba(layer, z, x, y) {
     const ty = tyRaw * tyRaw * (3 - 2 * tyRaw);
     const rowOff0 = gy * gSize;
     const rowOff1 = (gy + 1) * gSize;
-    const mr0 = maskR0[py];
-    const mr1 = maskR1[py];
-    const mty = maskTy[py];
     const pyRow = py * size;
 
     for (let px = 0; px < size; px++) {
-      const mc0 = maskC0[px];
-      const mc1 = maskC1[px];
-      const mtx = maskTx[px];
-      const l00 = grid[mr0 + mc0];
-      const l01 = grid[mr0 + mc1];
-      const l10 = grid[mr1 + mc0];
-      const l11 = grid[mr1 + mc1];
-      const landRaw = (1 - mtx) * (1 - mty) * l00 + mtx * (1 - mty) * l01 + (1 - mtx) * mty * l10 + mtx * mty * l11;
-      const land = smoothstep(0.18, 0.82, landRaw);
+      const land = smoothstep(0.14, 0.86, landSmooth[pyRow + px]);
       if (land >= 0.999) continue;
 
       const gx = Math.min(gSize - 2, (px / step) | 0);
