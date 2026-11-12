@@ -708,18 +708,40 @@ html, body {
   position: absolute; top: 8px; right: 8px; z-index: 30;
   width: min(350px, calc(100% - 16px));
   max-height: calc(100% - 80px); /* Leave room above bottom dock to prevent collision */
-  overflow-y: auto; overflow-x: hidden;
+  overflow: hidden;
   background: var(--surface-glass-panel);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   border: var(--border-hairline);
-  border-radius: 8px; padding: 8px 10px; display: none; flex-direction: column; gap: 7px;
+  border-radius: 8px; padding: 10px 12px; display: none; flex-direction: column;
   box-shadow: var(--panel-shadow);
 }
 .inspector-card.open { display: flex; }
 .drawer-header {
-  position: sticky; top: 0; z-index: 5; background: inherit;
-  padding-bottom: 5px; border-bottom: var(--border-hairline);
+  flex-shrink: 0;
+  background: transparent;
+  padding-bottom: 7px;
+  border-bottom: var(--border-hairline);
+  margin-bottom: 8px;
+}
+#inspector-body {
+  overflow-y: auto;
+  overflow-x: hidden;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-right: 2px;
+}
+#inspector-body::-webkit-scrollbar {
+  width: 4px;
+}
+#inspector-body::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+[data-theme="daylight"] #inspector-body::-webkit-scrollbar-thumb {
+  background: rgba(15, 23, 42, 0.2);
 }
 .drawer-close-btn {
   width: 24px; height: 24px; min-width: 24px; min-height: 24px;
