@@ -660,7 +660,7 @@
         <div class="top-left-hud">
           <div class="quick-bar">
             <select id="wpp-select" class="pill-select" aria-label="Pilih wilayah perairan">
-              <option value="">Semua Perairan Indonesia</option>
+              <option value="">Seluruh Samudra Dunia (Global)</option>
             </select>
             <select id="fish-filter-select" class="pill-select" aria-label="Filter jenis ikan di peta">
               <option value="">Semua Jenis Ikan</option>
@@ -2011,9 +2011,9 @@
         state.centerLon = zone.centroid_lon;
         state.zoom = 6;
       } else {
-        state.centerLat = -2.5;
-        state.centerLon = 118.0;
-        state.zoom = 5;
+        state.centerLat = 5.0;
+        state.centerLon = 115.0;
+        state.zoom = 3;
       }
       syncMap();
     });

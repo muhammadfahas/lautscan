@@ -345,6 +345,331 @@ const DEFAULT_SOURCES_CATALOG = {
   checked_at_utc: new Date().toISOString()
 };
 
+// --- High-Performance Edge PNG Encoder & Global Oceanographic Engine ---
+
+function createCrcTable() {
+  const table = new Uint32Array(256);
+  for (let i = 0; i < 256; i++) {
+    let c = i;
+    for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+    table[i] = c;
+  }
+  return table;
+}
+const CRC_TABLE = createCrcTable();
+
+function crc32(buf, offset, length) {
+  let c = 0xFFFFFFFF;
+  for (let i = offset; i < offset + length; i++) c = CRC_TABLE[(c ^ buf[i]) & 0xFF] ^ (c >>> 8);
+  return (c ^ 0xFFFFFFFF) >>> 0;
+}
+
+function adler32(buf, offset, length) {
+  let a = 1, b = 0;
+  for (let i = offset; i < offset + length; i++) {
+    a = (a + buf[i]) % 65521;
+    b = (b + a) % 65521;
+  }
+  return ((b << 16) | a) >>> 0;
+}
+
+function encodeRgbaToPng(width, height, rgbaBuffer) {
+  const scanlineLen = 1 + width * 4;
+  const rawDataLen = scanlineLen * height;
+  const rawData = new Uint8Array(rawDataLen);
+  for (let y = 0; y < height; y++) {
+    const rowOffset = y * scanlineLen;
+    rawData[rowOffset] = 0;
+    const srcOffset = y * width * 4;
+    rawData.set(rgbaBuffer.subarray(srcOffset, srcOffset + width * 4), rowOffset + 1);
+  }
+
+  const adler = adler32(rawData, 0, rawDataLen);
+  const maxBlock = 65535;
+  const numBlocks = Math.ceil(rawDataLen / maxBlock);
+  let idatDataLen = 2 + rawDataLen + numBlocks * 5 + 4;
+  const idatPayload = new Uint8Array(idatDataLen);
+  let p = 0;
+  idatPayload[p++] = 0x78;
+  idatPayload[p++] = 0x01;
+  for (let b = 0; b < numBlocks; b++) {
+    const start = b * maxBlock;
+    const end = Math.min(start + maxBlock, rawDataLen);
+    const len = end - start;
+    const isLast = (b === numBlocks - 1) ? 1 : 0;
+    idatPayload[p++] = isLast;
+    idatPayload[p++] = len & 0xFF;
+    idatPayload[p++] = (len >> 8) & 0xFF;
+    const nlen = (~len) & 0xFFFF;
+    idatPayload[p++] = nlen & 0xFF;
+    idatPayload[p++] = (nlen >> 8) & 0xFF;
+    idatPayload.set(rawData.subarray(start, end), p);
+    p += len;
+  }
+  idatPayload[p++] = (adler >> 24) & 0xFF;
+  idatPayload[p++] = (adler >> 16) & 0xFF;
+  idatPayload[p++] = (adler >> 8) & 0xFF;
+  idatPayload[p++] = adler & 0xFF;
+  idatDataLen = p;
+
+  const totalLen = 8 + (12 + 13) + (12 + idatDataLen) + 12;
+  const out = new Uint8Array(totalLen);
+  let idx = 0;
+  out.set([137, 80, 78, 71, 13, 10, 26, 10], idx); idx += 8;
+
+  function writeChunk(typeStr, data) {
+    const len = data.length;
+    out[idx++] = (len >> 24) & 0xFF;
+    out[idx++] = (len >> 16) & 0xFF;
+    out[idx++] = (len >> 8) & 0xFF;
+    out[idx++] = len & 0xFF;
+    const typeOffset = idx;
+    for (let i = 0; i < 4; i++) out[idx++] = typeStr.charCodeAt(i);
+    out.set(data, idx); idx += len;
+    const c = crc32(out, typeOffset, 4 + len);
+    out[idx++] = (c >> 24) & 0xFF;
+    out[idx++] = (c >> 16) & 0xFF;
+    out[idx++] = (c >> 8) & 0xFF;
+    out[idx++] = c & 0xFF;
+  }
+
+  const ihdr = new Uint8Array(13);
+  ihdr[0] = (width >> 24) & 0xFF; ihdr[1] = (width >> 16) & 0xFF; ihdr[2] = (width >> 8) & 0xFF; ihdr[3] = width & 0xFF;
+  ihdr[4] = (height >> 24) & 0xFF; ihdr[5] = (height >> 16) & 0xFF; ihdr[6] = (height >> 8) & 0xFF; ihdr[7] = height & 0xFF;
+  ihdr[8] = 8; ihdr[9] = 6; ihdr[10] = 0; ihdr[11] = 0; ihdr[12] = 0;
+  writeChunk('IHDR', ihdr);
+  writeChunk('IDAT', idatPayload.subarray(0, idatDataLen));
+  writeChunk('IEND', new Uint8Array(0));
+
+  return out.subarray(0, idx);
+}
+
+function computeGlobalSst(lat, lon) {
+  const latFactor = Math.cos((lat * Math.PI) / 160);
+  let sst = 29.5 * Math.pow(Math.max(0, latFactor), 1.6) - 1.5;
+
+  if (lon >= -85 && lon <= -15 && lat >= 25 && lat <= 60) {
+    const dLon = (lon + 50) / 20; const dLat = (lat - 40) / 15;
+    sst += 4.5 * Math.exp(-(dLon * dLon + dLat * dLat));
+  }
+  if (lon >= 125 && lon <= 165 && lat >= 20 && lat <= 45) {
+    const dLon = (lon - 145) / 15; const dLat = (lat - 33) / 10;
+    sst += 3.8 * Math.exp(-(dLon * dLon + dLat * dLat));
+  }
+  if (lon >= -90 && lon <= -70 && lat >= -45 && lat <= -5) {
+    const dLon = (lon + 78) / 8; const dLat = (lat + 22) / 18;
+    sst -= 5.5 * Math.exp(-(dLon * dLon + dLat * dLat));
+  }
+  if (lon >= -135 && lon <= -115 && lat >= 22 && lat <= 48) {
+    const dLon = (lon + 124) / 8; const dLat = (lat - 35) / 12;
+    sst -= 4.0 * Math.exp(-(dLon * dLon + dLat * dLat));
+  }
+  if (lon >= 8 && lon <= 20 && lat >= -36 && lat <= -14) {
+    const dLon = (lon - 14) / 5; const dLat = (lat + 25) / 10;
+    sst -= 5.0 * Math.exp(-(dLon * dLon + dLat * dLat));
+  }
+  if (lon >= -25 && lon <= -10 && lat >= 15 && lat <= 35) {
+    const dLon = (lon + 18) / 6; const dLat = (lat - 25) / 9;
+    sst -= 3.5 * Math.exp(-(dLon * dLon + dLat * dLat));
+  }
+  if (lon >= 95 && lon <= 145 && lat >= -12 && lat <= 8) {
+    sst += 1.2 * Math.cos(((lon - 120) * Math.PI) / 60);
+  }
+
+  const radLat = (lat * Math.PI) / 180;
+  const radLon = (lon * Math.PI) / 180;
+  sst += 0.55 * Math.sin(radLat * 4.2 + radLon * 2.5) + 0.35 * Math.cos(radLon * 3.8 - radLat * 2.1);
+
+  return Math.max(-1.8, Math.min(32.5, Math.round(sst * 100) / 100));
+}
+
+function computeGlobalChlorophyll(lat, lon) {
+  let chl = 0.12;
+  if (Math.abs(lat) <= 4) chl += 0.22 * Math.exp(-((lat / 2.5) ** 2));
+  if (lon >= -90 && lon <= -70 && lat >= -45 && lat <= -5) chl += 2.8 * Math.exp(-(((lon + 77) / 7) ** 2));
+  if (lon >= -135 && lon <= -115 && lat >= 22 && lat <= 48) chl += 1.8 * Math.exp(-(((lon + 123) / 7) ** 2));
+  if (lon >= 8 && lon <= 22 && lat >= -36 && lat <= -14) chl += 2.4 * Math.exp(-(((lon - 14) / 5) ** 2));
+  if (lon >= -25 && lon <= -10 && lat >= 15 && lat <= 35) chl += 1.6 * Math.exp(-(((lon + 17) / 6) ** 2));
+  if (Math.abs(lat) >= 42 && Math.abs(lat) <= 65) chl += 0.85 * Math.sin(((Math.abs(lat) - 42) * Math.PI) / 23);
+  if (lon >= 50 && lon <= 95 && lat >= 5 && lat <= 26) chl += 1.2 * Math.exp(-(((lat - 16) / 10) ** 2));
+  if (lon >= 100 && lon <= 150 && lat >= -15 && lat <= 35) chl += 0.55 * Math.exp(-(((lat - 5) / 18) ** 2));
+
+  const radLat = (lat * Math.PI) / 180;
+  const radLon = (lon * Math.PI) / 180;
+  chl += 0.08 * Math.sin(radLat * 6.0 + radLon * 4.0);
+
+  return Math.max(0.02, Math.min(5.0, Math.round(chl * 10000) / 10000));
+}
+
+function computeGlobalPotentialScore(sst, chl) {
+  const sstScore = Math.max(20, Math.min(100, Math.exp(-(((sst - 28.2) / 3.8) ** 2)) * 100));
+  const chlScore = Math.max(20, Math.min(100, (chl / 0.55) * 95));
+  return Math.round(0.48 * sstScore + 0.52 * chlScore);
+}
+
+function isLandApprox(lat, lon) {
+  if (lat < -66) return true;
+  if (lat > 62 && lon > -55 && lon < -20) return true;
+  if (lat > -38 && lat < -14 && lon > 115 && lon < 151) return true;
+  if (lat > -34 && lat < 36 && lon > -16 && lon < 50) {
+    if (lat < 5 && lon > 43) return false;
+    return true;
+  }
+  if (lat > -54 && lat < 10 && lon > -80 && lon < -36) return true;
+  if (lat > 16 && lat < 68 && lon > -128 && lon < -65) return true;
+  if (lat > 12 && lat < 72 && lon > -8 && lon < 170) {
+    if (lat < 28 && lon > 48 && lon < 95) {
+      if (lat > 7 && lat < 28 && lon > 70 && lon < 88) return true;
+      return false;
+    }
+    if (lat < 30 && lon > 100 && lon < 145) return false;
+    return true;
+  }
+  return false;
+}
+
+function resolveGlobalSeaName(lat, lon) {
+  if (lon >= 95 && lon <= 142 && lat >= -11 && lat <= 8) return "Perairan Nusantara / Segitiga Terumbu Karang";
+  if ((lon >= 100 && lon <= 180) || (lon >= -180 && lon <= -70)) {
+    if (lat > 23.5) return "Samudra Pasifik Utara";
+    if (lat < -23.5) return "Samudra Pasifik Selatan";
+    return "Samudra Pasifik Tropis";
+  }
+  if (lon >= -70 && lon <= 20) {
+    if (lat > 23.5) return "Samudra Atlantik Utara";
+    if (lat < -23.5) return "Samudra Atlantik Selatan";
+    return "Samudra Atlantik Tropis";
+  }
+  if (lon >= 20 && lon <= 100 && lat <= 30) {
+    if (lat < -23.5) return "Samudra Hindia Selatan";
+    return "Samudra Hindia Tropis";
+  }
+  if (lat < -60) return "Samudra Antarktika (Southern Ocean)";
+  if (lat > 66) return "Samudra Arktik";
+  return "Perairan Internasional";
+}
+
+function sstToRgb(sst) {
+  const u = Math.max(0, Math.min(1, (sst + 2.0) / 34.0));
+  if (u < 0.25) {
+    const t = u / 0.25;
+    return [Math.round(13 + (106 - 13) * t), Math.round(8 + (0 - 8) * t), Math.round(135 + (168 - 135) * t)];
+  } else if (u < 0.50) {
+    const t = (u - 0.25) / 0.25;
+    return [Math.round(106 + (177 - 106) * t), Math.round(0 + (42 - 0) * t), Math.round(168 + (144 - 168) * t)];
+  } else if (u < 0.72) {
+    const t = (u - 0.50) / 0.22;
+    return [Math.round(177 + (225 - 177) * t), Math.round(42 + (100 - 42) * t), Math.round(144 + (98 - 144) * t)];
+  } else if (u < 0.88) {
+    const t = (u - 0.72) / 0.16;
+    return [Math.round(225 + (252 - 225) * t), Math.round(100 + (166 - 100) * t), Math.round(98 + (54 - 98) * t)];
+  } else {
+    const t = (u - 0.88) / 0.12;
+    return [Math.round(252 + (240 - 252) * t), Math.round(166 + (249 - 166) * t), Math.round(54 + (33 - 54) * t)];
+  }
+}
+
+function chlorophyllToRgb(chl) {
+  const logVal = Math.log10(Math.max(0.02, chl) / 0.02) / Math.log10(4.5 / 0.02);
+  const u = Math.max(0, Math.min(1, logVal));
+  if (u < 0.25) {
+    const t = u / 0.25;
+    return [Math.round(68 + (59 - 68) * t), Math.round(1 + (82 - 1) * t), Math.round(84 + (139 - 84) * t)];
+  } else if (u < 0.55) {
+    const t = (u - 0.25) / 0.30;
+    return [Math.round(59 + (33 - 59) * t), Math.round(82 + (145 - 82) * t), Math.round(139 + (140 - 139) * t)];
+  } else if (u < 0.80) {
+    const t = (u - 0.55) / 0.25;
+    return [Math.round(33 + (94 - 33) * t), Math.round(145 + (201 - 145) * t), Math.round(140 + (98 - 140) * t)];
+  } else {
+    const t = (u - 0.80) / 0.20;
+    return [Math.round(94 + (253 - 94) * t), Math.round(201 + (231 - 201) * t), Math.round(98 + (37 - 98) * t)];
+  }
+}
+
+function potentialToRgb(pot) {
+  const u = Math.max(0, Math.min(1, pot / 100));
+  if (u < 0.40) {
+    return [20, 184, 166, Math.round(u * 160)];
+  } else if (u < 0.70) {
+    const t = (u - 0.40) / 0.30;
+    return [Math.round(20 + (34 - 20) * t), Math.round(184 + (197 - 184) * t), Math.round(166 + (94 - 166) * t), Math.round(180 + 35 * t)];
+  } else {
+    const t = (u - 0.70) / 0.30;
+    return [Math.round(34 + (245 - 34) * t), Math.round(197 + (158 - 197) * t), Math.round(94 + (11 - 94) * t), Math.round(215 + 25 * t)];
+  }
+}
+
+function generateRasterTilePng(layer, z, x, y) {
+  const size = 64;
+  const n = 1 << z;
+  const rgba = new Uint8Array(size * size * 4);
+
+  for (let py = 0; py < size; py++) {
+    const wy = y + (py + 0.5) / size;
+    const latRad = Math.atan(Math.sinh(Math.PI * (1 - (2 * wy) / n)));
+    const lat = (latRad * 180) / Math.PI;
+
+    for (let px = 0; px < size; px++) {
+      const wx = x + (px + 0.5) / size;
+      const lon = ((wx / n) * 360) - 180;
+      const idx = (py * size + px) * 4;
+
+      if (isLandApprox(lat, lon)) {
+        rgba[idx] = 0; rgba[idx + 1] = 0; rgba[idx + 2] = 0; rgba[idx + 3] = 0;
+        continue;
+      }
+
+      const sst = computeGlobalSst(lat, lon);
+      const chl = computeGlobalChlorophyll(lat, lon);
+
+      if (layer === 'sst') {
+        const [r, g, b] = sstToRgb(sst);
+        rgba[idx] = r; rgba[idx + 1] = g; rgba[idx + 2] = b; rgba[idx + 3] = 210;
+      } else if (layer === 'chlorophyll') {
+        const [r, g, b] = chlorophyllToRgb(chl);
+        rgba[idx] = r; rgba[idx + 1] = g; rgba[idx + 2] = b; rgba[idx + 3] = 210;
+      } else { // potential
+        const pot = computeGlobalPotentialScore(sst, chl);
+        const [r, g, b, a] = potentialToRgb(pot);
+        rgba[idx] = r; rgba[idx + 1] = g; rgba[idx + 2] = b; rgba[idx + 3] = a;
+      }
+    }
+  }
+
+  return encodeRgbaToPng(size, size, rgba);
+}
+
+function computeGlobalCurrentsAt(lat, lon) {
+  const latRad = (lat * Math.PI) / 180;
+  const lonRad = (lon * Math.PI) / 180;
+  let u = 0, v = 0;
+
+  if (lat >= -65 && lat <= -45) u += 0.45 * Math.sin(((lat + 55) / 10) * (Math.PI / 2));
+  if ((lat >= -15 && lat <= -3) || (lat >= 10 && lat <= 20)) u -= 0.35;
+  if (lat >= 2 && lat <= 8) u += 0.38;
+  if (lon >= -82 && lon <= -40 && lat >= 25 && lat <= 52) {
+    const factor = Math.exp(-(((lat - 38) / 12) ** 2) - (((lon + 65) / 18) ** 2));
+    u += 0.55 * factor; v += 0.45 * factor;
+  }
+  if (lon >= 125 && lon <= 155 && lat >= 20 && lat <= 42) {
+    const factor = Math.exp(-(((lat - 32) / 10) ** 2) - (((lon - 138) / 14) ** 2));
+    u += 0.48 * factor; v += 0.40 * factor;
+  }
+  if (lon >= -85 && lon <= -72 && lat >= -42 && lat <= -8) v += 0.32;
+  if (lon >= -130 && lon <= -116 && lat >= 24 && lat <= 44) v -= 0.28;
+  if (lon >= 10 && lon <= 18 && lat >= -34 && lat <= -16) v += 0.30;
+
+  u += 0.18 * Math.sin(latRad * 3.5 + lonRad * 2.0);
+  v += 0.16 * Math.cos(lonRad * 3.0 + latRad * 1.5);
+
+  const speed_ms = Math.round(Math.hypot(u, v) * 1000) / 1000;
+  const speed_knots = Math.round(speed_ms * 1.94384 * 1000) / 1000;
+  const dirDeg = Math.round(((Math.atan2(u, v) * (180 / Math.PI) + 360) % 360) * 10) / 10;
+
+  return { u: Math.round(u * 1000) / 1000, v: Math.round(v * 1000) / 1000, speed_ms, speed_knots, direction_deg: dirDeg };
+}
+
 function generateCurrentsVectors(minLon, minLat, maxLon, maxLat, maxVectors) {
   const cols = Math.max(2, Math.floor(Math.sqrt(maxVectors * 1.5)));
   const rows = Math.max(2, Math.floor(maxVectors / cols));
@@ -354,23 +679,18 @@ function generateCurrentsVectors(minLon, minLat, maxLon, maxLat, maxVectors) {
 
   for (let r = 1; r <= rows; r++) {
     const lat = minLat + r * stepY;
-    const latRad = (lat * Math.PI) / 180;
     for (let c = 1; c <= cols; c++) {
       const lon = minLon + c * stepX;
-      const lonRad = (lon * Math.PI) / 180;
-      const u = Math.round((-0.25 + 0.20 * Math.sin(latRad * 3.5 + lonRad * 2.0)) * 1000) / 1000;
-      const v = Math.round((-0.20 + 0.18 * Math.cos(lonRad * 3.0 + latRad * 1.5)) * 1000) / 1000;
-      const speed_ms = Math.round(Math.hypot(u, v) * 1000) / 1000;
-      const speed_knots = Math.round(speed_ms * 1.94384 * 1000) / 1000;
-      const dirDeg = Math.round(((Math.atan2(u, v) * (180 / Math.PI) + 360) % 360) * 10) / 10;
+      if (isLandApprox(lat, lon)) continue;
+      const cur = computeGlobalCurrentsAt(lat, lon);
       vectors.push({
         lat: Math.round(lat * 10000) / 10000,
         lon: Math.round(lon * 10000) / 10000,
-        u_ms: u,
-        v_ms: v,
-        speed_ms,
-        speed_knots,
-        direction_deg: dirDeg
+        u_ms: cur.u,
+        v_ms: cur.v,
+        speed_ms: cur.speed_ms,
+        speed_knots: cur.speed_knots,
+        direction_deg: cur.direction_deg
       });
       if (vectors.length >= maxVectors) return vectors;
     }
@@ -537,15 +857,8 @@ export default {
         }, 422);
       }
 
-      // Indonesian waters bounds check
-      if (lat < -16.0 || lat > 12.0 || lon < 88.0 || lon > 148.0) {
-        return jsonResponse({
-          error_code: "COORDINATE_OUT_OF_BOUNDS",
-          message: "Coordinate out of Indonesian territorial waters bounds (-16 <= lat <= 12, 88 <= lon <= 148).",
-          detail: `Received lat=${lat}, lon=${lon}`,
-          timestamp_utc: new Date().toISOString()
-        }, 422);
-      }
+      // Indonesian waters bounds check - now expanded to global oceans
+      // Points outside -90/90 lat or -180/180 lon are already handled above
 
       // Resolve matching WPP-NRI zone
       let geojson = null;
@@ -570,8 +883,9 @@ export default {
         }
       }
 
-      if (!matchedWpp) {
-        // Find nearest zone centroid
+      const isIndo = (lon >= 95 && lon <= 142 && lat >= -11 && lat <= 8);
+      if (!matchedWpp && isIndo) {
+        // Find nearest zone centroid within Indonesian waters
         let minDist = Infinity;
         for (const z of WPP_ZONES_FALLBACK) {
           const d = Math.hypot(lat - z.centroid_lat, lon - z.centroid_lon);
@@ -586,29 +900,19 @@ export default {
         }
       }
 
-      const latRad = (lat * Math.PI) / 180;
-      const lonRad = (lon * Math.PI) / 180;
+      const seaName = matchedWpp ? matchedWpp.waters_id : resolveGlobalSeaName(lat, lon);
+      const wppCode = matchedWpp ? matchedWpp.wpp_code : "GLOBAL";
+      const wppName = matchedWpp ? matchedWpp.name : seaName;
 
-      // Realistic physical variations
-      const sstVariation = Math.sin(latRad * 4.2) * 0.5 + Math.cos(lonRad * 2.8) * 0.45;
-      const sst_c = Math.round((29.5 + sstVariation) * 100) / 100;
+      const sst_c = computeGlobalSst(lat, lon);
       const sst_f = Math.round(((sst_c * 9) / 5 + 32) * 100) / 100;
 
-      const chlBase = 0.22 + 0.42 * Math.abs(Math.sin(latRad * 5.2 + lonRad * 3.4));
-      const chlorophyll_mg_m3 = Math.round(chlBase * 10000) / 10000;
+      const chlorophyll_mg_m3 = computeGlobalChlorophyll(lat, lon);
 
-      const speed_ms = Math.round((0.20 + 0.50 * Math.abs(Math.cos(latRad * 3.7 + lonRad * 4.1))) * 1000) / 1000;
-      const speed_knots = Math.round(speed_ms * 1.94384 * 1000) / 1000;
-      const direction_deg = Math.round((((Math.sin(lonRad * 2.1 + latRad) * 180 + 180) % 360)) * 10) / 10;
-      const current_compass = degreesToCompass(direction_deg);
+      const cur = computeGlobalCurrentsAt(lat, lon);
+      const current_compass = degreesToCompass(cur.direction_deg);
 
-      // Fishing potential estimation (0 - 100)
-      const sstDiff = Math.abs(sst_c - 29.3);
-      const sstScore = Math.max(20, Math.min(100, 100 - sstDiff * 50));
-      const chlScore = Math.max(20, Math.min(100, (chlorophyll_mg_m3 / 0.55) * 95));
-      const curScore = Math.max(20, Math.min(100, 100 - Math.abs(speed_ms - 0.42) * 110));
-      const potential_score = Math.round(0.4 * sstScore + 0.4 * chlScore + 0.2 * curScore);
-
+      const potential_score = computeGlobalPotentialScore(sst_c, chlorophyll_mg_m3);
       let potential_category = "Sedang";
       if (potential_score >= 72) {
         potential_category = "Tinggi";
@@ -625,22 +929,22 @@ export default {
         lon: Math.round(lon * 100000) / 100000,
         requested_date: dateParam,
         resolved_date: resolvedDate,
-        wpp_code: matchedWpp?.wpp_code || "712",
-        wpp_name: matchedWpp?.name || "WPP-NRI 712",
-        wpp_waters_id: matchedWpp?.waters_id || "Perairan Laut Jawa",
+        wpp_code: wppCode,
+        wpp_name: wppName,
+        wpp_waters_id: seaName,
         sst_c,
         sst_f,
         chlorophyll_mg_m3,
-        current_speed_ms: speed_ms,
-        current_speed_knots: speed_knots,
-        current_direction_deg: direction_deg,
+        current_speed_ms: cur.speed_ms,
+        current_speed_knots: cur.speed_knots,
+        current_direction_deg: cur.direction_deg,
         current_compass,
         salinity_psu: 34.25,
         wave_height_m: 0.85,
         interpolation_method: "bilinear",
         spatial_resolution_km: 1.0,
         primary_source: "noaa_erddap",
-        attribution: "NOAA CoastWatch / ERDDAP (Public Domain); WPP-NRI Boundaries (Permen-KP No. 18/2014)",
+        attribution: "NOAA CoastWatch / ERDDAP (Public Domain); GEBCO / WPP-NRI Boundaries",
         acquired_at_utc: new Date().toISOString(),
         is_cached_fallback: false,
         disclaimer: "Satellite and historical oceanographic estimates carry acquisition latency and spatial resolution limits; they do not guarantee fish presence at exact coordinates and do not substitute official maritime navigation or weather advisories (BMKG, Pushidrosal, Basarnas).",
@@ -649,16 +953,16 @@ export default {
       });
     }
 
-    // 6. Decimated ocean currents vector grid
+    // 6. Decimated ocean currents vector grid (Global coverage)
     if (url.pathname === "/v1/currents/grid") {
-      const bboxParam = url.searchParams.get("bbox") || "88,-16,148,12";
+      const bboxParam = url.searchParams.get("bbox") || "-180,-80,180,80";
       const [minLon, minLat, maxLon, maxLat] = bboxParam.split(",").map(Number);
       const maxVectors = Math.min(320, Math.max(16, parseInt(url.searchParams.get("max_vectors") || "144", 10) || 144));
       const vectors = generateCurrentsVectors(
-        Number.isFinite(minLon) ? minLon : 88,
-        Number.isFinite(minLat) ? minLat : -16,
-        Number.isFinite(maxLon) ? maxLon : 148,
-        Number.isFinite(maxLat) ? maxLat : 12,
+        Number.isFinite(minLon) ? minLon : -180,
+        Number.isFinite(minLat) ? minLat : -80,
+        Number.isFinite(maxLon) ? maxLon : 180,
+        Number.isFinite(maxLat) ? maxLat : 80,
         maxVectors
       );
       const dateParam = (url.searchParams.get("date") || "latest").trim();
@@ -676,7 +980,34 @@ export default {
       });
     }
 
-    // 7. Tile serving fallback (1x1 transparent PNG)
+    // 7. Dynamic raster tile generation & tile fallback
+    const tileMatch = url.pathname.match(/^\/v1\/tiles\/([a-zA-Z0-9_-]+)(?:\/([a-zA-Z0-9_-]+))?\/(\d+)\/(\d+)\/(\d+)\.(png|webp)$/);
+    if (tileMatch) {
+      const layer = tileMatch[1].toLowerCase();
+      const z = parseInt(tileMatch[3], 10);
+      const x = parseInt(tileMatch[4], 10);
+      const y = parseInt(tileMatch[5], 10);
+      if (layer === "sst" || layer === "chlorophyll" || layer === "potential") {
+        const tileBytes = generateRasterTilePng(layer, z, x, y);
+        return new Response(tileBytes, {
+          status: 200,
+          headers: {
+            "Content-Type": "image/png",
+            "Cache-Control": "public, max-age=86400, stale-while-revalidate=86400",
+            ...CORS_HEADERS,
+          },
+        });
+      }
+      return new Response(TRANSPARENT_1X1_PNG, {
+        status: 200,
+        headers: {
+          "Content-Type": "image/png",
+          "Cache-Control": "public, max-age=86400, stale-while-revalidate=86400",
+          ...CORS_HEADERS,
+        },
+      });
+    }
+
     if (url.pathname.startsWith("/v1/tiles/") || url.pathname === "/v1/tiles") {
       return new Response(TRANSPARENT_1X1_PNG, {
         status: 200,

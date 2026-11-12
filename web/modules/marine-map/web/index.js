@@ -11,9 +11,9 @@
 // - Camera stop emits `moveend` with serialized bbox + camera JSON
 
 const TILE_SIZE = 256;
-const MIN_ZOOM = 2;
+const MIN_ZOOM = 1;
 const DEFAULT_MAX_ZOOM = 14;
-const MIN_NATIVE_RASTER_ZOOM = 4;
+const MIN_NATIVE_RASTER_ZOOM = 1;
 const MAX_NATIVE_RASTER_ZOOM = 9;
 const MAX_RASTER_CACHE_ENTRIES = 280;
 const MAX_CURRENTS_CACHE_ENTRIES = 12;
@@ -484,14 +484,8 @@ function tileBounds(z, x, y) {
 }
 
 function intersectsIndonesia(z, x, y) {
-  if (z <= 3) return true;
-  const b = tileBounds(z, x, y);
-  return !(
-    b.east < INDONESIA_BOUNDS.minLon ||
-    b.west > INDONESIA_BOUNDS.maxLon ||
-    b.north < INDONESIA_BOUNDS.minLat ||
-    b.south > INDONESIA_BOUNDS.maxLat
-  );
+  // Global coverage: allow all tiles worldwide
+  return true;
 }
 
 function normalizeBaseUrl(raw) {
@@ -1138,15 +1132,15 @@ export class MarineMap {
     const clampedBottom = clamp(cy + halfH, 0, scale);
     const [northLat] = unproject(cx, clampedTop, this.zoom);
     const [southLat] = unproject(cx, clampedBottom, this.zoom);
-    const minLat = Math.max(INDONESIA_BOUNDS.minLat, southLat);
-    const maxLat = Math.min(INDONESIA_BOUNDS.maxLat, northLat);
+    const minLat = clamp(southLat, -80, 80);
+    const maxLat = clamp(northLat, -80, 80);
     if (minLat >= maxLat) return null;
 
     const lonSpan = (w / scale) * 360;
     if (lonSpan >= 359.99) {
       return {
-        minLon: INDONESIA_BOUNDS.minLon,
-        maxLon: INDONESIA_BOUNDS.maxLon,
+        minLon: -180,
+        maxLon: 180,
         minLat,
         maxLat,
       };
@@ -1154,17 +1148,11 @@ export class MarineMap {
 
     const rawWest = ((cx - halfW) / scale) * 360 - 180;
     const rawEast = ((cx + halfW) / scale) * 360 - 180;
-    let minLon = Infinity;
-    let maxLon = -Infinity;
-    for (const shift of [0, -360, 360]) {
-      const a = Math.max(INDONESIA_BOUNDS.minLon, rawWest + shift);
-      const b = Math.min(INDONESIA_BOUNDS.maxLon, rawEast + shift);
-      if (a < b) {
-        if (a < minLon) minLon = a;
-        if (b > maxLon) maxLon = b;
-      }
+    const minLon = clamp(rawWest, -180, 180);
+    const maxLon = clamp(rawEast, -180, 180);
+    if (minLon >= maxLon) {
+      return { minLon: -180, maxLon: 180, minLat, maxLat };
     }
-    if (!Number.isFinite(minLon) || minLon >= maxLon) return null;
     return { minLon, maxLon, minLat, maxLat };
   }
 
@@ -1913,28 +1901,14 @@ export class MarineMap {
   padCurrentsBbox(bounds) {
     const spanLon = bounds.maxLon - bounds.minLon;
     const spanLat = bounds.maxLat - bounds.minLat;
-    const targetLon = Math.min(INDONESIA_BOUNDS.maxLon - INDONESIA_BOUNDS.minLon, Math.max(4.5, spanLon * 1.25));
-    const targetLat = Math.min(INDONESIA_BOUNDS.maxLat - INDONESIA_BOUNDS.minLat, Math.max(3.5, spanLat * 1.25));
+    const targetLon = Math.min(360, Math.max(4.5, spanLon * 1.25));
+    const targetLat = Math.min(160, Math.max(3.5, spanLat * 1.25));
     const cLon = (bounds.minLon + bounds.maxLon) * 0.5;
     const cLat = (bounds.minLat + bounds.maxLat) * 0.5;
-    let minLon = Math.max(INDONESIA_BOUNDS.minLon, cLon - targetLon * 0.5);
-    let maxLon = Math.min(INDONESIA_BOUNDS.maxLon, cLon + targetLon * 0.5);
-    if (maxLon - minLon < targetLon) {
-      if (minLon <= INDONESIA_BOUNDS.minLon) {
-        maxLon = Math.min(INDONESIA_BOUNDS.maxLon, minLon + targetLon);
-      } else {
-        minLon = Math.max(INDONESIA_BOUNDS.minLon, maxLon - targetLon);
-      }
-    }
-    let minLat = Math.max(INDONESIA_BOUNDS.minLat, cLat - targetLat * 0.5);
-    let maxLat = Math.min(INDONESIA_BOUNDS.maxLat, cLat + targetLat * 0.5);
-    if (maxLat - minLat < targetLat) {
-      if (minLat <= INDONESIA_BOUNDS.minLat) {
-        maxLat = Math.min(INDONESIA_BOUNDS.maxLat, minLat + targetLat);
-      } else {
-        minLat = Math.max(INDONESIA_BOUNDS.minLat, maxLat - targetLat);
-      }
-    }
+    let minLon = Math.max(-180, cLon - targetLon * 0.5);
+    let maxLon = Math.min(180, cLon + targetLon * 0.5);
+    let minLat = Math.max(-80, cLat - targetLat * 0.5);
+    let maxLat = Math.min(80, cLat + targetLat * 0.5);
     return { minLon, minLat, maxLon, maxLat };
   }
 
