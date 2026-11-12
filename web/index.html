@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/app.css?v=20261113M">
+  <link rel="stylesheet" href="/app.css?v=20261113N">
 </head>
 <body>
   <div class="app-shell">
@@ -1406,12 +1406,7 @@
         fishCardHtml = `
           <div class="fish-banner" style="flex-direction:column;align-items:stretch;">
             <div style="display:flex;align-items:center;gap:10px;">
-              <div class="fish-banner-icon">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M6.5 12c.94-3.46 4.94-6 8.5-6 3.56 0 6.06 2.54 7 6-.94 3.46-3.44 6-7 6-3.56 0-7.56-2.54-8.5-6Z"/>
-                  <circle cx="9" cy="11" r="1" fill="currentColor"/>
-                </svg>
-              </div>
+              <img src="/assets/species/${getSpeciesImageKey(fish)}.jpg" alt="${fishProfile.nameId}" style="width:56px;height:42px;border-radius:6px;object-fit:cover;border:var(--border-hairline);flex-shrink:0;">
               <div style="min-width:0;flex:1;">
                 <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:wrap;">
                   <div style="font-weight:700;font-size:15px;">${fishProfile.nameId}</div>
@@ -1882,7 +1877,7 @@
             } else {
               cardContainer.innerHTML = pageItems.map((s) => {
                 const imgKey = getSpeciesImageKey(s);
-                const imgSrc = `/assets/species/${imgKey}.svg`;
+                const imgSrc = `/assets/species/${imgKey}.jpg`;
                 const depthText = s.depth_m != null ? `${Math.round(s.depth_m)} m` : 'Permukaan - 100 m';
                 const dateText = formatWibDateTime(s.event_date_utc, 'Arsip survei');
                 const commonName = s.common_name || extractFishNameId(s);
@@ -1936,7 +1931,7 @@
             } else {
               tbody.innerHTML = pageItems.map((s) => {
                 const imgKey = getSpeciesImageKey(s);
-                const imgSrc = `/assets/species/${imgKey}.svg`;
+                const imgSrc = `/assets/species/${imgKey}.jpg`;
                 const depthText = s.depth_m != null ? `${Math.round(s.depth_m)} m` : '-';
                 const dateText = formatWibDateTime(s.event_date_utc, 'Arsip survei');
                 const commonName = s.common_name || extractFishNameId(s);
