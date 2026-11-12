@@ -35,8 +35,80 @@
       display: flex; align-items: center; gap: 8px; min-width: 0; user-select: none;
     }
     .brand-icon {
-      width: 18px; height: 18px; flex-shrink: 0;
+      width: 20px; height: 20px; flex-shrink: 0;
+      display: inline-flex; align-items: center; justify-content: center;
       color: var(--accent-primary);
+    }
+
+    /* 3D Volumetric Iconography & Rendering */
+    .icon-3d {
+      display: inline-block;
+      object-fit: cover;
+      border-radius: 4px;
+      vertical-align: middle;
+      filter: drop-shadow(0 2px 6px rgba(0, 210, 255, 0.25));
+      transition: transform 180ms ease, filter 180ms ease;
+      flex-shrink: 0;
+    }
+    .icon-3d:hover {
+      transform: translateY(-1px) scale(1.08);
+      filter: drop-shadow(0 4px 10px rgba(0, 210, 255, 0.45));
+    }
+    [data-theme="daylight"] .icon-3d {
+      filter: drop-shadow(0 2px 5px rgba(2, 132, 199, 0.22));
+    }
+    [data-theme="daylight"] .icon-3d:hover {
+      filter: drop-shadow(0 4px 10px rgba(2, 132, 199, 0.38));
+    }
+    .icon-3d-logo {
+      width: 20px;
+      height: 20px;
+      border-radius: 5px;
+      filter: drop-shadow(0 2px 8px rgba(0, 210, 255, 0.35));
+    }
+    .icon-3d-lens {
+      width: 18px;
+      height: 18px;
+      border-radius: 4px;
+      filter: drop-shadow(0 2px 5px rgba(0, 210, 255, 0.25));
+    }
+    .icon-3d-badge {
+      width: 14px;
+      height: 14px;
+      border-radius: 3px;
+      filter: drop-shadow(0 1px 4px rgba(0, 210, 255, 0.20));
+    }
+    .icon-3d-pin {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.5)) drop-shadow(0 2px 6px rgba(0, 210, 255, 0.35));
+    }
+    .icon-3d-banner {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      filter: drop-shadow(0 3px 8px rgba(245, 158, 11, 0.35));
+    }
+    .icon-3d-gauge {
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+      flex-shrink: 0;
+      filter: drop-shadow(0 1px 4px rgba(0, 210, 255, 0.25));
+    }
+    .lens-btn img.icon-3d,
+    .lens-btn .icon-3d-lens {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+    }
+    .fish-banner-icon img,
+    .fish-banner-icon .icon-3d {
+      width: 100%;
+      height: 100%;
+      border-radius: inherit;
+      object-fit: cover;
     }
     .brand-title {
       font-size: 13px; font-weight: 700; letter-spacing: 0.06em; line-height: 1;
@@ -387,12 +459,13 @@
     .fish-banner {
       display: flex; align-items: center; gap: 8px; padding: 8px 10px;
       border-radius: 6px; background: var(--accent-cta-dim);
-      border: 1px solid rgba(249, 115, 22, 0.2);
+      border: 1px solid rgba(245, 158, 11, 0.22);
     }
     .fish-banner-icon {
-      width: 30px; height: 30px; border-radius: 5px; flex-shrink: 0;
+      width: 32px; height: 32px; border-radius: 6px; flex-shrink: 0;
       background: var(--accent-cta); color: #FFFFFF;
       display: flex; align-items: center; justify-content: center;
+      overflow: hidden;
     }
     .profile-badge {
       display: inline-flex; align-items: center; padding: 1px 6px; border-radius: 4px;
@@ -432,11 +505,13 @@
     }
     .verdict-pill {
       padding: 2px 7px; border-radius: 4px; font-size: 11px; font-weight: 700;
-      white-space: nowrap; color: #FFFFFF;
+      white-space: nowrap;
     }
-    .verdict-high { background: #16A34A; }
-    .verdict-mid { background: #0284C7; }
-    .verdict-low { background: #64748B; }
+    .verdict-high { background: var(--status-healthy); color: #060913; }
+    .verdict-mid { background: var(--accent-primary); color: #060913; }
+    .verdict-low { background: #64748B; color: #FFFFFF; }
+    [data-theme="daylight"] .verdict-high { color: #FFFFFF; }
+    [data-theme="daylight"] .verdict-mid { color: #FFFFFF; }
     .tiles-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
     .metric-tile {
       padding: 8px; border-radius: 6px; background: var(--surface-subtle);
@@ -551,9 +626,7 @@
   <div class="app-shell">
     <header class="nav-bar">
       <div class="brand">
-        <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/>
-        </svg>
+        <img src="/assets/icons/logo_3d.jpg" alt="Laut Scan Logo" class="brand-icon icon-3d icon-3d-logo" width="20" height="20">
         <div style="display:flex;align-items:center;gap:6px;">
           <span class="brand-title">LAUT SCAN</span>
           <span class="brand-divider">/</span>
@@ -598,10 +671,7 @@
               <option value="udang">Udang</option>
             </select>
             <button id="toggle-species-btn" class="pill-btn" type="button" aria-pressed="true" aria-label="Tampilkan pin titik ikan">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M6.5 12c.94-3.46 4.94-6 8.5-6 3.56 0 6.06 2.54 7 6-.94 3.46-3.44 6-7 6-3.56 0-7.56-2.54-8.5-6Z"/>
-                <path d="M18 12v.5"/>
-              </svg>
+              <img src="/assets/icons/tuna_3d.jpg" alt="" class="icon-3d icon-3d-badge" width="14" height="14">
               <span>Titik Ikan</span>
             </button>
             <button id="inspect-center-btn" class="pill-btn" type="button" aria-label="Periksa kondisi di wilayah aktif">
@@ -657,27 +727,19 @@
           <div class="lens-dock" role="region" aria-label="Pilihan Lensa Peta Laut">
             <div class="lens-row">
               <button class="lens-btn active" data-lens="potential" type="button" aria-pressed="true">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                </svg>
+                <img src="/assets/icons/tuna_3d.jpg" alt="" class="icon-3d icon-3d-lens" width="18" height="18">
                 <span>Zona Ikan</span>
               </button>
               <button class="lens-btn" data-lens="sst" type="button" aria-pressed="false">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/>
-                </svg>
+                <img src="/assets/icons/sst_3d.jpg" alt="" class="icon-3d icon-3d-lens" width="18" height="18">
                 <span>Suhu Air</span>
               </button>
               <button class="lens-btn" data-lens="chlorophyll" type="button" aria-pressed="false">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/>
-                </svg>
+                <img src="/assets/icons/chlorophyll_3d.jpg" alt="" class="icon-3d icon-3d-lens" width="18" height="18">
                 <span>Pakan Alami</span>
               </button>
               <button class="lens-btn" data-lens="currents" type="button" aria-pressed="false">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <path d="M17.7 7.7a2.5 2.5 0 1 1 1.8 4.3H2"/><path d="M9.6 4.6A2 2 0 1 1 11 8H2"/><path d="M12.6 19.4A2 2 0 1 0 14 16H2"/>
-                </svg>
+                <img src="/assets/icons/currents_3d.jpg" alt="" class="icon-3d icon-3d-lens" width="18" height="18">
                 <span>Arus Laut</span>
               </button>
               <button id="toggle-tune-btn" class="tune-btn" type="button" aria-expanded="false" aria-label="Atur transparansi dan tanggal">
@@ -697,9 +759,7 @@
         <aside id="inspector-drawer" class="inspector-card" aria-label="Kondisi Titik Ini">
           <div class="drawer-header row-between">
             <div style="display:flex;align-items:center;gap:6px;">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cta)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <circle cx="12" cy="12" r="10"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/>
-              </svg>
+              <img src="/assets/icons/logo_3d.jpg" alt="" class="icon-3d icon-3d-badge" width="16" height="16">
               <strong style="font-size:13px;letter-spacing:0.02em;">Kondisi Titik Ini</strong>
             </div>
             <button id="close-inspector-btn" class="drawer-close-btn" type="button" aria-label="Tutup kartu kondisi">
@@ -1529,7 +1589,7 @@
           <div class="fish-banner" style="flex-direction:column;align-items:stretch;">
             <div style="display:flex;align-items:center;gap:10px;">
               <div class="fish-banner-icon">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 12c.94-3.46 4.94-6 8.5-6 3.56 0 6.06 2.54 7 6-.94 3.46-3.44 6-7 6-3.56 0-7.56-2.54-8.5-6Z"/><path d="M18 12v.5"/><path d="M7 10.67C7 8 5.58 5.97 2.73 5.5c-1 1.5-1 5 .23 6.5-1.24 1.5-1.24 5-.23 6.5C5.58 18.03 7 16 7 13.33"/></svg>
+                <img src="/assets/icons/tuna_3d.jpg" alt="${fishProfile.nameId}" class="icon-3d icon-3d-banner" width="32" height="32">
               </div>
               <div style="min-width:0;flex:1;">
                 <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:wrap;">
@@ -1556,7 +1616,10 @@
       } else if (uniqueTypes.length > 0) {
         fishCardHtml = `
           <div class="nearby-fish-box">
-            <div style="font-size:12px;font-weight:600;color:var(--ink-muted);">Ikan yang pernah tercatat di sekitar sini (ketuk untuk detail):</div>
+            <div style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--ink-muted);">
+              <img src="/assets/icons/tuna_3d.jpg" alt="" class="icon-3d icon-3d-badge" width="14" height="14">
+              <span>Ikan yang pernah tercatat di sekitar sini (ketuk untuk detail):</span>
+            </div>
             <div class="nearby-fish-chips">
               ${uniqueTypes.slice(0, 6).map((s) => `<button type="button" class="nearby-fish-chip" data-jump-fish="${s.id}">${extractFishNameId(s)}</button>`).join('')}
             </div>
@@ -1603,7 +1666,7 @@
         <div class="tiles-2col">
           <div class="metric-tile">
             <div class="metric-label">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cta)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/></svg>
+              <img src="/assets/icons/sst_3d.jpg" alt="" class="icon-3d icon-3d-gauge" width="16" height="16">
               <span>Suhu Air</span>
             </div>
             <div class="metric-value">${sstVal}</div>
@@ -1612,7 +1675,7 @@
 
           <div class="metric-tile">
             <div class="metric-label">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--status-healthy)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/></svg>
+              <img src="/assets/icons/chlorophyll_3d.jpg" alt="" class="icon-3d icon-3d-gauge" width="16" height="16">
               <span>Pakan Alami</span>
             </div>
             <div style="font-size:15px;font-weight:700;">${chlStatus}</div>
@@ -1623,7 +1686,10 @@
 
         <div class="current-tile">
           <div style="display:flex;flex-direction:column;gap:3px;">
-            <span style="font-size:12px;font-weight:600;color:var(--ink-muted);">Arah &amp; Kuat Arus</span>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <img src="/assets/icons/currents_3d.jpg" alt="" class="icon-3d icon-3d-gauge" width="16" height="16">
+              <span style="font-size:12px;font-weight:600;color:var(--ink-muted);">Arah &amp; Kuat Arus</span>
+            </div>
             <span class="metric-value" style="font-size:16px;">${spdVal}</span>
             <span class="metric-status">${spdStatus} ke ${compassText}</span>
           </div>
