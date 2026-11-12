@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/app.css?v=20261113g">
+  <link rel="stylesheet" href="/app.css?v=20261113h">
   <style>
     /* Compact Desktop Application Stylesheet */
     * { box-sizing: border-box; }
@@ -672,7 +672,7 @@
               <option value="udang">Udang</option>
             </select>
             <button id="toggle-species-btn" class="pill-btn" type="button" aria-pressed="true" aria-label="Tampilkan pin titik ikan">
-              <img src="/assets/icons/fish_2d.png" alt="" width="14" height="14" style="display:block;object-fit:contain;" />
+              <span class="fish-2d-icon" aria-hidden="true" style="width:14px;height:14px;"></span>
               <span>Titik Ikan</span>
             </button>
             <button id="inspect-center-btn" class="pill-btn" type="button" aria-label="Periksa kondisi di wilayah aktif">
@@ -883,7 +883,7 @@
   </div>
 
   <script type="module">
-    import { create, setProps } from '/modules/marine-map/web/index.js?v=20261113f';
+    import { create, setProps } from '/modules/marine-map/web/index.js?v=20261113g';
 
     const urlParams = new URLSearchParams(window.location.search);
     const rawApiParam = (urlParams.get('api') || '').trim();

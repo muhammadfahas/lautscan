@@ -36,8 +36,8 @@ const STYLE = `
   --mm-ink: #1E293B;
   --mm-muted: #475569;
   --mm-border: #E2E8F0;
-  --mm-focus: #3B82F6;
-  --mm-cta: #F97316;
+  --mm-focus: #0F172A;
+  --mm-cta: #0F172A;
   --mm-plain-tile: #E8ECEF;
   --mm-plain-grid: #CBD5E1;
   position: absolute;
@@ -61,8 +61,8 @@ const STYLE = `
   --mm-ink: #F1F5F9;
   --mm-muted: #94A3B8;
   --mm-border: #21262D;
-  --mm-focus: #38BDF8;
-  --mm-cta: #F97316;
+  --mm-focus: #FFFFFF;
+  --mm-cta: #FFFFFF;
   --mm-plain-tile: #0F172A;
   --mm-plain-grid: #1E293B;
 }
@@ -164,30 +164,30 @@ const STYLE = `
   z-index: 6;
 }
 .lautscan-marine-map .wpp-path {
-  fill: rgba(59, 130, 246, 0.06);
-  stroke: #3B82F6;
-  stroke-width: 1.5;
+  fill: rgba(0, 0, 0, 0.03);
+  stroke: rgba(15, 23, 42, 0.45);
+  stroke-width: 1.4;
   stroke-linejoin: round;
   transition: stroke 180ms ease, fill 180ms ease, stroke-width 180ms ease;
 }
 .lautscan-marine-map.theme-night .wpp-path {
-  fill: rgba(56, 189, 248, 0.08);
-  stroke: #38BDF8;
-  stroke-width: 1.8;
+  fill: rgba(255, 255, 255, 0.03);
+  stroke: rgba(255, 255, 255, 0.55);
+  stroke-width: 1.4;
   stroke-dasharray: 6 3;
-  filter: drop-shadow(0 0 4px rgba(56, 189, 248, 0.35));
+  filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.85));
 }
 .lautscan-marine-map.theme-night .wpp-path.selected {
-  fill: rgba(249, 115, 22, 0.22);
-  stroke: #F97316;
-  stroke-width: 2.8;
+  fill: rgba(255, 255, 255, 0.12);
+  stroke: #FFFFFF;
+  stroke-width: 2.2;
   stroke-dasharray: none;
-  filter: drop-shadow(0 0 10px rgba(249, 115, 22, 0.65));
+  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.55));
 }
 .lautscan-marine-map .wpp-path.selected {
-  fill: rgba(249, 115, 22, 0.16);
-  stroke: #F97316;
-  stroke-width: 2.5;
+  fill: rgba(0, 0, 0, 0.08);
+  stroke: #0F172A;
+  stroke-width: 2.2;
 }
 .lautscan-marine-map .wpp-labels-layer {
   position: absolute;
@@ -229,18 +229,24 @@ const STYLE = `
   transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease;
 }
 .lautscan-marine-map.theme-night .wpp-chip-pill {
-  background: rgba(13, 17, 23, 0.90);
-  border: 1px solid rgba(56, 189, 248, 0.35);
-  color: #E2E8F0;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.55), 0 0 8px rgba(56, 189, 248, 0.15);
+  background: rgba(13, 17, 23, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  color: #F8FAFC;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.65);
   backdrop-filter: blur(8px);
 }
 .lautscan-marine-map .wpp-chip:hover .wpp-chip-pill {
   border-color: var(--mm-focus);
 }
 .lautscan-marine-map .wpp-chip[aria-pressed="true"] .wpp-chip-pill {
-  background: var(--mm-cta);
-  border-color: var(--mm-cta);
+  background: #FFFFFF;
+  border-color: #FFFFFF;
+  color: #060913;
+  font-weight: 700;
+}
+[data-theme="daylight"] .lautscan-marine-map .wpp-chip[aria-pressed="true"] .wpp-chip-pill {
+  background: #0F172A;
+  border-color: #0F172A;
   color: #FFFFFF;
 }
 .lautscan-marine-map .markers-layer {
@@ -283,36 +289,53 @@ const STYLE = `
 }
 .lautscan-marine-map.theme-night .species-marker-pill {
   background: rgba(13, 17, 23, 0.94);
-  border: 1.5px solid rgba(249, 115, 22, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.28);
   color: #F8FAFC;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.65), 0 0 10px rgba(249, 115, 22, 0.25);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.65);
   backdrop-filter: blur(8px);
 }
-.lautscan-marine-map.theme-night .species-marker:hover .species-marker-pill,
-.lautscan-marine-map.theme-night .species-marker[aria-pressed="true"] .species-marker-pill {
-  border-color: #F97316;
+.lautscan-marine-map.theme-night .species-marker:hover .species-marker-pill {
+  border-color: #FFFFFF;
   background: rgba(24, 30, 42, 0.98);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.75), 0 0 16px rgba(249, 115, 22, 0.55);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.75);
 }
 .lautscan-marine-map .species-marker-dot {
-  width: 20px;
-  height: 20px;
+  width: 19px;
+  height: 19px;
   border-radius: 999px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   color: #FFFFFF;
   flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: #000000;
+}
+.lautscan-marine-map .species-fish-icon {
+  display: block;
+  width: 13px;
+  height: 13px;
+  object-fit: contain;
+  pointer-events: none;
 }
 .lautscan-marine-map .species-marker:hover .species-marker-pill {
   transform: scale(1.06);
   border-color: var(--mm-focus);
 }
 .lautscan-marine-map .species-marker[aria-pressed="true"] .species-marker-pill {
-  background: var(--mm-cta);
-  border-color: var(--mm-cta);
-  color: #FFFFFF;
+  background: #FFFFFF !important;
+  border-color: #FFFFFF !important;
+  color: #060913 !important;
   transform: scale(1.08);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.8), 0 0 12px rgba(255, 255, 255, 0.45);
+}
+.lautscan-marine-map .species-marker[aria-pressed="true"] .species-marker-dot {
+  background: #060913;
+  border-color: #060913;
+  color: #FFFFFF;
+}
+.lautscan-marine-map .species-marker[aria-pressed="true"] .species-fish-icon {
+  filter: none;
 }
 .lautscan-marine-map .pin-layer {
   position: absolute;
@@ -503,7 +526,7 @@ function buildZoomOutSvg() {
 }
 
 function buildSpeciesSvg() {
-  return '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 12c.94-3.46 4.94-6 8.5-6 3.56 0 6.06 2.54 7 6-.94 3.46-3.44 6-7 6-3.56 0-7.56-2.54-8.5-6Z"/><path d="M18 12v.5"/><path d="M7 10.67C7 8 5.58 5.97 2.73 5.5c-1 1.5-1 5 .23 6.5-1.24 1.5-1.24 5-.23 6.5C5.58 18.03 7 16 7 13.33"/></svg>';
+  return '<img class="species-fish-icon" src="/assets/icons/fish_2d.png" alt="" width="13" height="13" decoding="async" />';
 }
 
 function shortFishLabel(commonName, sciName) {
@@ -551,7 +574,7 @@ function shortFishLabel(commonName, sciName) {
 }
 
 function buildInspectPinSvg() {
-  return '<svg viewBox="0 0 28 28" aria-hidden="true"><circle cx="14" cy="14" r="10" fill="rgba(249,115,22,0.18)" stroke="#F97316" stroke-width="2"/><circle cx="14" cy="14" r="3.5" fill="#F97316" stroke="#FFFFFF" stroke-width="1.5"/><path d="M14 2v4M14 22v4M2 14h4M22 14h4" stroke="#F97316" stroke-width="1.6" stroke-linecap="round"/></svg>';
+  return '<svg viewBox="0 0 28 28" aria-hidden="true"><circle cx="14" cy="14" r="10" fill="rgba(255,255,255,0.18)" stroke="#FFFFFF" stroke-width="2"/><circle cx="14" cy="14" r="3.5" fill="#FFFFFF" stroke="#060913" stroke-width="1.5"/><path d="M14 2v4M14 22v4M2 14h4M22 14h4" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round"/></svg>';
 }
 
 function bboxPolygon(minLon, minLat, maxLon, maxLat) {
@@ -1293,7 +1316,7 @@ export class MarineMap {
   overlayTileUrl(layer, z, x, y) {
     const rawDate = this.selectedDate || 'latest';
     const effectiveDate = rawDate === 'latest' ? new Date().toISOString().slice(0, 10) : rawDate;
-    const safeDate = encodeURIComponent(`${effectiveDate}-v4`);
+    const safeDate = encodeURIComponent(`${effectiveDate}-v6`);
     const path = `/v1/tiles/${encodeURIComponent(layer)}/${safeDate}/${z}/${x}/${y}.png`;
     return this.tileBaseUrl ? `${this.tileBaseUrl}${path}` : path;
   }
@@ -1343,7 +1366,7 @@ export class MarineMap {
     const [northLat, westLon] = unproject(left, top, z);
     const [southLat, eastLon] = unproject(left + w / k, top + h / k, z);
 
-    ctx.strokeStyle = night ? 'rgba(56, 189, 248, 0.12)' : 'rgba(30, 41, 59, 0.10)';
+    ctx.strokeStyle = night ? 'rgba(255, 255, 255, 0.08)' : 'rgba(15, 23, 42, 0.08)';
     ctx.lineWidth = 1;
     ctx.font = '10px "Fira Code", ui-monospace, monospace';
     ctx.fillStyle = night ? 'rgba(148, 163, 184, 0.65)' : 'rgba(71, 85, 105, 0.65)';
@@ -2636,22 +2659,16 @@ export class MarineMap {
       btn.style.left = `${round(baseX, 1)}px`;
       btn.style.top = `${round(baseY, 1)}px`;
 
-      const dotColor = selected
-        ? '#F97316'
-        : marker.depthM !== null && marker.depthM >= 80
-          ? '#1D4ED8'
-          : marker.depthM !== null && marker.depthM >= 40
-            ? '#0D9488'
-            : '#0284C7';
-      const drawnState = `${selected ? '1' : '0'}:${dotColor}:${marker.shortName}`;
+      const dotColor = selected ? '#060913' : '#000000';
+      const drawnState = `${selected ? '1' : '0'}:${marker.shortName}`;
       if (btn.dataset.drawn !== drawnState) {
         btn.dataset.drawn = drawnState;
         const pill = this.doc.createElement('span');
         pill.className = 'species-marker-pill';
         const dot = this.doc.createElement('span');
         dot.className = 'species-marker-dot';
-        dot.style.background = selected ? '#FFFFFF' : dotColor;
-        if (selected) dot.style.color = '#F97316';
+        dot.style.background = dotColor;
+        dot.style.color = '#FFFFFF';
         dot.innerHTML = buildSpeciesSvg();
         const nameEl = this.doc.createElement('span');
         nameEl.className = 'species-marker-name';

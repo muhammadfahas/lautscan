@@ -8,23 +8,23 @@
   --surface-canvas: #060913;
   --surface-elevated: #0B132B;
   --surface-subtle: rgba(255, 255, 255, 0.04);
-  --surface-hover: rgba(0, 210, 255, 0.08);
-  --surface-active: rgba(0, 210, 255, 0.14);
+  --surface-hover: rgba(255, 255, 255, 0.08);
+  --surface-active: rgba(255, 255, 255, 0.14);
   --surface-glass-header: rgba(6, 10, 22, 0.78);
   --surface-glass-footer: rgba(6, 10, 22, 0.85);
   --surface-glass-panel: rgba(11, 19, 43, 0.80);
   --surface-glass-popover: rgba(11, 19, 43, 0.92);
   --glass-blur: blur(16px) saturate(180%);
-  --border-hairline: 1px solid rgba(255, 255, 255, 0.09);
-  --border-subtle: rgba(255, 255, 255, 0.09);
-  --border-hover: rgba(0, 210, 255, 0.32);
-  --ink-primary: #F1F5F9;
-  --ink-secondary: #CBD5E1;
+  --border-hairline: 1px solid rgba(255, 255, 255, 0.14);
+  --border-subtle: rgba(255, 255, 255, 0.12);
+  --border-hover: rgba(255, 255, 255, 0.35);
+  --ink-primary: #F8FAFC;
+  --ink-secondary: #E2E8F0;
   --ink-muted: #94A3B8;
-  --accent-primary: #00D2FF;
-  --accent-primary-dim: rgba(0, 210, 255, 0.15);
-  --accent-cta: #F59E0B;
-  --accent-cta-dim: rgba(245, 158, 11, 0.15);
+  --accent-primary: #FFFFFF;
+  --accent-primary-dim: rgba(255, 255, 255, 0.12);
+  --accent-cta: #FFFFFF;
+  --accent-cta-dim: rgba(255, 255, 255, 0.12);
   --status-healthy: #10B981;
   --status-degraded: #F59E0B;
   --status-error: #EF4444;
@@ -38,24 +38,24 @@
   --font-mono: 'Fira Code', ui-monospace, SFMono-Regular, Menlo, monospace;
   --surface-canvas: #F4F7FB;
   --surface-elevated: #FFFFFF;
-  --surface-subtle: rgba(15, 23, 42, 0.04);
-  --surface-hover: rgba(2, 132, 199, 0.08);
-  --surface-active: rgba(2, 132, 199, 0.14);
+  --surface-subtle: rgba(15, 23, 42, 0.05);
+  --surface-hover: rgba(15, 23, 42, 0.08);
+  --surface-active: rgba(15, 23, 42, 0.14);
   --surface-glass-header: rgba(244, 247, 251, 0.85);
   --surface-glass-footer: rgba(244, 247, 251, 0.90);
   --surface-glass-panel: rgba(255, 255, 255, 0.88);
   --surface-glass-popover: rgba(255, 255, 255, 0.96);
   --glass-blur: blur(16px) saturate(180%);
-  --border-hairline: 1px solid rgba(15, 23, 42, 0.09);
-  --border-subtle: rgba(15, 23, 42, 0.09);
-  --border-hover: rgba(2, 132, 199, 0.30);
+  --border-hairline: 1px solid rgba(15, 23, 42, 0.14);
+  --border-subtle: rgba(15, 23, 42, 0.12);
+  --border-hover: rgba(15, 23, 42, 0.35);
   --ink-primary: #0F172A;
   --ink-secondary: #334155;
   --ink-muted: #64748B;
-  --accent-primary: #0284C7;
-  --accent-primary-dim: rgba(2, 132, 199, 0.12);
-  --accent-cta: #F59E0B;
-  --accent-cta-dim: rgba(245, 158, 11, 0.12);
+  --accent-primary: #0F172A;
+  --accent-primary-dim: rgba(15, 23, 42, 0.08);
+  --accent-cta: #0F172A;
+  --accent-cta-dim: rgba(15, 23, 42, 0.08);
   --status-healthy: #10B981;
   --status-degraded: #D97706;
   --status-error: #DC2626;
@@ -362,14 +362,16 @@ html, body {
   border-color: var(--border-hover);
   color: var(--ink-primary);
 }
-.lens-btn[data-lens="potential"].active {
-  background: var(--accent-cta); border-color: var(--accent-cta); color: #FFFFFF;
+.lens-btn.active {
+  background: #FFFFFF !important;
+  border-color: #FFFFFF !important;
+  color: #060913 !important;
+  font-weight: 700;
 }
-.lens-btn:not([data-lens="potential"]).active {
-  background: var(--accent-primary); border-color: var(--accent-primary); color: #060913;
-}
-[data-theme="daylight"] .lens-btn:not([data-lens="potential"]).active {
-  color: #FFFFFF;
+[data-theme="daylight"] .lens-btn.active {
+  background: #0F172A !important;
+  border-color: #0F172A !important;
+  color: #FFFFFF !important;
 }
 .lens-btn img.icon-3d,
 .lens-btn .icon-3d-lens {
@@ -506,25 +508,25 @@ html, body {
 }
 .takeaway-box {
   padding: 8px 10px; border-radius: 6px;
-  background: var(--accent-primary-dim);
-  border: 1px solid rgba(0, 210, 255, 0.22);
+  background: var(--surface-subtle);
+  border: var(--border-hairline);
   display: flex; flex-direction: column; gap: 3px;
 }
 .takeaway-title {
   font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
-  color: var(--accent-primary);
+  color: var(--ink-secondary);
 }
 .takeaway-text {
   font-size: 12px; line-height: 1.4; font-weight: 500; color: var(--ink-primary);
 }
 .fish-banner {
   display: flex; align-items: center; gap: 8px; padding: 8px 10px;
-  border-radius: 6px; background: var(--accent-cta-dim);
-  border: 1px solid rgba(245, 158, 11, 0.22);
+  border-radius: 6px; background: var(--surface-subtle);
+  border: var(--border-hairline);
 }
 .fish-banner-icon {
   width: 32px; height: 32px; border-radius: 6px; flex-shrink: 0;
-  background: var(--accent-cta); color: #FFFFFF;
+  background: #FFFFFF; color: #060913;
   display: flex; align-items: center; justify-content: center;
   overflow: hidden;
 }
