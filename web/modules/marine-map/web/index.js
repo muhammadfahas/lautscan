@@ -47,7 +47,7 @@ const STYLE = `
   overflow: hidden;
   background: var(--mm-bg);
   color: var(--mm-ink);
-  font-family: "Fira Sans", system-ui, -apple-system, sans-serif;
+  font-family: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
@@ -219,7 +219,7 @@ const STYLE = `
   border: 1px solid var(--mm-border);
   background: rgba(255, 255, 255, 0.88);
   color: var(--mm-ink);
-  font-family: "Fira Code", ui-monospace, monospace;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
   font-variant-numeric: tabular-nums;
   font-size: 11px;
   font-weight: 600;
@@ -279,7 +279,7 @@ const STYLE = `
   border: 1px solid var(--mm-border);
   background: rgba(255, 255, 255, 0.94);
   color: var(--mm-ink);
-  font-family: "Fira Sans", system-ui, sans-serif;
+  font-family: "Plus Jakarta Sans", system-ui, sans-serif;
   font-size: 11px;
   font-weight: 700;
   line-height: 1.2;
@@ -428,7 +428,7 @@ const STYLE = `
   backdrop-filter: blur(10px);
 }
 .lautscan-marine-map .hud-coords {
-  font-family: "Fira Code", ui-monospace, monospace;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
   font-variant-numeric: tabular-nums;
   color: var(--mm-ink);
   white-space: nowrap;
@@ -1368,7 +1368,7 @@ export class MarineMap {
 
     ctx.strokeStyle = night ? 'rgba(255, 255, 255, 0.08)' : 'rgba(15, 23, 42, 0.08)';
     ctx.lineWidth = 1;
-    ctx.font = '10px "Fira Code", ui-monospace, monospace';
+    ctx.font = '10px "JetBrains Mono", ui-monospace, monospace';
     ctx.fillStyle = night ? 'rgba(148, 163, 184, 0.65)' : 'rgba(71, 85, 105, 0.65)';
 
     const startLat = Math.floor(Math.max(-80, southLat) / step) * step;
