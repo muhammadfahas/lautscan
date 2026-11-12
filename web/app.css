@@ -917,6 +917,401 @@ th { font-weight: 600; color: var(--ink-muted); font-size: 11px; text-transform:
 .table-scroll { overflow-x: auto; background: var(--surface-glass-panel); border: var(--border-hairline); border-radius: 8px; padding: 6px; }
 .tabular-nums { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 
+/* Enhanced Wireframe & Components for Species, Trends, and Sources */
+.page-header-wrap {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: var(--border-hairline);
+}
+.page-title {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 0 4px 0;
+  letter-spacing: -0.01em;
+}
+.page-desc {
+  font-size: 12.5px;
+  color: var(--ink-muted);
+  max-width: 640px;
+  line-height: 1.5;
+}
+.badge-cluster {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.cluster-pill {
+  padding: 4px 9px;
+  border-radius: 6px;
+  background: var(--surface-subtle);
+  border: var(--border-hairline);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ink-secondary);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.cluster-pill strong {
+  color: var(--ink-primary);
+}
+
+/* Toolbar Controls */
+.catalog-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--surface-glass-panel);
+  border: var(--border-hairline);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+}
+.toolbar-filters {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  flex: 1;
+}
+.toolbar-search {
+  min-width: 200px;
+  flex: 1 1 240px;
+}
+.toolbar-select {
+  height: 30px;
+  min-height: 30px;
+  padding: 0 8px;
+  border-radius: 6px;
+  border: var(--border-hairline);
+  background: var(--surface-subtle);
+  color: var(--ink-primary);
+  font: 500 12px var(--font-sans);
+  cursor: pointer;
+}
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.view-toggle-group {
+  display: inline-flex;
+  border-radius: 6px;
+  border: var(--border-hairline);
+  background: var(--surface-subtle);
+  padding: 2px;
+  gap: 2px;
+}
+.view-btn {
+  height: 26px;
+  padding: 0 8px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: var(--ink-muted);
+  font: 600 11.5px var(--font-sans);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 140ms ease;
+}
+.view-btn:hover {
+  color: var(--ink-primary);
+}
+.view-btn.active {
+  background: var(--surface-elevated);
+  color: var(--ink-primary);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+}
+
+/* Card Grid for Species (Kotak-kotak) */
+.species-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+}
+.species-card {
+  border-radius: 10px;
+  border: var(--border-hairline);
+  background: var(--surface-glass-panel);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+.species-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--border-hover);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.40);
+}
+.species-card-media {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  background: #060b14;
+  overflow: hidden;
+  border-bottom: var(--border-hairline);
+}
+.species-card-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 240ms ease;
+}
+.species-card:hover .species-card-img {
+  transform: scale(1.03);
+}
+.species-card-tag {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-size: 10.5px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: rgba(6, 11, 22, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #FFFFFF;
+  backdrop-filter: blur(8px);
+}
+.species-card-body {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+}
+.species-names {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.species-common-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink-primary);
+  margin: 0;
+  line-height: 1.3;
+}
+.species-sci-name {
+  font-size: 12px;
+  font-style: italic;
+  color: var(--ink-muted);
+}
+.species-meta-table {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  font-size: 11px;
+  padding: 8px;
+  border-radius: 6px;
+  background: var(--surface-subtle);
+  border: var(--border-hairline);
+}
+.meta-field {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.meta-label {
+  color: var(--ink-muted);
+  font-size: 10px;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.meta-val {
+  color: var(--ink-primary);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.species-card-actions {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 6px;
+  border-top: var(--border-hairline);
+}
+.species-map-btn {
+  width: 100%;
+  height: 30px;
+  border-radius: 6px;
+  border: var(--border-hairline);
+  background: var(--surface-subtle);
+  color: var(--ink-primary);
+  font: 600 11.5px var(--font-sans);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 140ms ease;
+}
+.species-map-btn:hover {
+  background: var(--surface-hover);
+  border-color: var(--accent-primary);
+}
+
+/* Table View Thumbnail */
+.table-thumb {
+  width: 44px;
+  height: 28px;
+  border-radius: 4px;
+  object-fit: cover;
+  background: #08111e;
+  border: var(--border-hairline);
+  display: block;
+}
+
+/* Pagination Bar */
+.pagination-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--surface-glass-panel);
+  border: var(--border-hairline);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+}
+.page-summary {
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+.page-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.page-btn {
+  height: 28px;
+  min-width: 28px;
+  padding: 0 8px;
+  border-radius: 5px;
+  border: var(--border-hairline);
+  background: var(--surface-subtle);
+  color: var(--ink-primary);
+  font: 600 12px var(--font-mono);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 120ms ease;
+}
+.page-btn:hover:not(:disabled) {
+  background: var(--surface-hover);
+  border-color: var(--border-hover);
+}
+.page-btn.active {
+  background: #FFFFFF !important;
+  color: #060913 !important;
+  border-color: #FFFFFF !important;
+}
+[data-theme="daylight"] .page-btn.active {
+  background: #0F172A !important;
+  color: #FFFFFF !important;
+  border-color: #0F172A !important;
+}
+.page-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* KPI Bento Grid for Trends & Sources */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+.kpi-card {
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: var(--surface-glass-panel);
+  border: var(--border-hairline);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.kpi-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  letter-spacing: 0.03em;
+}
+.kpi-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--ink-primary);
+  font-family: var(--font-sans);
+}
+.kpi-sub {
+  font-size: 11.5px;
+  color: var(--ink-muted);
+}
+
+/* Sortable Table Headers */
+.sortable-th {
+  cursor: pointer;
+  user-select: none;
+  transition: color 120ms ease;
+}
+.sortable-th:hover {
+  color: var(--ink-primary);
+}
+.sortable-th::after {
+  content: ' ↕';
+  font-size: 10px;
+  opacity: 0.4;
+}
+.sortable-th.sort-asc::after {
+  content: ' ↑';
+  opacity: 1;
+  color: var(--accent-primary);
+}
+.sortable-th.sort-desc::after {
+  content: ' ↓';
+  opacity: 1;
+  color: var(--accent-primary);
+}
+
+/* Relative Progress Bar in Trend Table */
+.mini-progress-track {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  margin-top: 4px;
+}
+.mini-progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--accent-primary);
+  transition: width 300ms ease;
+}
+
 /* Responsive adjustments for smaller viewports */
 @media (max-width: 768px) {
   .nav-bar { padding: 0 8px; }

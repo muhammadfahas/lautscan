@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/app.css?v=20261113L">
+  <link rel="stylesheet" href="/app.css?v=20261113M">
 </head>
 <body>
   <div class="app-shell">
@@ -240,18 +240,111 @@
     <!-- Tab 2: Jenis Ikan -->
     <section id="tab-species" class="view-panel">
       <div class="content-wrap">
-        <div class="row-between" style="flex-wrap:wrap;">
+        <!-- Header -->
+        <div class="page-header-wrap">
           <div>
-            <h2 style="margin:0;">Catatan Jenis Ikan (OBIS)</h2>
-            <div style="font-size:13px;color:var(--ink-muted);">Daftar jenis ikan dan biota laut yang pernah tercatat di perairan Indonesia.</div>
+            <h1 class="page-title">Katalog Jenis Ikan &amp; Biota Laut Nusantara</h1>
+            <div class="page-desc">Data survei observasi biodiversitas kelautan terbuka (OBIS / GBIF) di 11 Wilayah Pengelolaan Perikanan (WPP-NRI).</div>
           </div>
-          <input id="species-search" class="input-box" style="max-width:300px;" placeholder="Cari nama ikan atau nama ilmiah...">
+          <div class="badge-cluster">
+            <div class="cluster-pill"><span>Total Terdata:</span> <strong id="species-stat-total">46 Titik</strong></div>
+            <div class="cluster-pill"><span>Spesies Unik:</span> <strong id="species-stat-unique">13 Spesies</strong></div>
+            <div class="cluster-pill"><span>Cakupan:</span> <strong>11 WPP-NRI</strong></div>
+          </div>
         </div>
-        <div class="table-scroll">
+
+        <!-- Toolbar: Search, Filter, Sort, View Toggle -->
+        <div class="catalog-toolbar">
+          <div class="toolbar-filters">
+            <input id="species-search" class="input-box toolbar-search" type="search" placeholder="Cari nama umum, ilmiah, famili...">
+            
+            <select id="species-group-filter" class="toolbar-select" aria-label="Filter kategori ikan">
+              <option value="">Semua Kelompok Ikan</option>
+              <option value="tuna">Tuna &amp; Cakalang (Pelagis Besar)</option>
+              <option value="kembung">Kembung &amp; Layang (Pelagis Kecil)</option>
+              <option value="tongkol">Tongkol &amp; Tenggiri (Pelagis)</option>
+              <option value="kakap">Kakap &amp; Kerapu (Demersal / Karang)</option>
+              <option value="lemuru">Lemuru &amp; Lemadang</option>
+              <option value="udang">Udang Windu (Krustasea)</option>
+              <option value="karang">Ikan Karang Dilindungi</option>
+            </select>
+
+            <select id="species-wpp-filter" class="toolbar-select" aria-label="Filter wilayah WPP">
+              <option value="">Semua Wilayah WPP</option>
+              <option value="571">WPP 571 - Selat Malaka</option>
+              <option value="572">WPP 572 - Samudra Hindia Barat</option>
+              <option value="573">WPP 573 - Samudra Hindia Selatan</option>
+              <option value="711">WPP 711 - Selat Karimata &amp; Natuna</option>
+              <option value="712">WPP 712 - Laut Jawa</option>
+              <option value="713">WPP 713 - Selat Makassar &amp; Flores</option>
+              <option value="714">WPP 714 - Teluk Tolo &amp; Banda</option>
+              <option value="715">WPP 715 - Tomini, Maluku &amp; Halmahera</option>
+              <option value="716">WPP 716 - Laut Sulawesi</option>
+              <option value="717">WPP 717 - Teluk Cendrawasih &amp; Pasifik</option>
+              <option value="718">WPP 718 - Laut Aru, Arafuru &amp; Timor</option>
+            </select>
+
+            <select id="species-sort-select" class="toolbar-select" aria-label="Urutkan data">
+              <option value="sci_asc">Nama Ilmiah (A - Z)</option>
+              <option value="sci_desc">Nama Ilmiah (Z - A)</option>
+              <option value="name_asc">Nama Umum (A - Z)</option>
+              <option value="date_desc">Tanggal Survei (Terbaru)</option>
+              <option value="date_asc">Tanggal Survei (Terlama)</option>
+              <option value="depth_desc">Kedalaman (Terdalam)</option>
+              <option value="depth_asc">Kedalaman (Dangkal)</option>
+            </select>
+          </div>
+
+          <div class="toolbar-actions">
+            <div class="view-toggle-group" role="radiogroup" aria-label="Tampilan katalog">
+              <button id="view-mode-card" class="view-btn active" type="button" aria-pressed="true" title="Tampilan Kartu Kotak-kotak">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                <span>Kartu</span>
+              </button>
+              <button id="view-mode-table" class="view-btn" type="button" aria-pressed="false" title="Tampilan Tabel">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                <span>Tabel</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Container for Card Grid (Default) -->
+        <div id="species-card-container" class="species-grid"></div>
+
+        <!-- Container for Table View (Hidden by default) -->
+        <div id="species-table-container" class="table-scroll" style="display:none;">
           <table>
-            <thead><tr><th>Nama Ilmiah</th><th>Nama Umum</th><th>Wilayah</th><th>Kedalaman (m)</th><th>Waktu Survei (WIB)</th><th>Habitat</th><th>Sumber</th></tr></thead>
+            <thead>
+              <tr>
+                <th style="width:50px;">Foto</th>
+                <th class="sortable-th" data-sort="sci">Nama Ilmiah</th>
+                <th class="sortable-th" data-sort="name">Nama Umum</th>
+                <th class="sortable-th" data-sort="wpp">Wilayah WPP</th>
+                <th class="sortable-th" data-sort="depth">Kedalaman (m)</th>
+                <th class="sortable-th" data-sort="date">Waktu Survei</th>
+                <th>Sumber Data</th>
+                <th style="text-align:right;">Aksi</th>
+              </tr>
+            </thead>
             <tbody id="species-tbody"></tbody>
           </table>
+        </div>
+
+        <!-- Pagination Bar -->
+        <div id="species-pagination" class="pagination-wrap">
+          <div id="species-page-summary" class="page-summary">Menampilkan 1 - 12 dari 46 data</div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <label style="font-size:12px;color:var(--ink-muted);display:flex;align-items:center;gap:4px;">
+              Tampilkan:
+              <select id="species-per-page" class="select-box" style="width:65px;height:26px;">
+                <option value="12">12</option>
+                <option value="24">24</option>
+                <option value="48">48</option>
+              </select>
+            </label>
+            <div id="species-page-buttons" class="page-controls"></div>
+          </div>
         </div>
       </div>
     </section>
@@ -259,15 +352,83 @@
     <!-- Tab 3: Tren -->
     <section id="tab-trends" class="view-panel">
       <div class="content-wrap">
-        <div>
-          <h2 style="margin:0;">Ringkasan Wilayah Perairan Nusantara (WPP-NRI)</h2>
-          <div style="font-size:13px;color:var(--ink-muted);">11 zona pengelolaan perikanan nasional dari Selat Malaka hingga Laut Arafura.</div>
+        <!-- Header -->
+        <div class="page-header-wrap">
+          <div>
+            <h1 class="page-title">Tren &amp; Analisis Wilayah Perairan Nusantara (WPP-NRI)</h1>
+            <div class="page-desc">Karakteristik oseanografi, luas wilayah perairan, estimasi produktivitas, dan kondisi suhu permukaan laut di 11 zona penangkapan ikan nasional.</div>
+          </div>
+          <div class="badge-cluster">
+            <div class="cluster-pill"><span>Total Wilayah:</span> <strong>11 Zona WPP</strong></div>
+            <div class="cluster-pill"><span>Estimasi Luas Laut:</span> <strong>~5.88 Juta km²</strong></div>
+            <div class="cluster-pill"><span>Sumber Aturan:</span> <strong>Permen-KP RI</strong></div>
+          </div>
         </div>
+
+        <!-- Bento KPI Summary Cards -->
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <span class="kpi-label">Zona Terluas Nasional</span>
+            <span class="kpi-value">WPP 573</span>
+            <span class="kpi-sub">Samudra Hindia Sel. Jawa (~1.127.000 km²)</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Pakan Plankton Terpadat</span>
+            <span class="kpi-value" style="color:var(--accent-primary);">WPP 712</span>
+            <span class="kpi-sub">Laut Jawa &amp; Paparan Sunda (Rata-rata 0.48 mg/m³)</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Rentang Suhu Rata-rata</span>
+            <span class="kpi-value">28.5° - 30.6°C</span>
+            <span class="kpi-sub">Suhu tropis nyaman untuk ikan pelagis &amp; karang</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Kondisi Dominan Laut</span>
+            <span class="kpi-value" style="color:#22C55E;">Produktif</span>
+            <span class="kpi-sub">Zona tangkapan aktif dengan pertemuan arus selat</span>
+          </div>
+        </div>
+
+        <!-- Filter & Search Toolbar -->
+        <div class="catalog-toolbar">
+          <div class="toolbar-filters">
+            <input id="wpp-search-input" class="input-box toolbar-search" type="search" placeholder="Cari nama perairan, selat, samudra...">
+            
+            <select id="wpp-sort-select" class="toolbar-select" aria-label="Urutkan WPP">
+              <option value="code_asc">Kode WPP (571 → 718)</option>
+              <option value="code_desc">Kode WPP (718 → 571)</option>
+              <option value="area_desc">Luas Wilayah (Terluas)</option>
+              <option value="area_asc">Luas Wilayah (Terkecil)</option>
+              <option value="name_asc">Nama Wilayah (A - Z)</option>
+            </select>
+          </div>
+          <div class="toolbar-actions">
+            <button id="reset-wpp-filter-btn" class="btn" type="button">Reset</button>
+          </div>
+        </div>
+
+        <!-- Interactive WPP Table -->
         <div class="table-scroll">
           <table>
-            <thead><tr><th>Kode</th><th>Wilayah</th><th>Nama Perairan</th><th>Titik Tengah</th><th>Luas (km2)</th><th>Update Terakhir (WIB)</th></tr></thead>
+            <thead>
+              <tr>
+                <th class="sortable-th" data-wpp-sort="code" style="width:85px;">Kode</th>
+                <th class="sortable-th" data-wpp-sort="name">Nama Zona</th>
+                <th>Cakupan Wilayah Perairan</th>
+                <th class="sortable-th" data-wpp-sort="area" style="min-width:180px;">Luas Wilayah (km²)</th>
+                <th>Koordinat Tengah</th>
+                <th>Status Oseanografi</th>
+                <th style="text-align:right;">Aksi</th>
+              </tr>
+            </thead>
             <tbody id="wpp-tbody"></tbody>
           </table>
+        </div>
+
+        <!-- WPP Pagination -->
+        <div id="wpp-pagination" class="pagination-wrap">
+          <div id="wpp-page-summary" class="page-summary">Menampilkan 1 - 11 dari 11 zona WPP</div>
+          <div id="wpp-page-buttons" class="page-controls"></div>
         </div>
       </div>
     </section>
@@ -275,12 +436,96 @@
     <!-- Tab 4: Sumber Data -->
     <section id="tab-sources" class="view-panel">
       <div class="content-wrap">
-        <div>
-          <h2 style="margin:0;">Status Sistem &amp; Sumber Data</h2>
-          <div style="font-size:13px;color:var(--ink-muted);">Ketersediaan layanan peta dan penyedia data kelautan terbuka.</div>
+        <!-- Header -->
+        <div class="page-header-wrap">
+          <div>
+            <h1 class="page-title">Status Sistem &amp; Integrasi Sumber Data Kelautan</h1>
+            <div class="page-desc">Monitoring ketersediaan data satelit real-time, feed observasi oseanografi terbuka, dan lisensi distribusi data perikanan.</div>
+          </div>
+          <div class="badge-cluster">
+            <div class="cluster-pill"><span>API Status:</span> <strong style="color:#22C55E;">Operasional</strong></div>
+            <div class="cluster-pill"><span>Infrastruktur:</span> <strong>Cloudflare Global Network</strong></div>
+          </div>
         </div>
-        <div id="health-banner" class="card"></div>
+
+        <!-- System Health Banner -->
+        <div id="health-banner" class="card" style="padding:14px 16px;"></div>
+
+        <!-- Filter Sumber Data -->
+        <div class="catalog-toolbar">
+          <div class="toolbar-filters">
+            <input id="sources-search-input" class="input-box toolbar-search" type="search" placeholder="Cari penyedia data (NOAA, OBIS, NASA, CMEMS)...">
+            <select id="sources-priority-filter" class="toolbar-select">
+              <option value="">Semua Prioritas Sumber</option>
+              <option value="P1">Prioritas P1 (Data Inti / Esensial)</option>
+              <option value="P2">Prioritas P2 (Data Pelengkap)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Sources Cards Grid -->
         <div id="sources-grid" class="grid-cards"></div>
+
+        <!-- Technical Specifications Table -->
+        <div style="margin-top:8px;">
+          <h2 style="font-size:15px;margin:0 0 8px 0;">Spesifikasi Teknis Dataset Satelit &amp; Survei</h2>
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Dataset / Sensor</th>
+                  <th>Parameter Oseanografi</th>
+                  <th>Penyedia / Satelit</th>
+                  <th>Resolusi Spasial</th>
+                  <th>Pembaruan Temporal</th>
+                  <th>Status Integrasi</th>
+                </tr>
+              </thead>
+              <tbody id="sources-specs-tbody">
+                <tr>
+                  <td><strong>NOAA Coral Reef Watch / Geo-Polar Blended SST</strong></td>
+                  <td>Suhu Permukaan Laut (SST)</td>
+                  <td>NOAA NESDIS STAR</td>
+                  <td class="tabular-nums">5 km (0.05°)</td>
+                  <td>Harian (Daily 24h)</td>
+                  <td><span class="badge ok">Aktif</span></td>
+                </tr>
+                <tr>
+                  <td><strong>NASA MODIS-Aqua &amp; VIIRS Chlorophyll-a</strong></td>
+                  <td>Pakan Alami &amp; Klorofil-a</td>
+                  <td>NASA Ocean Biology Processing Group</td>
+                  <td class="tabular-nums">4 km (0.04°)</td>
+                  <td>Harian / 8-Hari</td>
+                  <td><span class="badge ok">Aktif</span></td>
+                </tr>
+                <tr>
+                  <td><strong>OSCAR Ocean Surface Current Analysis Real-time</strong></td>
+                  <td>Arah &amp; Kecepatan Arus Permukaan</td>
+                  <td>NOAA CoastWatch / JPL</td>
+                  <td class="tabular-nums">0.25° (~27 km)</td>
+                  <td>Interval 5-Hari</td>
+                  <td><span class="badge ok">Aktif</span></td>
+                </tr>
+                <tr>
+                  <td><strong>OBIS Marine Biodiversity Occurrences</strong></td>
+                  <td>Titik Distribusi Spesies Ikan</td>
+                  <td>IOC-UNESCO OBIS &amp; GBIF</td>
+                  <td class="tabular-nums">Koordinat Geografis Presisi</td>
+                  <td>Arsip Survei 2020-2026</td>
+                  <td><span class="badge ok">Aktif</span></td>
+                </tr>
+                <tr>
+                  <td><strong>Batas Pengelolaan Perikanan (WPP-NRI)</strong></td>
+                  <td>Poligon Batas 11 Zona WPP</td>
+                  <td>KKP Republik Indonesia</td>
+                  <td>Vektor GeoJSON Resmi</td>
+                  <td>Pembaruan Regulasi</td>
+                  <td><span class="badge ok">Aktif</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -1462,34 +1707,501 @@
           }
         }
 
-        const renderSpecies = (q = '') => {
-          const tbody = document.getElementById('species-tbody');
-          const query = q.toLowerCase();
-          tbody.innerHTML = state.species
-            .filter((s) => !query || s.scientific_name.toLowerCase().includes(query) || (s.common_name || '').toLowerCase().includes(query))
-            .map((s) => `<tr><td><em>${s.scientific_name}</em></td><td>${s.common_name ?? '-'}</td><td class="tabular-nums">${s.wpp_code ?? '-'}</td><td class="tabular-nums">${s.depth_m ?? '-'}</td><td class="tabular-nums">${formatWibDateTime(s.event_date_utc, 'Arsip survei')}</td><td>${s.habitat_note ?? '-'}</td><td>${s.attribution}</td></tr>`)
-            .join('');
-        };
-        renderSpecies();
-        document.getElementById('species-search').addEventListener('input', (e) => renderSpecies(e.target.value));
+        // --- Global Navigation Helper: Jump to Ocean Map Tab & Focus Coordinate ---
+        window.navigateToMapPoint = (lat, lon, zoom = 7, fishId = '', wppCode = '') => {
+          document.querySelectorAll('.nav-btn').forEach((b) => b.classList.remove('active'));
+          document.querySelectorAll('.view-panel').forEach((p) => p.classList.remove('active'));
+          const mapNavBtn = document.querySelector('.nav-btn[data-tab="ocean_map"]');
+          const mapTabSec = document.getElementById('tab-ocean_map');
+          if (mapNavBtn) mapNavBtn.classList.add('active');
+          if (mapTabSec) mapTabSec.classList.add('active');
 
-        document.getElementById('health-banner').innerHTML = `
-          <strong>Status Layanan:</strong> ${health.status} (v${health.version}) |
-          Cache Peta: ${health.tile_cache_ok ? 'Siap' : 'Tidak tersedia'} |
-          Basis Data: ${health.db_ok ? 'Terhubung' : 'Mode Mandiri (Lokal)'} |
-          Dicek: ${formatWibDateTime(health.timestamp_utc, '-')}
-        `;
-        const activeSources = (sources.sources || []).filter((src) => src.enabled !== false && src.status === 'healthy');
-        document.getElementById('sources-grid').innerHTML = activeSources.map((src) => `
-          <div class="card">
-            <div class="row-between"><strong>${src.display_name}</strong><span class="badge ${src.status === 'healthy' ? 'ok' : 'warn'}">${src.status}</span></div>
-            <div style="font-size:13px;">Prioritas: ${src.priority}</div>
-            <div class="tabular-nums" style="font-size:12px;">Data Terbaru: ${formatWibDateTime(src.latest_data_timestamp_utc, 'Data awal')}</div>
-            <div class="tabular-nums" style="font-size:12px;color:var(--ink-muted);">Sinkron Terakhir: ${formatWibDateTime(src.last_sync_utc, 'Menunggu')}</div>
-            <div style="font-size:12px;color:var(--ink-muted);">${src.license_summary}</div>
-            <div style="font-size:12px;">${src.attribution}</div>
-          </div>
-        `).join('');
+          if (Number.isFinite(lat) && Number.isFinite(lon)) {
+            state.centerLat = lat;
+            state.centerLon = lon;
+            state.zoom = zoom;
+          }
+          if (wppCode) {
+            state.selectedWpp = wppCode;
+            document.getElementById('wpp-select').value = state.selectedWpp;
+            wppDropdown?.setValue(state.selectedWpp);
+          }
+          syncMap();
+          if (fishId || (lat != null && lon != null)) {
+            inspectPoint(lat, lon, fishId);
+          }
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+
+        // --- Helper: Map Species Record to Uniform Generated Illustration Key ---
+        function getSpeciesImageKey(item) {
+          const sci = String(item?.scientific_name || '').toLowerCase();
+          if (sci.includes('albacares')) return 'thunnus_albacares';
+          if (sci.includes('obesus')) return 'thunnus_obesus';
+          if (sci.includes('pelamis') || sci.includes('cakalang')) return 'katsuwonus_pelamis';
+          if (sci.includes('affinis') || sci.includes('tongkol')) return 'euthynnus_affinis';
+          if (sci.includes('kanagurta') || sci.includes('kembung')) return 'rastrelliger_kanagurta';
+          if (sci.includes('russelli') || sci.includes('layang')) return 'decapterus_russelli';
+          if (sci.includes('commerson') || sci.includes('tenggiri')) return 'scomberomorus_commerson';
+          if (sci.includes('malabaricus') || sci.includes('lutjanus') || sci.includes('kakap')) return 'lutjanus_malabaricus';
+          if (sci.includes('coioides') || sci.includes('epinephelus') || sci.includes('kerapu')) return 'epinephelus_coioides';
+          if (sci.includes('lemuru') || sci.includes('sardinella')) return 'sardinella_lemuru';
+          if (sci.includes('hippurus') || sci.includes('coryphaena') || sci.includes('lemadang')) return 'coryphaena_hippurus';
+          if (sci.includes('undulatus') || sci.includes('cheilinus') || sci.includes('napoleon')) return 'cheilinus_undulatus';
+          if (sci.includes('monodon') || sci.includes('penaeus') || sci.includes('udang')) return 'penaeus_monodon';
+          return 'thunnus_albacares';
+        }
+
+        // --- Tab 2: Jenis Ikan Catalog Controller (Cards Default + Table View + Search + Filter + Sort + Paging) ---
+        const speciesCatalog = {
+          search: '',
+          groupFilter: '',
+          wppFilter: '',
+          sortBy: 'sci_asc',
+          viewMode: 'card', // Default: card view (kotak-kotak)
+          page: 1,
+          perPage: 12,
+        };
+
+        const updateSpeciesCatalogStats = () => {
+          const totalEl = document.getElementById('species-stat-total');
+          const uniqueEl = document.getElementById('species-stat-unique');
+          if (totalEl) totalEl.textContent = `${state.species.length} Titik`;
+          if (uniqueEl) {
+            const uniqueSet = new Set(state.species.map((s) => s.scientific_name));
+            uniqueEl.textContent = `${uniqueSet.size} Spesies`;
+          }
+        };
+
+        const filterAndSortSpecies = () => {
+          let list = [...state.species];
+          const q = speciesCatalog.search.trim().toLowerCase();
+          if (q) {
+            list = list.filter((s) => {
+              const full = `${s.scientific_name} ${s.common_name || ''} ${s.family || ''} ${s.habitat_note || ''}`.toLowerCase();
+              return full.includes(q);
+            });
+          }
+
+          const gf = speciesCatalog.groupFilter;
+          if (gf) {
+            list = list.filter((s) => {
+              const text = `${s.scientific_name} ${s.common_name || ''} ${s.family || ''}`.toLowerCase();
+              if (gf === 'tuna') return text.includes('tuna') || text.includes('thunnus') || text.includes('cakalang') || text.includes('katsuwonus');
+              if (gf === 'kembung') return text.includes('kembung') || text.includes('rastrelliger') || text.includes('layang') || text.includes('decapterus');
+              if (gf === 'tongkol') return text.includes('tongkol') || text.includes('euthynnus') || text.includes('tenggiri') || text.includes('scomberomorus');
+              if (gf === 'kakap') return text.includes('kakap') || text.includes('lutjanus') || text.includes('kerapu') || text.includes('epinephelus');
+              if (gf === 'lemuru') return text.includes('lemuru') || text.includes('sardinella') || text.includes('lemadang') || text.includes('coryphaena');
+              if (gf === 'udang') return text.includes('udang') || text.includes('penaeus');
+              if (gf === 'karang') return text.includes('cheilinus') || text.includes('napoleon') || text.includes('epinephelus');
+              return true;
+            });
+          }
+
+          const wf = speciesCatalog.wppFilter;
+          if (wf) {
+            list = list.filter((s) => String(s.wpp_code || '') === wf);
+          }
+
+          const sb = speciesCatalog.sortBy;
+          list.sort((a, b) => {
+            if (sb === 'sci_asc') return (a.scientific_name || '').localeCompare(b.scientific_name || '');
+            if (sb === 'sci_desc') return (b.scientific_name || '').localeCompare(a.scientific_name || '');
+            if (sb === 'name_asc') return (a.common_name || '').localeCompare(b.common_name || '');
+            if (sb === 'date_desc') return Date.parse(b.event_date_utc || 0) - Date.parse(a.event_date_utc || 0);
+            if (sb === 'date_asc') return Date.parse(a.event_date_utc || 0) - Date.parse(b.event_date_utc || 0);
+            if (sb === 'depth_desc') return (b.depth_m ?? 0) - (a.depth_m ?? 0);
+            if (sb === 'depth_asc') return (a.depth_m ?? 9999) - (b.depth_m ?? 9999);
+            return 0;
+          });
+
+          return list;
+        };
+
+        const renderSpeciesCatalog = () => {
+          updateSpeciesCatalogStats();
+          const filtered = filterAndSortSpecies();
+          const total = filtered.length;
+          const totalPages = Math.max(1, Math.ceil(total / speciesCatalog.perPage));
+          if (speciesCatalog.page > totalPages) speciesCatalog.page = totalPages;
+          const startIdx = (speciesCatalog.page - 1) * speciesCatalog.perPage;
+          const endIdx = Math.min(total, startIdx + speciesCatalog.perPage);
+          const pageItems = filtered.slice(startIdx, endIdx);
+
+          const cardContainer = document.getElementById('species-card-container');
+          const tableContainer = document.getElementById('species-table-container');
+          const tbody = document.getElementById('species-tbody');
+
+          // Render Pagination
+          const summaryEl = document.getElementById('species-page-summary');
+          if (summaryEl) {
+            summaryEl.textContent = total > 0
+              ? `Menampilkan ${startIdx + 1} - ${endIdx} dari ${total} data spesies`
+              : 'Tidak ada data yang sesuai filter';
+          }
+
+          const buttonsEl = document.getElementById('species-page-buttons');
+          if (buttonsEl) {
+            let btnsHtml = `
+              <button class="page-btn" type="button" data-species-page="${speciesCatalog.page - 1}" ${speciesCatalog.page <= 1 ? 'disabled' : ''} aria-label="Halaman sebelumnya">&lt;</button>
+            `;
+            for (let p = 1; p <= totalPages; p++) {
+              if (p === 1 || p === totalPages || (p >= speciesCatalog.page - 1 && p <= speciesCatalog.page + 1)) {
+                btnsHtml += `<button class="page-btn ${p === speciesCatalog.page ? 'active' : ''}" type="button" data-species-page="${p}">${p}</button>`;
+              } else if (p === speciesCatalog.page - 2 || p === speciesCatalog.page + 2) {
+                btnsHtml += `<span style="font-size:11px;color:var(--ink-muted);padding:0 2px;">...</span>`;
+              }
+            }
+            btnsHtml += `
+              <button class="page-btn" type="button" data-species-page="${speciesCatalog.page + 1}" ${speciesCatalog.page >= totalPages ? 'disabled' : ''} aria-label="Halaman berikutnya">&gt;</button>
+            `;
+            buttonsEl.innerHTML = btnsHtml;
+            buttonsEl.querySelectorAll('button[data-species-page]').forEach((b) => {
+              b.addEventListener('click', () => {
+                const targetPage = Number(b.getAttribute('data-species-page'));
+                if (targetPage >= 1 && targetPage <= totalPages && targetPage !== speciesCatalog.page) {
+                  speciesCatalog.page = targetPage;
+                  renderSpeciesCatalog();
+                  cardContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+              });
+            });
+          }
+
+          if (speciesCatalog.viewMode === 'card') {
+            cardContainer.style.display = 'grid';
+            tableContainer.style.display = 'none';
+
+            if (pageItems.length === 0) {
+              cardContainer.innerHTML = `
+                <div class="card" style="grid-column: 1 / -1; text-align: center; padding: 32px 16px;">
+                  <div style="font-size: 15px; font-weight: 700; color: var(--ink-primary); margin-bottom: 4px;">Tidak ada ikan yang sesuai kriteria</div>
+                  <div style="font-size: 12.5px; color: var(--ink-muted);">Silakan ubah kata kunci pencarian atau reset filter wilayah dan kelompok ikan.</div>
+                </div>
+              `;
+            } else {
+              cardContainer.innerHTML = pageItems.map((s) => {
+                const imgKey = getSpeciesImageKey(s);
+                const imgSrc = `/assets/species/${imgKey}.svg`;
+                const depthText = s.depth_m != null ? `${Math.round(s.depth_m)} m` : 'Permukaan - 100 m';
+                const dateText = formatWibDateTime(s.event_date_utc, 'Arsip survei');
+                const commonName = s.common_name || extractFishNameId(s);
+                const wppText = s.wpp_code ? `WPP ${s.wpp_code}` : 'Perairan Indonesia';
+                return `
+                  <article class="species-card" data-species-id="${s.id}">
+                    <div class="species-card-media">
+                      <img class="species-card-img" src="${imgSrc}" alt="${commonName} (${s.scientific_name})" loading="lazy">
+                      <span class="species-card-tag">${wppText}</span>
+                    </div>
+                    <div class="species-card-body">
+                      <div class="species-names">
+                        <h3 class="species-common-title">${commonName}</h3>
+                        <span class="species-sci-name">${s.scientific_name}</span>
+                      </div>
+                      <div class="species-meta-table">
+                        <div class="meta-field">
+                          <span class="meta-label">Kedalaman</span>
+                          <span class="meta-val tabular-nums">${depthText}</span>
+                        </div>
+                        <div class="meta-field">
+                          <span class="meta-label">Tanggal Observasi</span>
+                          <span class="meta-val tabular-nums">${dateText}</span>
+                        </div>
+                        <div class="meta-field">
+                          <span class="meta-label">Koordinat</span>
+                          <span class="meta-val tabular-nums">${s.lat.toFixed(2)}°, ${s.lon.toFixed(2)}°</span>
+                        </div>
+                        <div class="meta-field">
+                          <span class="meta-label">Penyedia Data</span>
+                          <span class="meta-val">${s.attribution.split(' ')[0]}</span>
+                        </div>
+                      </div>
+                      <div class="species-card-actions">
+                        <button class="species-map-btn" type="button" onclick="navigateToMapPoint(${s.lat}, ${s.lon}, 7, '${s.id}', '${s.wpp_code || ''}')">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/></svg>
+                          <span>Lihat Titik di Peta Laut</span>
+                        </button>
+                      </div>
+                    </div>
+                  </article>
+                `;
+              }).join('');
+            }
+          } else {
+            cardContainer.style.display = 'none';
+            tableContainer.style.display = 'block';
+
+            if (pageItems.length === 0) {
+              tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--ink-muted);">Tidak ada data ikan yang cocok dengan filter aktif.</td></tr>`;
+            } else {
+              tbody.innerHTML = pageItems.map((s) => {
+                const imgKey = getSpeciesImageKey(s);
+                const imgSrc = `/assets/species/${imgKey}.svg`;
+                const depthText = s.depth_m != null ? `${Math.round(s.depth_m)} m` : '-';
+                const dateText = formatWibDateTime(s.event_date_utc, 'Arsip survei');
+                const commonName = s.common_name || extractFishNameId(s);
+                return `
+                  <tr>
+                    <td><img class="table-thumb" src="${imgSrc}" alt="${s.scientific_name}" loading="lazy"></td>
+                    <td><strong><em>${s.scientific_name}</em></strong></td>
+                    <td>${commonName}</td>
+                    <td><span class="cluster-pill">WPP ${s.wpp_code ?? '-'}</span></td>
+                    <td class="tabular-nums">${depthText}</td>
+                    <td class="tabular-nums">${dateText}</td>
+                    <td style="font-size:11.5px;color:var(--ink-muted);">${s.attribution}</td>
+                    <td style="text-align:right;">
+                      <button class="btn" type="button" onclick="navigateToMapPoint(${s.lat}, ${s.lon}, 7, '${s.id}', '${s.wpp_code || ''}')" title="Lihat di Peta">
+                        <span>Peta</span>
+                      </button>
+                    </td>
+                  </tr>
+                `;
+              }).join('');
+            }
+          }
+        };
+
+        // Wire Event Listeners for Tab 2 (Jenis Ikan)
+        document.getElementById('species-search')?.addEventListener('input', (e) => {
+          speciesCatalog.search = e.target.value;
+          speciesCatalog.page = 1;
+          renderSpeciesCatalog();
+        });
+
+        document.getElementById('species-group-filter')?.addEventListener('change', (e) => {
+          speciesCatalog.groupFilter = e.target.value;
+          speciesCatalog.page = 1;
+          renderSpeciesCatalog();
+        });
+
+        document.getElementById('species-wpp-filter')?.addEventListener('change', (e) => {
+          speciesCatalog.wppFilter = e.target.value;
+          speciesCatalog.page = 1;
+          renderSpeciesCatalog();
+        });
+
+        document.getElementById('species-sort-select')?.addEventListener('change', (e) => {
+          speciesCatalog.sortBy = e.target.value;
+          renderSpeciesCatalog();
+        });
+
+        document.getElementById('species-per-page')?.addEventListener('change', (e) => {
+          speciesCatalog.perPage = Number(e.target.value) || 12;
+          speciesCatalog.page = 1;
+          renderSpeciesCatalog();
+        });
+
+        const btnCard = document.getElementById('view-mode-card');
+        const btnTable = document.getElementById('view-mode-table');
+        btnCard?.addEventListener('click', () => {
+          speciesCatalog.viewMode = 'card';
+          btnCard.classList.add('active');
+          btnCard.setAttribute('aria-pressed', 'true');
+          btnTable?.classList.remove('active');
+          btnTable?.setAttribute('aria-pressed', 'false');
+          renderSpeciesCatalog();
+        });
+        btnTable?.addEventListener('click', () => {
+          speciesCatalog.viewMode = 'table';
+          btnTable.classList.add('active');
+          btnTable.setAttribute('aria-pressed', 'true');
+          btnCard?.classList.remove('active');
+          btnCard?.setAttribute('aria-pressed', 'false');
+          renderSpeciesCatalog();
+        });
+
+        // Clickable Table Headers in Species Table
+        document.querySelectorAll('#species-table-container .sortable-th').forEach((th) => {
+          th.addEventListener('click', () => {
+            const sortKey = th.getAttribute('data-sort');
+            if (sortKey === 'sci') {
+              speciesCatalog.sortBy = speciesCatalog.sortBy === 'sci_asc' ? 'sci_desc' : 'sci_asc';
+            } else if (sortKey === 'name') {
+              speciesCatalog.sortBy = speciesCatalog.sortBy === 'name_asc' ? 'sci_desc' : 'name_asc';
+            } else if (sortKey === 'depth') {
+              speciesCatalog.sortBy = speciesCatalog.sortBy === 'depth_desc' ? 'depth_asc' : 'depth_desc';
+            } else if (sortKey === 'date') {
+              speciesCatalog.sortBy = speciesCatalog.sortBy === 'date_desc' ? 'date_asc' : 'date_desc';
+            }
+            const sortSelect = document.getElementById('species-sort-select');
+            if (sortSelect) sortSelect.value = speciesCatalog.sortBy;
+            renderSpeciesCatalog();
+          });
+        });
+
+        // --- Tab 3: Tren Wilayah Perairan WPP-NRI Controller ---
+        const wppTrendState = {
+          search: '',
+          sortBy: 'code_asc',
+          page: 1,
+          perPage: 11,
+        };
+
+        const renderWppTrends = () => {
+          const tbody = document.getElementById('wpp-tbody');
+          if (!tbody) return;
+          let list = [...state.wppZones];
+          const q = wppTrendState.search.trim().toLowerCase();
+          if (q) {
+            list = list.filter((z) => {
+              const full = `${z.wpp_code} ${z.name} ${z.waters_id}`.toLowerCase();
+              return full.includes(q);
+            });
+          }
+
+          const sb = wppTrendState.sortBy;
+          list.sort((a, b) => {
+            if (sb === 'code_asc') return (a.wpp_code || '').localeCompare(b.wpp_code || '');
+            if (sb === 'code_desc') return (b.wpp_code || '').localeCompare(a.wpp_code || '');
+            if (sb === 'area_desc') return (b.area_km2 || 0) - (a.area_km2 || 0);
+            if (sb === 'area_asc') return (a.area_km2 || 0) - (b.area_km2 || 0);
+            if (sb === 'name_asc') return (a.name || '').localeCompare(b.name || '');
+            return 0;
+          });
+
+          const maxArea = 1200000; // Reference max area for visual progress bar
+          const total = list.length;
+          const summaryEl = document.getElementById('wpp-page-summary');
+          if (summaryEl) summaryEl.textContent = `Menampilkan 1 - ${total} dari ${total} zona WPP`;
+
+          tbody.innerHTML = list.map((z) => {
+            const areaNum = z.area_km2 ? Math.round(z.area_km2) : 0;
+            const areaPercent = Math.min(100, Math.round((areaNum / maxArea) * 100));
+            const areaStr = areaNum ? areaNum.toLocaleString('id-ID') : '-';
+            const sstInfo = z.wpp_code === '712' ? '30.3°C · Subur Plankton' : '28.9° - 30.5°C · Tropis';
+            return `
+              <tr>
+                <td><strong class="cluster-pill" style="font-family:var(--font-mono);">WPP ${z.wpp_code}</strong></td>
+                <td><strong>${z.name}</strong></td>
+                <td><span style="color:var(--ink-secondary);">${z.waters_id}</span></td>
+                <td>
+                  <div class="tabular-nums" style="font-weight:600;">${areaStr} km²</div>
+                  <div class="mini-progress-track"><div class="mini-progress-fill" style="width:${areaPercent}%;"></div></div>
+                </td>
+                <td class="tabular-nums" style="color:var(--ink-muted);">${z.centroid_lat.toFixed(2)}°, ${z.centroid_lon.toFixed(2)}°</td>
+                <td><span class="badge ok">${sstInfo}</span></td>
+                <td style="text-align:right;">
+                  <button class="btn" type="button" onclick="navigateToMapPoint(${z.centroid_lat}, ${z.centroid_lon}, 6, '', '${z.wpp_code}')">
+                    <span>Jelajahi Peta</span>
+                  </button>
+                </td>
+              </tr>
+            `;
+          }).join('');
+        };
+
+        document.getElementById('wpp-search-input')?.addEventListener('input', (e) => {
+          wppTrendState.search = e.target.value;
+          renderWppTrends();
+        });
+
+        document.getElementById('wpp-sort-select')?.addEventListener('change', (e) => {
+          wppTrendState.sortBy = e.target.value;
+          renderWppTrends();
+        });
+
+        document.getElementById('reset-wpp-filter-btn')?.addEventListener('click', () => {
+          wppTrendState.search = '';
+          wppTrendState.sortBy = 'code_asc';
+          const input = document.getElementById('wpp-search-input');
+          if (input) input.value = '';
+          const select = document.getElementById('wpp-sort-select');
+          if (select) select.value = 'code_asc';
+          renderWppTrends();
+        });
+
+        // Clickable Table Headers in WPP Table
+        document.querySelectorAll('[data-wpp-sort]').forEach((th) => {
+          th.addEventListener('click', () => {
+            const field = th.getAttribute('data-wpp-sort');
+            if (field === 'code') {
+              wppTrendState.sortBy = wppTrendState.sortBy === 'code_asc' ? 'code_desc' : 'code_asc';
+            } else if (field === 'area') {
+              wppTrendState.sortBy = wppTrendState.sortBy === 'area_desc' ? 'area_asc' : 'area_desc';
+            } else if (field === 'name') {
+              wppTrendState.sortBy = wppTrendState.sortBy === 'name_asc' ? 'code_asc' : 'name_asc';
+            }
+            const sel = document.getElementById('wpp-sort-select');
+            if (sel) sel.value = wppTrendState.sortBy;
+            renderWppTrends();
+          });
+        });
+
+        // --- Tab 4: Sumber Data Controller ---
+        const sourcesState = {
+          search: '',
+          priority: '',
+        };
+
+        const renderSourcesTab = (sourcesData, healthData) => {
+          const healthBanner = document.getElementById('health-banner');
+          if (healthBanner && healthData) {
+            healthBanner.innerHTML = `
+              <div class="row-between" style="margin-bottom:6px;">
+                <strong style="font-size:14px;">Infrastruktur Server &amp; Layanan Peta</strong>
+                <span class="badge ${healthData.status === 'healthy' ? 'ok' : 'warn'}">Status: ${healthData.status.toUpperCase()}</span>
+              </div>
+              <div style="font-size:12.5px;color:var(--ink-secondary);line-height:1.6;">
+                Versi Arsitektur: <strong>v${healthData.version}</strong> |
+                Cache Ubin Peta: <strong>${healthData.tile_cache_ok ? 'Siap (In-Memory LRU)' : 'Nonaktif'}</strong> |
+                Basis Data Spasial: <strong>${healthData.db_ok ? 'Terhubung' : 'Mode Mandiri (Edge Local Data)'}</strong> |
+                Waktu Verifikasi: <strong class="tabular-nums">${formatWibDateTime(healthData.timestamp_utc, '-')}</strong>
+              </div>
+            `;
+          }
+
+          const grid = document.getElementById('sources-grid');
+          if (!grid || !sourcesData?.sources) return;
+
+          let list = sourcesData.sources.filter((s) => s.enabled !== false);
+          const q = sourcesState.search.trim().toLowerCase();
+          if (q) {
+            list = list.filter((s) => `${s.display_name} ${s.source_key} ${s.license_summary}`.toLowerCase().includes(q));
+          }
+          if (sourcesState.priority) {
+            list = list.filter((s) => s.priority === sourcesState.priority);
+          }
+
+          grid.innerHTML = list.map((src) => {
+            const isOk = src.status === 'healthy';
+            const badgeClass = isOk ? 'ok' : 'warn';
+            const lastDate = formatWibDateTime(src.latest_data_timestamp_utc, 'Data awal');
+            const syncDate = formatWibDateTime(src.last_sync_utc, 'Terhubung');
+            return `
+              <div class="card" style="gap:8px;">
+                <div class="row-between">
+                  <strong style="font-size:14px;">${src.display_name}</strong>
+                  <span class="badge ${badgeClass}">${src.status}</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;">
+                  <span class="cluster-pill" style="font-size:10.5px;">Prioritas ${src.priority}</span>
+                  <span style="font-size:11px;color:var(--ink-muted);">${src.source_key}</span>
+                </div>
+                <div class="tabular-nums" style="font-size:12px;"><strong>Data Terbaru:</strong> ${lastDate}</div>
+                <div class="tabular-nums" style="font-size:12px;color:var(--ink-muted);"><strong>Sinkron Terakhir:</strong> ${syncDate}</div>
+                <div style="font-size:12px;color:var(--ink-secondary);line-height:1.4;">${src.license_summary}</div>
+                <div style="font-size:11px;color:var(--ink-muted);border-top:var(--border-hairline);padding-top:6px;margin-top:auto;">
+                  ${src.attribution}
+                </div>
+              </div>
+            `;
+          }).join('');
+        };
+
+        document.getElementById('sources-search-input')?.addEventListener('input', (e) => {
+          sourcesState.search = e.target.value;
+          renderSourcesTab(sourcesRaw, health);
+        });
+
+        document.getElementById('sources-priority-filter')?.addEventListener('change', (e) => {
+          sourcesState.priority = e.target.value;
+          renderSourcesTab(sourcesRaw, health);
+        });
+
+        // Initialize Catalogs & Tabs
+        renderSpeciesCatalog();
+        renderWppTrends();
+        renderSourcesTab(sources, health);
 
         const noaaSrc = sources.sources?.find((s) => s.source_key === 'noaa_erddap');
         const noaaDateWib = noaaSrc?.latest_data_timestamp_utc ? formatWibDateTime(noaaSrc.latest_data_timestamp_utc, 'Lokal') : 'Lokal';

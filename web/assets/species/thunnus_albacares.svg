@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 260" width="100%" height="100%" style="background:#070d18; border-radius:10px; overflow:hidden;">
+    <defs>
+        <radialGradient id="oceanGlow_thunnus_albacares" cx="50%" cy="50%" r="65%">
+            <stop offset="0%" stop-color="#F59E0B" stop-opacity="0.18" />
+            <stop offset="60%" stop-color="#0a1426" stop-opacity="0.85" />
+            <stop offset="100%" stop-color="#050a14" stop-opacity="0.98" />
+        </radialGradient>
+        <pattern id="grid_thunnus_albacares" width="20" height="20" patternUnits="userSpaceOnUse">
+            <path d="M 20 0 L 0 0 0 20" fill="none" stroke="rgba(255, 255, 255, 0.03)" stroke-width="1" />
+        </pattern>
+        <filter id="softGlow_thunnus_albacares" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="6" result="blur" />
+            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+        </filter>
+    </defs>
+
+    <!-- Card Background -->
+    <rect width="400" height="260" fill="url(#oceanGlow_thunnus_albacares)" />
+    <rect width="400" height="260" fill="url(#grid_thunnus_albacares)" />
+
+    <!-- Subtle Depth Ring -->
+    <circle cx="200" cy="130" r="110" fill="none" stroke="#F59E0B" stroke-opacity="0.08" stroke-width="2" stroke-dasharray="4,6" />
+    <circle cx="200" cy="130" r="70" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="1" />
+
+    <!-- Species Illustration -->
+    <g id="fish-art">
+        <!-- Body Gradient -->
+            <defs>
+                <linearGradient id="tunaback" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stop-color="#0E2338" />
+                    <stop offset="40%" stop-color="#1E3A5F" />
+                    <stop offset="70%" stop-color="#3B82F6" />
+                    <stop offset="85%" stop-color="#94A3B8" />
+                    <stop offset="100%" stop-color="#F1F5F9" />
+                </linearGradient>
+                <linearGradient id="yellowfin" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#F59E0B" />
+                    <stop offset="100%" stop-color="#FBBF24" />
+                </linearGradient>
+            </defs>
+            <!-- Caudal Fin (Tail) -->
+            <path d="M 330 130 Q 365 75 385 60 Q 365 125 350 130 Q 365 135 385 200 Q 365 185 330 130 Z" fill="#F59E0B" opacity="0.95"/>
+            <path d="M 335 130 Q 360 85 375 72 Q 355 125 345 130 Q 355 135 375 188 Q 360 175 335 130 Z" fill="#1E3A5F"/>
+            <!-- Second Dorsal Fin (Long sickle yellow) -->
+            <path d="M 235 98 Q 255 35 295 18 Q 275 65 258 103 Z" fill="url(#yellowfin)"/>
+            <!-- Anal Fin (Long sickle yellow) -->
+            <path d="M 240 162 Q 260 225 298 242 Q 280 195 262 157 Z" fill="url(#yellowfin)"/>
+            <!-- First Dorsal Fin -->
+            <path d="M 140 102 Q 185 60 225 98 Z" fill="#1E3A5F" stroke="#F59E0B" stroke-width="1.5"/>
+            <!-- Finlets top and bottom -->
+            <polygon points="268,107 278,98 276,108" fill="#F59E0B"/>
+            <polygon points="282,112 292,104 290,113" fill="#F59E0B"/>
+            <polygon points="296,117 305,110 303,118" fill="#F59E0B"/>
+            <polygon points="310,122 318,116 317,123" fill="#F59E0B"/>
+            <polygon points="270,153 280,162 278,152" fill="#F59E0B"/>
+            <polygon points="284,148 294,156 292,147" fill="#F59E0B"/>
+            <polygon points="298,143 307,150 305,142" fill="#F59E0B"/>
+            <polygon points="312,138 320,144 319,137" fill="#F59E0B"/>
+            <!-- Main Torpedo Body -->
+            <path d="M 40 130 Q 75 90 150 90 Q 250 90 335 130 Q 250 170 150 170 Q 75 170 40 130 Z" fill="url(#tunaback)"/>
+            <!-- Belly Iridescence & Silver Glow -->
+            <path d="M 65 130 Q 120 120 200 120 Q 280 125 330 130 Q 250 168 150 168 Q 90 168 65 130 Z" fill="#FFFFFF" opacity="0.35"/>
+            <!-- Pectoral Fin -->
+            <path d="M 125 128 Q 185 132 230 148 Q 175 142 125 136 Z" fill="#0F172A" stroke="#F59E0B" stroke-width="1"/>
+            <!-- Gill Cover -->
+            <path d="M 110 102 Q 125 130 110 158" fill="none" stroke="#F59E0B" stroke-width="1.8" opacity="0.6"/>
+            <!-- Eye -->
+            <circle cx="78" cy="118" r="7" fill="#FBBF24"/>
+            <circle cx="78" cy="118" r="4.5" fill="#0F172A"/>
+            <circle cx="76" cy="116" r="1.5" fill="#FFFFFF"/>
+            <!-- Mouth Line -->
+            <path d="M 40 130 Q 60 132 70 134" fill="none" stroke="#0E2338" stroke-width="2"/>
+    </g>
+
+    <!-- Bottom Metadata Ribbon inside Image -->
+    <rect x="0" y="222" width="400" height="38" fill="rgba(6, 11, 22, 0.82)" />
+    <line x1="0" y1="222" x2="400" y2="222" stroke="rgba(255,255,255,0.12)" stroke-width="1" />
+    
+    <!-- Title & Scientific Name -->
+    <text x="14" y="238" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-size="11.5" font-weight="700" fill="#F8FAFC">Tuna Sirip Kuning</text>
+    <text x="14" y="251" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-size="9.5" font-style="italic" fill="#94A3B8">Thunnus albacares</text>
+
+    <!-- Badge Tag -->
+    <rect x="270" y="231" width="116" height="18" rx="4" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.15)" stroke-width="1" />
+    <text x="328" y="243.5" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-size="9" font-weight="600" fill="#F59E0B" text-anchor="middle">Scombridae · Pelagis Besar</text>
+</svg>

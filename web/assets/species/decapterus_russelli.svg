@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 260" width="100%" height="100%" style="background:#070d18; border-radius:10px; overflow:hidden;">
+    <defs>
+        <radialGradient id="oceanGlow_decapterus_russelli" cx="50%" cy="50%" r="65%">
+            <stop offset="0%" stop-color="#38BDF8" stop-opacity="0.18" />
+            <stop offset="60%" stop-color="#0a1426" stop-opacity="0.85" />
+            <stop offset="100%" stop-color="#050a14" stop-opacity="0.98" />
+        </radialGradient>
+        <pattern id="grid_decapterus_russelli" width="20" height="20" patternUnits="userSpaceOnUse">
+            <path d="M 20 0 L 0 0 0 20" fill="none" stroke="rgba(255, 255, 255, 0.03)" stroke-width="1" />
+        </pattern>
+        <filter id="softGlow_decapterus_russelli" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="6" result="blur" />
+            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+        </filter>
+    </defs>
+
+    <!-- Card Background -->
+    <rect width="400" height="260" fill="url(#oceanGlow_decapterus_russelli)" />
+    <rect width="400" height="260" fill="url(#grid_decapterus_russelli)" />
+
+    <!-- Subtle Depth Ring -->
+    <circle cx="200" cy="130" r="110" fill="none" stroke="#38BDF8" stroke-opacity="0.08" stroke-width="2" stroke-dasharray="4,6" />
+    <circle cx="200" cy="130" r="70" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="1" />
+
+    <!-- Species Illustration -->
+    <g id="fish-art">
+        <defs>
+                <linearGradient id="layangback" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stop-color="#0C4A6E" />
+                    <stop offset="35%" stop-color="#0284C7" />
+                    <stop offset="65%" stop-color="#38BDF8" />
+                    <stop offset="85%" stop-color="#BAE6FD" />
+                    <stop offset="100%" stop-color="#FFFFFF" />
+                </linearGradient>
+            </defs>
+            <path d="M 335 130 Q 365 85 382 72 Q 362 125 350 130 Q 362 135 382 188 Q 365 175 335 130 Z" fill="#0284C7"/>
+            <path d="M 130 105 Q 165 80 200 105 Z" fill="#0284C7"/>
+            <path d="M 215 106 Q 255 90 285 108 Z" fill="#0284C7"/>
+            <!-- Slender Fusiform Body -->
+            <path d="M 40 130 Q 75 100 145 100 Q 245 100 335 130 Q 245 160 145 160 Q 75 160 40 130 Z" fill="url(#layangback)"/>
+            <!-- Prominent Lateral Line with Scutes near Tail -->
+            <path d="M 105 124 Q 185 124 235 130 L 325 130" fill="none" stroke="#FDE047" stroke-width="1.8"/>
+            <!-- Scutes (durian sisik keras) near tail -->
+            <path d="M 255 126 L 258 134 M 265 126 L 268 134 M 275 126 L 278 134 M 285 126 L 288 134 M 295 126 L 298 134 M 305 126 L 308 134 M 315 126 L 318 134" stroke="#0369A1" stroke-width="1.5"/>
+            <!-- Opercular Black Spot -->
+            <circle cx="110" cy="115" r="3.5" fill="#082F49"/>
+            <circle cx="75" cy="120" r="7" fill="#BAE6FD"/>
+            <circle cx="75" cy="120" r="4" fill="#082F49"/>
+            <circle cx="73" cy="118" r="1.5" fill="#FFFFFF"/>
+            <path d="M 102 108 Q 114 130 102 152" fill="none" stroke="#082F49" stroke-width="1.6"/>
+            <path d="M 115 128 Q 155 132 185 138 Q 150 136 115 132 Z" fill="#0284C7"/>
+    </g>
+
+    <!-- Bottom Metadata Ribbon inside Image -->
+    <rect x="0" y="222" width="400" height="38" fill="rgba(6, 11, 22, 0.82)" />
+    <line x1="0" y1="222" x2="400" y2="222" stroke="rgba(255,255,255,0.12)" stroke-width="1" />
+    
+    <!-- Title & Scientific Name -->
+    <text x="14" y="238" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-size="11.5" font-weight="700" fill="#F8FAFC">Ikan Layang Deles</text>
+    <text x="14" y="251" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-size="9.5" font-style="italic" fill="#94A3B8">Decapterus russelli</text>
+
+    <!-- Badge Tag -->
+    <rect x="270" y="231" width="116" height="18" rx="4" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.15)" stroke-width="1" />
+    <text x="328" y="243.5" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-size="9" font-weight="600" fill="#38BDF8" text-anchor="middle">Carangidae · Pelagis Kecil</text>
+</svg>

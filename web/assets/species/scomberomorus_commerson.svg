@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 260" width="100%" height="100%" style="background:#070d18; border-radius:10px; overflow:hidden;">
+    <defs>
+        <radialGradient id="oceanGlow_scomberomorus_commerson" cx="50%" cy="50%" r="65%">
+            <stop offset="0%" stop-color="#64748B" stop-opacity="0.18" />
+            <stop offset="60%" stop-color="#0a1426" stop-opacity="0.85" />
+            <stop offset="100%" stop-color="#050a14" stop-opacity="0.98" />
+        </radialGradient>
+        <pattern id="grid_scomberomorus_commerson" width="20" height="20" patternUnits="userSpaceOnUse">
+            <path d="M 20 0 L 0 0 0 20" fill="none" stroke="rgba(255, 255, 255, 0.03)" stroke-width="1" />
+        </pattern>
+        <filter id="softGlow_scomberomorus_commerson" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="6" result="blur" />
+            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+        </filter>
+    </defs>
+
+    <!-- Card Background -->
+    <rect width="400" height="260" fill="url(#oceanGlow_scomberomorus_commerson)" />
+    <rect width="400" height="260" fill="url(#grid_scomberomorus_commerson)" />
+
+    <!-- Subtle Depth Ring -->
+    <circle cx="200" cy="130" r="110" fill="none" stroke="#64748B" stroke-opacity="0.08" stroke-width="2" stroke-dasharray="4,6" />
+    <circle cx="200" cy="130" r="70" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="1" />
+
+    <!-- Species Illustration -->
+    <g id="fish-art">
+        <defs>
+                <linearGradient id="tenggiriback" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stop-color="#1E293B" />
+                    <stop offset="35%" stop-color="#334155" />
+                    <stop offset="65%" stop-color="#64748B" />
+                    <stop offset="85%" stop-color="#CBD5E1" />
+                    <stop offset="100%" stop-color="#F8FAFC" />
+                </linearGradient>
+            </defs>
+            <path d="M 345 130 Q 375 80 390 68 Q 372 125 360 130 Q 372 135 390 192 Q 375 180 345 130 Z" fill="#334155"/>
+            <path d="M 130 108 Q 185 92 235 108 Z" fill="#1E293B"/>
+            <path d="M 245 108 Q 260 85 278 108 Z" fill="#334155"/>
+            <!-- Elongated Torpedo Body -->
+            <path d="M 30 130 Q 70 104 150 104 Q 260 104 345 130 Q 260 156 150 156 Q 70 156 30 130 Z" fill="url(#tenggiriback)"/>
+            <!-- Vertical Wavy Zebra Bars Across Body -->
+            <path d="M 140 110 Q 142 130 138 150" stroke="#1E293B" stroke-width="2.2" stroke-linecap="round"/>
+            <path d="M 155 110 Q 158 130 154 150" stroke="#1E293B" stroke-width="2.2" stroke-linecap="round"/>
+            <path d="M 170 110 Q 173 130 169 150" stroke="#1E293B" stroke-width="2.2" stroke-linecap="round"/>
+            <path d="M 185 110 Q 188 130 184 150" stroke="#1E293B" stroke-width="2.2" stroke-linecap="round"/>
+            <path d="M 200 110 Q 203 130 199 150" stroke="#1E293B" stroke-width="2.2" stroke-linecap="round"/>
+            <path d="M 215 110 Q 218 130 214 150" stroke="#1E293B" stroke-width="2.2" stroke-linecap="round"/>
+            <path d="M 230 112 Q 233 130 229 148" stroke="#1E293B" stroke-width="2.2" stroke-linecap="round"/>
+            <path d="M 245 114 Q 248 130 244 146" stroke="#1E293B" stroke-width="2.2" stroke-linecap="round"/>
+            <path d="M 260 116 Q 263 130 259 144" stroke="#1E293B" stroke-width="2.2" stroke-linecap="round"/>
+            <path d="M 275 118 Q 278 130 274 142" stroke="#1E293B" stroke-width="2" stroke-linecap="round"/>
+            <!-- Sharp Snout with Teeth -->
+            <path d="M 30 130 L 70 132" stroke="#0F172A" stroke-width="2"/>
+            <circle cx="68" cy="120" r="6.5" fill="#CBD5E1"/>
+            <circle cx="68" cy="120" r="4" fill="#0F172A"/>
+            <circle cx="66" cy="118" r="1.5" fill="#FFFFFF"/>
+            <path d="M 98 112 Q 110 130 98 148" fill="none" stroke="#334155" stroke-width="1.8"/>
+            <path d="M 112 128 Q 155 132 185 138 Q 150 136 112 132 Z" fill="#1E293B"/>
+    </g>
+
+    <!-- Bottom Metadata Ribbon inside Image -->
+    <rect x="0" y="222" width="400" height="38" fill="rgba(6, 11, 22, 0.82)" />
+    <line x1="0" y1="222" x2="400" y2="222" stroke="rgba(255,255,255,0.12)" stroke-width="1" />
+    
+    <!-- Title & Scientific Name -->
+    <text x="14" y="238" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-size="11.5" font-weight="700" fill="#F8FAFC">Ikan Tenggiri</text>
+    <text x="14" y="251" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-size="9.5" font-style="italic" fill="#94A3B8">Scomberomorus commerson</text>
+
+    <!-- Badge Tag -->
+    <rect x="270" y="231" width="116" height="18" rx="4" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.15)" stroke-width="1" />
+    <text x="328" y="243.5" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-size="9" font-weight="600" fill="#64748B" text-anchor="middle">Scombridae · Predator Pelagis</text>
+</svg>
