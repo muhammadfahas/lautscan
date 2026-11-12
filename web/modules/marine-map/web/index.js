@@ -25,6 +25,8 @@ const REST_MS = 250;
 const DRAG_THRESHOLD_PX = 5;
 const DEFAULT_OSM_TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 const DEFAULT_ATTRIBUTION = '© OpenStreetMap contributors';
+const DEFAULT_DARK_TILES = 'https://basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}.png';
+const DEFAULT_DARK_ATTRIBUTION = '© OpenStreetMap contributors, © CARTO';
 const INDONESIA_BOUNDS = { minLon: 88, minLat: -16, maxLon: 148, maxLat: 12 };
 const MAX_RENDERED_MARKERS = 150;
 
@@ -55,16 +57,16 @@ const STYLE = `
   outline-offset: -3px;
 }
 .lautscan-marine-map.theme-night {
-  --mm-bg: #0A0E27;
-  --mm-ocean: #0A0E27;
+  --mm-bg: #070A18;
+  --mm-ocean: #070A18;
   --mm-surface: #0D1117;
-  --mm-ink: #E6EDF3;
+  --mm-ink: #F1F5F9;
   --mm-muted: #94A3B8;
-  --mm-border: #30363D;
-  --mm-focus: #60A5FA;
+  --mm-border: #21262D;
+  --mm-focus: #38BDF8;
   --mm-cta: #F97316;
-  --mm-plain-tile: #111834;
-  --mm-plain-grid: #243056;
+  --mm-plain-tile: #0F172A;
+  --mm-plain-grid: #1E293B;
 }
 .lautscan-marine-map.dragging {
   cursor: grabbing;
@@ -92,7 +94,10 @@ const STYLE = `
   z-index: 1;
 }
 .lautscan-marine-map.theme-night .base-layer img.tile {
-  filter: invert(90%) hue-rotate(180deg) brightness(0.84) contrast(0.94) saturate(0.75);
+  filter: contrast(1.04) brightness(0.96);
+}
+.lautscan-marine-map.theme-night .base-layer img.tile[src*="tile.openstreetmap.org"] {
+  filter: invert(92%) hue-rotate(180deg) brightness(0.82) contrast(1.08) saturate(0.65);
 }
 .lautscan-marine-map .overlay-layer {
   z-index: 2;
@@ -171,8 +176,18 @@ const STYLE = `
   transition: stroke 180ms ease, fill 180ms ease, stroke-width 180ms ease;
 }
 .lautscan-marine-map.theme-night .wpp-path {
-  fill: rgba(96, 165, 250, 0.08);
-  stroke: #60A5FA;
+  fill: rgba(56, 189, 248, 0.08);
+  stroke: #38BDF8;
+  stroke-width: 1.8;
+  stroke-dasharray: 6 3;
+  filter: drop-shadow(0 0 4px rgba(56, 189, 248, 0.35));
+}
+.lautscan-marine-map.theme-night .wpp-path.selected {
+  fill: rgba(249, 115, 22, 0.22);
+  stroke: #F97316;
+  stroke-width: 2.8;
+  stroke-dasharray: none;
+  filter: drop-shadow(0 0 10px rgba(249, 115, 22, 0.65));
 }
 .lautscan-marine-map .wpp-path.selected {
   fill: rgba(249, 115, 22, 0.16);
@@ -219,8 +234,11 @@ const STYLE = `
   transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease;
 }
 .lautscan-marine-map.theme-night .wpp-chip-pill {
-  background: rgba(13, 17, 23, 0.88);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+  background: rgba(13, 17, 23, 0.90);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  color: #E2E8F0;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.55), 0 0 8px rgba(56, 189, 248, 0.15);
+  backdrop-filter: blur(8px);
 }
 .lautscan-marine-map .wpp-chip:hover .wpp-chip-pill {
   border-color: var(--mm-focus);
@@ -269,8 +287,17 @@ const STYLE = `
   transition: transform 160ms ease, background-color 160ms ease, border-color 160ms ease, color 160ms ease;
 }
 .lautscan-marine-map.theme-night .species-marker-pill {
-  background: rgba(13, 17, 23, 0.92);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.48);
+  background: rgba(13, 17, 23, 0.94);
+  border: 1.5px solid rgba(249, 115, 22, 0.65);
+  color: #F8FAFC;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.65), 0 0 10px rgba(249, 115, 22, 0.25);
+  backdrop-filter: blur(8px);
+}
+.lautscan-marine-map.theme-night .species-marker:hover .species-marker-pill,
+.lautscan-marine-map.theme-night .species-marker[aria-pressed="true"] .species-marker-pill {
+  border-color: #F97316;
+  background: rgba(24, 30, 42, 0.98);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.75), 0 0 16px rgba(249, 115, 22, 0.55);
 }
 .lautscan-marine-map .species-marker-dot {
   width: 20px;
@@ -319,7 +346,18 @@ const STYLE = `
   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.16);
 }
 .lautscan-marine-map.theme-night .zoom-controls {
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+  background: rgba(13, 17, 23, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.60);
+  backdrop-filter: blur(12px);
+}
+.lautscan-marine-map.theme-night .zoom-btn {
+  background: transparent;
+  color: #E2E8F0;
+}
+.lautscan-marine-map.theme-night .zoom-btn:hover:not(:disabled) {
+  background: rgba(56, 189, 248, 0.18);
+  color: #38BDF8;
 }
 .lautscan-marine-map .zoom-btn {
   min-width: 44px;
@@ -366,7 +404,10 @@ const STYLE = `
   pointer-events: none;
 }
 .lautscan-marine-map.theme-night .map-hud {
-  background: rgba(13, 17, 23, 0.88);
+  background: rgba(13, 17, 23, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(10px);
 }
 .lautscan-marine-map .hud-coords {
   font-family: "Fira Code", ui-monospace, monospace;
@@ -727,6 +768,8 @@ export class MarineMap {
     this.maxZoom = parseNum(this.config.maxZoom, DEFAULT_MAX_ZOOM);
     this.osmTemplate = parseStr(this.config.tiles, DEFAULT_OSM_TILES) || DEFAULT_OSM_TILES;
     this.attributionText = parseStr(this.config.attribution, DEFAULT_ATTRIBUTION) || DEFAULT_ATTRIBUTION;
+    this.darkTemplate = parseStr(this.config.darkTiles, DEFAULT_DARK_TILES) || DEFAULT_DARK_TILES;
+    this.darkAttribution = parseStr(this.config.darkAttribution, DEFAULT_DARK_ATTRIBUTION) || DEFAULT_DARK_ATTRIBUTION;
 
     const computedPos =
       typeof getComputedStyle === 'function'
@@ -737,7 +780,7 @@ export class MarineMap {
     }
 
     this.map = doc.createElement('div');
-    this.map.className = 'lautscan-marine-map theme-daylight';
+    this.map.className = 'lautscan-marine-map theme-night';
     if (this.plain) this.map.classList.add('plain-mode');
     this.map.tabIndex = 0;
     this.map.setAttribute('role', 'application');
@@ -811,7 +854,7 @@ export class MarineMap {
     this.hudCoords.className = 'hud-coords';
     this.hudCredit = doc.createElement('span');
     this.hudCredit.className = 'hud-credit';
-    this.hudCredit.textContent = this.plain ? 'Plain tiles' : this.attributionText;
+    this.hudCredit.textContent = this.plain ? 'Plain tiles' : this.darkAttribution;
     this.hud.append(this.hudCoords, this.hudCredit);
 
     this.map.append(
@@ -838,7 +881,7 @@ export class MarineMap {
     };
     this.center = [DEFAULT_CENTER_LAT, DEFAULT_CENTER_LON];
     this.zoom = DEFAULT_ZOOM;
-    this.baseStyle = 'daylight';
+    this.baseStyle = 'night';
     const makeLayerState = (container, opacity) => {
       const canvas = doc.createElement('canvas');
       canvas.className = 'overlay-canvas';
@@ -934,10 +977,17 @@ export class MarineMap {
     }
 
     if (changed('baseStyle')) {
-      const style = parseStr(safeProps.baseStyle, 'daylight').toLowerCase() === 'night' ? 'night' : 'daylight';
-      this.baseStyle = style;
-      this.map.classList.toggle('theme-night', style === 'night');
-      this.map.classList.toggle('theme-daylight', style !== 'night');
+      const style = parseStr(safeProps.baseStyle, 'night').toLowerCase() === 'daylight' ? 'daylight' : 'night';
+      if (this.baseStyle !== style) {
+        this.baseStyle = style;
+        this.map.classList.toggle('theme-night', style === 'night');
+        this.map.classList.toggle('theme-daylight', style !== 'night');
+        if (this.hudCredit) {
+          this.hudCredit.textContent = this.plain
+            ? 'Plain tiles'
+            : (style === 'night' ? this.darkAttribution : this.attributionText);
+        }
+      }
     }
 
     if (changed('potentialVisible')) this.layers.potential.visible = parseBool(safeProps.potentialVisible, false);
@@ -1258,6 +1308,13 @@ export class MarineMap {
   }
 
   osmTileUrl(z, x, y) {
+    if (this.baseStyle === 'night') {
+      const template = this.darkTemplate || 'https://basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}.png';
+      return template
+        .replace('{z}', String(z))
+        .replace('{x}', String(x))
+        .replace('{y}', String(y));
+    }
     return this.osmTemplate
       .replace('{z}', String(z))
       .replace('{x}', String(x))
@@ -1308,17 +1365,17 @@ export class MarineMap {
     ctx.clearRect(0, 0, w, h);
 
     const night = this.baseStyle === 'night';
-    ctx.fillStyle = night ? '#0A0E27' : '#EAF2F8';
+    ctx.fillStyle = night ? '#070A18' : '#EAF2F8';
     ctx.fillRect(0, 0, w, h);
 
     const step = this.zoom >= 10 ? 0.5 : this.zoom >= 8 ? 1 : this.zoom >= 6 ? 2 : this.zoom >= 4 ? 5 : 10;
     const [northLat, westLon] = unproject(left, top, z);
     const [southLat, eastLon] = unproject(left + w / k, top + h / k, z);
 
-    ctx.strokeStyle = night ? 'rgba(148, 163, 184, 0.14)' : 'rgba(30, 41, 59, 0.10)';
+    ctx.strokeStyle = night ? 'rgba(56, 189, 248, 0.12)' : 'rgba(30, 41, 59, 0.10)';
     ctx.lineWidth = 1;
     ctx.font = '10px "Fira Code", ui-monospace, monospace';
-    ctx.fillStyle = night ? 'rgba(148, 163, 184, 0.55)' : 'rgba(71, 85, 105, 0.65)';
+    ctx.fillStyle = night ? 'rgba(148, 163, 184, 0.65)' : 'rgba(71, 85, 105, 0.65)';
 
     const startLat = Math.floor(Math.max(-80, southLat) / step) * step;
     const endLat = Math.ceil(Math.min(80, northLat) / step) * step;
@@ -1417,6 +1474,14 @@ export class MarineMap {
                 this.pruneStaleTiles(tileMap, getActiveZ ? getActiveZ() : z);
               });
               tile.addEventListener('error', () => {
+                if (this.baseStyle === 'night' && !tile.dataset.fallback) {
+                  tile.dataset.fallback = '1';
+                  tile.src = this.osmTemplate
+                    .replace('{z}', String(z))
+                    .replace('{x}', String(wx))
+                    .replace('{y}', String(ty));
+                  return;
+                }
                 tile.dataset.loaded = '0';
                 tile.dataset.error = '1';
                 tile.style.visibility = 'hidden';
@@ -1502,7 +1567,7 @@ export class MarineMap {
       left,
       top,
       n,
-      keyPrefix: '',
+      keyPrefix: `${this.baseStyle}:`,
       plainClass: 'tile plain',
       layerName: '',
       urlFor: (tz, wx, ty) => this.osmTileUrl(tz, wx, ty),
