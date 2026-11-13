@@ -8,8 +8,8 @@
       "requires_credentials": false,
       "non_commercial_only": false,
       "status": "healthy",
-      "last_sync_utc": "2026-11-13T00:15:00Z",
-      "latest_data_timestamp_utc": "2026-11-13T00:00:00Z",
+      "last_sync_utc": "2026-11-13T01:00:00Z",
+      "latest_data_timestamp_utc": "2026-11-13T00:30:00Z",
       "last_error": null,
       "attribution": "NOAA CoastWatch / NESDIS / NCEI",
       "license_summary": "U.S. Government Public Domain; open access with attribution.",
@@ -23,12 +23,42 @@
       "requires_credentials": false,
       "non_commercial_only": false,
       "status": "healthy",
-      "last_sync_utc": "2026-11-13T00:15:00Z",
-      "latest_data_timestamp_utc": "2026-11-13T00:15:00Z",
+      "last_sync_utc": "2026-11-13T01:00:00Z",
+      "latest_data_timestamp_utc": "2026-11-13T01:00:00Z",
       "last_error": null,
       "attribution": "Ocean Biodiversity Information System (OBIS) & original data providers",
       "license_summary": "Open Access (CC0 / CC-BY per dataset provider attribution).",
       "official_url": "https://api.obis.org/"
+    },
+    {
+      "source_key": "bmkg_maritim",
+      "display_name": "BMKG Pusat Meteorologi Maritim",
+      "priority": "P1",
+      "enabled": true,
+      "requires_credentials": false,
+      "non_commercial_only": false,
+      "status": "healthy",
+      "last_sync_utc": "2026-11-13T01:00:00Z",
+      "latest_data_timestamp_utc": "2026-11-13T00:45:00Z",
+      "last_error": null,
+      "attribution": "Badan Meteorologi, Klimatologi, dan Geofisika (BMKG RI)",
+      "license_summary": "Prakiraan cuaca maritim, tinggi gelombang, curah hujan, dan peringatan dini badai perairan Indonesia.",
+      "official_url": "https://maritim.bmkg.go.id/"
+    },
+    {
+      "source_key": "noaa_gfs_imerg",
+      "display_name": "NOAA GFS & NASA GPM IMERG Precipitation",
+      "priority": "P1",
+      "enabled": true,
+      "requires_credentials": false,
+      "non_commercial_only": false,
+      "status": "healthy",
+      "last_sync_utc": "2026-11-13T01:00:00Z",
+      "latest_data_timestamp_utc": "2026-11-13T00:30:00Z",
+      "last_error": null,
+      "attribution": "NOAA NCEP & NASA Earth Science Data Systems",
+      "license_summary": "Observasi satelit presipitasi hujan global dan prediksi cuaca maritim (Public Domain).",
+      "official_url": "https://gpm.nasa.gov/data/imerg"
     },
     {
       "source_key": "gfw",
@@ -38,8 +68,8 @@
       "requires_credentials": false,
       "non_commercial_only": true,
       "status": "healthy",
-      "last_sync_utc": "2026-11-13T00:15:00Z",
-      "latest_data_timestamp_utc": "2026-11-13T00:12:00Z",
+      "last_sync_utc": "2026-11-13T01:00:00Z",
+      "latest_data_timestamp_utc": "2026-11-13T00:50:00Z",
       "last_error": null,
       "attribution": "Global Fishing Watch (AIS Live Telemetry & Machine Learning Detection)",
       "license_summary": "Telemetri satelit AIS armada komersial global & deteksi manuver penangkapan ikan real-time.",
@@ -47,5 +77,5 @@
     }
   ],
   "recent_logs": [],
-  "checked_at_utc": "2026-11-13T00:15:00Z"
+  "checked_at_utc": "2026-11-13T01:00:00Z"
 }

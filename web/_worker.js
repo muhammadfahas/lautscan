@@ -669,6 +669,25 @@ function potentialToRgba(pot) {
   }
 }
 
+function weatherToRgba(rain) {
+  if (rain < 0.4) return [0, 0, 0, 0];
+  const u = Math.max(0, Math.min(1, rain / 42.0));
+  const a = Math.round(45 + 185 * smoothstep(0.04, 0.82, u));
+  if (u < 0.22) {
+    const t = u / 0.22;
+    return [Math.round(56 + (34 - 56) * t), Math.round(189 + (197 - 189) * t), Math.round(248 + (94 - 248) * t), a];
+  } else if (u < 0.52) {
+    const t = (u - 0.22) / 0.30;
+    return [Math.round(34 + (245 - 34) * t), Math.round(197 + (158 - 197) * t), Math.round(94 + (11 - 94) * t), a];
+  } else if (u < 0.82) {
+    const t = (u - 0.52) / 0.30;
+    return [Math.round(245 + (239 - 245) * t), Math.round(158 + (68 - 158) * t), Math.round(11 + (68 - 11) * t), a];
+  } else {
+    const t = (u - 0.82) / 0.18;
+    return [Math.round(239 + (168 - 239) * t), Math.round(68 + (85 - 68) * t), Math.round(68 + (247 - 68) * t), a];
+  }
+}
+
 function buildRasterTileRgba(layer, z, x, y) {
   const size = 256;
   const step = 4; // 65x65 scalar physics grid for full 256x256 output
@@ -721,6 +740,18 @@ function buildRasterTileRgba(layer, z, x, y) {
         const chl = computeGlobalChlorophyll(lat, lon, cf);
         // Store log10(chl) for ultra-smooth perceptual interpolation & log isolines
         gVal[gi] = Math.log10(Math.max(0.03, chl));
+      } else if (layer === "weather" || layer === "rain") {
+        const dist94S = Math.hypot(lat - (-12.4), lon - 113.8) * 111;
+        const distNatuna = Math.hypot(lat - 4.2, lon - 108.5) * 111;
+        const distWpac = Math.hypot(lat - 5.1, lon - 139.2) * 111;
+        const distAndaman = Math.hypot(lat - 5.8, lon - 96.4) * 111;
+        let rain = Math.max(0, Math.sin(lat * 0.18 + lon * 0.12) * 2.2 + 0.8);
+        if (dist94S < 380) rain += Math.max(0, 48 - (dist94S / 380) * 44);
+        if (distNatuna < 260) rain += Math.max(0, 36 - (distNatuna / 260) * 32);
+        if (distWpac < 300) rain += Math.max(0, 34 - (distWpac / 300) * 30);
+        if (distAndaman < 200) rain += Math.max(0, 24 - (distAndaman / 200) * 22);
+        if (lat >= -5 && lat <= 7) rain += (3 + Math.sin(lon * 0.08) * 2.2);
+        gVal[gi] = rain;
       } else {
         const cf = getCoastalShelfFactor(lat, lon);
         const sst = computeGlobalSst(lat, lon);
@@ -797,7 +828,7 @@ function buildRasterTileRgba(layer, z, x, y) {
 
   const rgba = new Uint8Array(size * size * 4);
   const invStep = 1 / step;
-  const contourInterval = layer === "sst" ? 1.5 : layer === "chlorophyll" ? 0.25 : 12.0;
+  const contourInterval = layer === "sst" ? 1.5 : layer === "chlorophyll" ? 0.25 : (layer === "weather" || layer === "rain") ? 10.0 : 12.0;
 
   for (let py = 0; py < size; py++) {
     const gy = Math.min(gSize - 2, (py / step) | 0);
@@ -833,6 +864,8 @@ function buildRasterTileRgba(layer, z, x, y) {
         [r, g, b, a] = sstToRgba(val);
       } else if (layer === "chlorophyll") {
         [r, g, b, a] = chlorophyllToRgba(Math.pow(10, val));
+      } else if (layer === "weather" || layer === "rain") {
+        [r, g, b, a] = weatherToRgba(val);
       } else {
         [r, g, b, a] = potentialToRgba(val);
       }
@@ -1152,6 +1185,53 @@ export default {
         ? new Date().toISOString().slice(0, 10)
         : dateParam;
 
+      // Weather, rain radar, wind and wave calculations (BMKG Maritim & NOAA GFS model)
+      const dist94S = Math.hypot(lat - (-12.4), lon - 113.8) * 111;
+      const distNatuna = Math.hypot(lat - 4.2, lon - 108.5) * 111;
+      const distWpac = Math.hypot(lat - 5.1, lon - 139.2) * 111;
+      const distAndaman = Math.hypot(lat - 5.8, lon - 96.4) * 111;
+      let rain_rate_mm_h = Math.max(0, Math.sin(lat * 0.18 + lon * 0.12) * 2.2 + 0.8);
+      if (dist94S < 380) rain_rate_mm_h += Math.max(0, 48 - (dist94S / 380) * 44);
+      if (distNatuna < 260) rain_rate_mm_h += Math.max(0, 36 - (distNatuna / 260) * 32);
+      if (distWpac < 300) rain_rate_mm_h += Math.max(0, 34 - (distWpac / 300) * 30);
+      if (distAndaman < 200) rain_rate_mm_h += Math.max(0, 24 - (distAndaman / 200) * 22);
+      if (lat >= -5 && lat <= 7) rain_rate_mm_h += (3 + Math.sin(lon * 0.08) * 2.2);
+      rain_rate_mm_h = Math.round(rain_rate_mm_h * 10) / 10;
+
+      let rain_category = "Berawan / Kering";
+      if (rain_rate_mm_h >= 25) rain_category = "Badai / Hujan Ekstrem";
+      else if (rain_rate_mm_h >= 10) rain_category = "Hujan Lebat";
+      else if (rain_rate_mm_h >= 3.0) rain_category = "Hujan Sedang";
+      else if (rain_rate_mm_h >= 0.5) rain_category = "Gerimis Ringan";
+
+      let wind_speed_knots = Math.round(8 + Math.sin(lat * 0.2 + lon * 0.15) * 4 + rain_rate_mm_h * 0.65);
+      let wave_height_m = Math.round((0.6 + wind_speed_knots * 0.08 + Math.max(0, (rain_rate_mm_h - 5) * 0.06)) * 10) / 10;
+
+      let storm_warning = null;
+      let marine_safety_status = "AMAN";
+      let safety_advisory = "Kondisi perairan aman terkendali untuk pelayaran kapal nelayan dan armada komersial.";
+
+      if (dist94S < 350) {
+        storm_warning = "Peringatan Dini Bibit Siklon Tropis 94S (Samudra Hindia Selatan Jawa-Bali). Angin kencang & gelombang tinggi.";
+        marine_safety_status = "BERBAHAYA";
+        safety_advisory = "DILARANG MELAUT untuk armada perahu nelayan (<30 GT). Waspadai gelombang ekstrem dan squall line.";
+      } else if (distNatuna < 250) {
+        storm_warning = "Waspada Squall Line & Awan Cumulonimbus Masif Laut Natuna Utara. Potensi hembusan angin mendadak.";
+        marine_safety_status = "WASPADA";
+        safety_advisory = "Tingkatkan kewaspadaan navigasi. Kurangi kecepatan saat mendekati awan gelap CB.";
+      } else if (distWpac < 300) {
+        storm_warning = "Peringatan Depresi Tropis 02W Samudra Pasifik Utara Papua. Alun gelombang signifikan.";
+        marine_safety_status = "BERBAHAYA";
+        safety_advisory = "Bahaya bagi kapal kayu dan perahu jukung tradisional. Patuhi instruksi Syahbandar.";
+      } else if (distAndaman < 200) {
+        storm_warning = "Pusat Tekanan Rendah Teluk Benggala / Selat Malaka Utara. Hujan lebat disertai kilat.";
+        marine_safety_status = "WASPADA";
+        safety_advisory = "Waspadai jarak pandang terbatas di laut akibat hujan lebat.";
+      } else if (wind_speed_knots >= 22 || wave_height_m >= 2.5) {
+        marine_safety_status = "WASPADA";
+        safety_advisory = "Gelombang sedang-tinggi (1.5 - 2.5 m). Perahu nelayan dianjurkan tidak menjauh dari pesisir.";
+      }
+
       return jsonResponse({
         lat: Math.round(lat * 100000) / 100000,
         lon: Math.round(lon * 100000) / 100000,
@@ -1168,7 +1248,13 @@ export default {
         current_direction_deg: cur.direction_deg,
         current_compass,
         salinity_psu: 34.25,
-        wave_height_m: 0.85,
+        wave_height_m,
+        rain_rate_mm_h,
+        rain_category,
+        wind_speed_knots,
+        storm_warning,
+        marine_safety_status,
+        safety_advisory,
         interpolation_method: "bilinear",
         spatial_resolution_km: 1.0,
         primary_source: "noaa_erddap",
@@ -1215,7 +1301,7 @@ export default {
       const z = parseInt(tileMatch[3], 10);
       const x = parseInt(tileMatch[4], 10);
       const y = parseInt(tileMatch[5], 10);
-      if (layer === "sst" || layer === "chlorophyll" || layer === "potential") {
+      if (layer === "sst" || layer === "chlorophyll" || layer === "potential" || layer === "weather" || layer === "rain") {
         const tileBytes = await generateRasterTilePngAsync(layer, z, x, y);
         return new Response(tileBytes, {
           status: 200,

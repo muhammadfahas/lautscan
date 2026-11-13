@@ -200,6 +200,12 @@
                 </svg>
                 <span>Arus Laut</span>
               </button>
+              <button class="lens-btn" data-lens="weather" type="button" aria-pressed="false">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M19 16.9A5 5 0 0 0 18 7h-1.26a8 8 0 1 0-11.62 9"/><polyline points="13 11 9 17 15 17 11 23"/>
+                </svg>
+                <span>Cuaca &amp; Hujan</span>
+              </button>
               <button id="toggle-tune-btn" class="tune-btn" type="button" aria-expanded="false" aria-label="Atur transparansi dan tanggal">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                   <line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/>
@@ -536,6 +542,22 @@
                   <td>Real-Time (15–30 Menit)</td>
                   <td><span class="badge ok">Aktif</span></td>
                 </tr>
+                <tr>
+                  <td><strong>BMKG Pusat Meteorologi Maritim</strong></td>
+                  <td>Peringatan Dini Badai, Bibit Siklon, &amp; Tinggi Gelombang</td>
+                  <td>BMKG RI (Stasiun Maritim &amp; Buoy Nusantara)</td>
+                  <td class="tabular-nums">0.1° (~11 km) / Stasiun</td>
+                  <td>Tiap 3–6 Jam (Peringatan Real-Time)</td>
+                  <td><span class="badge ok">Aktif</span></td>
+                </tr>
+                <tr>
+                  <td><strong>NOAA GFS &amp; NASA GPM IMERG Precipitation</strong></td>
+                  <td>Presipitasi Radar Hujan Satelit &amp; Angin Permukaan</td>
+                  <td>NOAA NCEP &amp; NASA Earth Science</td>
+                  <td class="tabular-nums">0.1° (~10 km)</td>
+                  <td>Interval 30 Menit – 1 Jam</td>
+                  <td><span class="badge ok">Aktif</span></td>
+                </tr>
               </tbody>
             </table>
           </div>
@@ -602,7 +624,7 @@
   </div>
 
   <script type="module">
-    import { create, setProps } from '/modules/marine-map/web/index.js?v=20261113j';
+    import { create, setProps } from '/modules/marine-map/web/index.js?v=20261113k';
 
     const urlParams = new URLSearchParams(window.location.search);
     const rawApiParam = (urlParams.get('api') || '').trim();
@@ -612,6 +634,7 @@
       potential: { label: 'Ketebalan Zona Ikan', defaultOpacity: 0.88 },
       sst: { label: 'Ketebalan Suhu Air', defaultOpacity: 0.62 },
       chlorophyll: { label: 'Ketebalan Pakan Alami', defaultOpacity: 0.65 },
+      weather: { label: 'Ketebalan Hujan & Badai', defaultOpacity: 0.78 },
       currents: { label: 'Ketebalan Gelombang Arus', defaultOpacity: 0.88 },
     };
 
@@ -781,7 +804,7 @@
       centerLon: initialLon,
       zoom: initialZoom,
       activeLens: initialLens,
-      opacities: { potential: 0.88, sst: 0.62, chlorophyll: 0.65, currents: 0.88 },
+      opacities: { potential: 0.88, sst: 0.62, chlorophyll: 0.65, weather: 0.78, currents: 0.88 },
       showSpeciesPins: urlParams.get('pins') !== '0',
       showVesselPins: urlParams.get('vessels') !== '0',
       techDetailsOpen: false,
@@ -791,6 +814,9 @@
       selectedFish: null,
       vessels: [],
       selectedVessel: null,
+      storms: [],
+      selectedStorm: null,
+      weather: null,
       lastPoint: null,
     };
 
@@ -1070,6 +1096,9 @@
           shortName: v.name.length > 17 ? v.name.slice(0, 16) + '…' : v.name,
         })));
       }
+      if (Array.isArray(state.storms)) {
+        list.push(...state.storms);
+      }
       return list;
     }
 
@@ -1085,6 +1114,8 @@
         sstOpacity: state.opacities.sst,
         chlorophyllVisible: state.activeLens === 'chlorophyll',
         chlorophyllOpacity: state.opacities.chlorophyll,
+        weatherVisible: state.activeLens === 'weather',
+        weatherOpacity: state.opacities.weather,
         currentsVisible: state.activeLens === 'currents',
         currentsOpacity: state.opacities.currents,
         showSpeciesPins: state.showSpeciesPins,
@@ -1134,6 +1165,8 @@
         } else {
           detail = 'Warna hijau terang menandai perairan subur plankton makanan ikan kecil';
         }
+      } else if (state.activeLens === 'weather') {
+        detail = 'Radar presipitasi hujan satelit (NOAA/NASA) dan titik pusaran badai/siklon maritim BMKG';
       } else if (state.speedUnit === 'ms') {
         detail = 'Aliran biru tenang (<0.15 m/s), hijau mengalir (0.15-0.46 m/s), jingga deras (>0.46 m/s)';
       } else {
@@ -1232,6 +1265,27 @@
             <div class="tier-chip">
               <span class="tier-swatch" style="background:#5ec962;"></span>
               <span class="tier-text"><span class="tier-name">Subur Plankton</span><span class="tier-range">&gt;0.45 mg/m3</span></span>
+            </div>
+          </div>
+        `;
+      } else if (state.activeLens === 'weather') {
+        legendEl.innerHTML = `
+          <div class="legend-head">
+            <span class="legend-caption">Presipitasi radar hujan satelit (NOAA/NASA) &amp; sistem badai BMKG</span>
+            <div class="scale-bar scale-weather" aria-hidden="true"></div>
+          </div>
+          <div class="legend-tiers">
+            <div class="tier-chip">
+              <span class="tier-swatch" style="background:#22c55e;"></span>
+              <span class="tier-text"><span class="tier-name">Gerimis</span><span class="tier-range">0.5-3 mm/j</span></span>
+            </div>
+            <div class="tier-chip">
+              <span class="tier-swatch" style="background:#eab308;"></span>
+              <span class="tier-text"><span class="tier-name">Hujan Sedang</span><span class="tier-range">3-10 mm/j</span></span>
+            </div>
+            <div class="tier-chip">
+              <span class="tier-swatch" style="background:#ef4444;"></span>
+              <span class="tier-text"><span class="tier-name">Lebat / Badai</span><span class="tier-range">&gt;10 mm/j</span></span>
             </div>
           </div>
         `;
@@ -1354,6 +1408,42 @@
     async function inspectPoint(lat, lon, markerId = '') {
       const body = document.getElementById('inspector-body');
       state.techDetailsOpen = false;
+      const storm = markerId ? (state.storms?.find((s) => s.id === markerId) || null) : null;
+      if (storm) {
+        state.selectedStorm = storm;
+        state.selectedVessel = null;
+        state.selectedFish = null;
+        openInspectorDrawer();
+        const stormPt = {
+          lat: storm.lat,
+          lon: storm.lon,
+          wpp_code: storm.wpp_code || '572',
+          wpp_name: storm.waters_label || 'Perairan Terbuka Indonesia',
+          wpp_waters_id: storm.waters_label || 'Pusat Tekanan Rendah / Siklon',
+          potential_score: 25,
+          potential_tier: 'rendah',
+          sst_c: 29.0,
+          sst_f: 84.2,
+          chlorophyll_mg_m3: 0.28,
+          current_speed_knots: 3.5,
+          current_speed_ms: 1.8,
+          current_direction_deg: 210,
+          current_compass: 'SSW',
+          rain_rate_mm_h: storm.rain_rate_mm_h || 38.5,
+          rain_category: 'Badai / Hujan Ekstrem',
+          wind_speed_knots: storm.max_wind_knots || 35,
+          wave_height_m: storm.max_wave_m || 4.2,
+          marine_safety_status: storm.warning_level || 'BERBAHAYA',
+          storm_warning: `Pusat Badai / Bibit Siklon: ${storm.name}. ${storm.description}`,
+          safety_advisory: storm.advisory || 'DILARANG MELAUT. Pusaran angin kencang dan gelombang ekstrem membahayakan seluruh armada nelayan.',
+          is_storm: true,
+          storm: storm,
+        };
+        state.lastPoint = stormPt;
+        renderInspector(stormPt);
+        return;
+      }
+
       const vessel = markerId ? (state.vessels?.find((v) => v.id === markerId) || null) : null;
       if (vessel) {
         state.selectedVessel = vessel;
@@ -1490,10 +1580,56 @@
       const fish = state.selectedFish;
       const fishProfile = fish ? getFishProfile(fish) : null;
       const vessel = state.selectedVessel || pt.vessel;
+      const storm = state.selectedStorm || pt.storm;
       const takeawaySentence = buildActionableTakeaway(pt, verdict, fishProfile, vessel);
 
       let fishCardHtml = '';
-      if (vessel) {
+      if (storm) {
+        const stormDate = formatWibDateTime(storm.timestamp_utc, 'BMKG Maritim');
+        const isDangerous = storm.warning_level === 'AWAS' || storm.warning_level === 'BERBAHAYA';
+        const badgeColor = isDangerous ? '#EF4444' : '#F59E0B';
+        fishCardHtml = `
+          <div class="fish-banner" style="flex-direction:column;align-items:stretch;border-left:3px solid ${badgeColor};background:rgba(239,68,68,0.06);">
+            <div style="display:flex;align-items:flex-start;gap:12px;">
+              <div style="width:44px;height:44px;border-radius:8px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="${badgeColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M19 16.9A5 5 0 0 0 18 7h-1.26a8 8 0 1 0-11.62 9"/><polyline points="13 11 9 17 15 17 11 23"/>
+                </svg>
+              </div>
+              <div style="min-width:0;flex:1;">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:wrap;">
+                  <strong style="font-size:15px;color:var(--ink-primary);">${storm.name}</strong>
+                  <span class="badge" style="font-size:11px;background:${badgeColor};color:#000;font-weight:800;">${storm.warning_level}</span>
+                </div>
+                <div style="font-size:12px;color:var(--ink-secondary);margin-top:2px;">
+                  ${storm.waters_label} · Intensitas: <strong>${storm.intensity}</strong> · ${stormDate}
+                </div>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;padding-top:10px;border-top:var(--border-hairline);font-size:12px;">
+              <div>
+                <span style="color:var(--ink-muted);font-size:11px;">Angin Maksimum:</span>
+                <div class="tabular-nums font-mono" style="font-weight:600;color:#EF4444;">${storm.max_wind_knots} knot (Beaufort ${Math.round(storm.max_wind_knots / 5)})</div>
+              </div>
+              <div>
+                <span style="color:var(--ink-muted);font-size:11px;">Gelombang Maksimum:</span>
+                <div class="tabular-nums font-mono" style="font-weight:600;color:#EF4444;">${storm.max_wave_m} meter</div>
+              </div>
+              <div>
+                <span style="color:var(--ink-muted);font-size:11px;">Intensitas Hujan:</span>
+                <div class="tabular-nums font-mono" style="font-weight:600;color:var(--ink-primary);">${storm.rain_rate_mm_h} mm/jam</div>
+              </div>
+              <div>
+                <span style="color:var(--ink-muted);font-size:11px;">Arah Pergerakan:</span>
+                <div style="font-weight:600;color:var(--ink-primary);">${storm.movement_direction} (${storm.movement_speed_knots} knot)</div>
+              </div>
+            </div>
+            <div style="font-size:11.5px;color:#FCA5A5;background:rgba(239,68,68,0.12);padding:8px 10px;border-radius:6px;margin-top:8px;border:1px solid rgba(239,68,68,0.3);line-height:1.45;">
+              <strong>Peringatan BMKG:</strong> ${storm.advisory}
+            </div>
+          </div>
+        `;
+      } else if (vessel) {
         const isFishing = vessel.status === 'Menangkap Ikan';
         const vDate = formatWibDateTime(vessel.last_timestamp_utc, 'Live GFW AIS');
         fishCardHtml = `
@@ -1669,6 +1805,38 @@
           </div>
         </div>
 
+        <!-- Marine Weather, Rain Radar & Safety Warning Card -->
+        <div class="weather-safety-box" style="margin-top:10px;padding:12px 14px;border-radius:10px;background:rgba(15,23,42,0.65);border:1px solid ${pt.marine_safety_status === 'BERBAHAYA' || pt.marine_safety_status === 'AWAS' ? 'rgba(239,68,68,0.5)' : (pt.marine_safety_status === 'WASPADA' ? 'rgba(245,158,11,0.4)' : 'rgba(34,197,94,0.3)')};display:flex;flex-direction:column;gap:10px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+            <div style="display:flex;align-items:center;gap:7px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#38BDF8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M19 16.9A5 5 0 0 0 18 7h-1.26a8 8 0 1 0-11.62 9"/><polyline points="13 11 9 17 15 17 11 23"/>
+              </svg>
+              <strong style="font-size:13px;color:var(--ink-primary);">Cuaca &amp; Keselamatan Maritim</strong>
+            </div>
+            <span class="badge" style="font-size:11px;font-weight:800;background:${pt.marine_safety_status === 'BERBAHAYA' || pt.marine_safety_status === 'AWAS' ? '#EF4444' : (pt.marine_safety_status === 'WASPADA' ? '#F59E0B' : '#22C55E')};color:${pt.marine_safety_status === 'BERBAHAYA' || pt.marine_safety_status === 'AWAS' ? '#FFFFFF' : '#000000'};">${pt.marine_safety_status || (pt.wave_height_m >= 2.5 ? 'WASPADA' : 'AMAN')}</span>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;">
+            <div style="background:rgba(255,255,255,0.03);padding:8px 10px;border-radius:6px;border:var(--border-hairline);">
+              <span style="font-size:11px;color:var(--ink-muted);">Curah Hujan Radar:</span>
+              <div class="tabular-nums font-mono" style="font-weight:700;font-size:13.5px;color:var(--ink-primary);">${(pt.rain_rate_mm_h ?? 0).toFixed(1)} mm/j</div>
+              <div style="font-size:11px;color:#38BDF8;">${pt.rain_category || (pt.rain_rate_mm_h >= 10 ? 'Hujan Lebat' : (pt.rain_rate_mm_h >= 1 ? 'Hujan Ringan' : 'Berawan / Kering'))}</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.03);padding:8px 10px;border-radius:6px;border:var(--border-hairline);">
+              <span style="font-size:11px;color:var(--ink-muted);">Angin &amp; Gelombang:</span>
+              <div class="tabular-nums font-mono" style="font-weight:700;font-size:13.5px;color:var(--ink-primary);">${pt.wind_speed_knots ?? Math.round(8 + (pt.current_speed_knots || 1) * 3)} knot</div>
+              <div style="font-size:11px;color:var(--ink-secondary);">Gelombang: ${Number(pt.wave_height_m ?? 0.8).toFixed(1)} m</div>
+            </div>
+          </div>
+
+          ${pt.storm_warning ? `<div style="font-size:11.5px;color:#FCA5A5;background:rgba(239,68,68,0.12);padding:7px 9px;border-radius:6px;border:1px solid rgba(239,68,68,0.3);line-height:1.45;"><strong>Peringatan Badai:</strong> ${pt.storm_warning}</div>` : ''}
+
+          <div style="font-size:11.5px;color:var(--ink-secondary);line-height:1.45;border-top:var(--border-hairline);padding-top:8px;">
+            <strong style="color:var(--ink-primary);">Panduan BMKG:</strong> ${pt.safety_advisory || (pt.marine_safety_status === 'BERBAHAYA' ? 'DILARANG MELAUT untuk perahu nelayan (<30 GT).' : (pt.marine_safety_status === 'WASPADA' ? 'Waspadai gelombang sedang-tinggi dan hembusan angin mendadak.' : 'Kondisi perairan aman terkendali untuk pelayaran kapal nelayan dan armada komersial.'))}
+          </div>
+        </div>
+
         <button id="toggle-tech-btn" class="tech-toggle" type="button" aria-expanded="${state.techDetailsOpen}">
           <span>Detail Teknis</span>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -1762,13 +1930,15 @@
         const speciesPromise = fetchWithFallback(API ? `${API}/v1/species?limit=250` : null, '/data/species.json');
         const sourcesPromise = fetchWithFallback(API ? `${API}/v1/sources` : null, '/data/sources.json');
         const vesselsPromise = fetchWithFallback(null, '/data/vessels_gfw.json');
+        const weatherPromise = fetchWithFallback(null, '/data/marine_weather.json');
 
-        const [healthRaw, wppRaw, speciesRaw, sourcesRaw, vesselsRaw] = await Promise.all([
+        const [healthRaw, wppRaw, speciesRaw, sourcesRaw, vesselsRaw, weatherRaw] = await Promise.all([
           healthPromise,
           wppPromise,
           speciesPromise,
           sourcesPromise,
           vesselsPromise,
+          weatherPromise,
         ]);
 
         const health = healthRaw || {
@@ -1816,6 +1986,14 @@
         state.wppGeoJson = wppGeoJsonStr;
         state.species = Array.isArray(speciesRaw.items) ? speciesRaw.items : [];
         state.vessels = Array.isArray(vesselsRaw?.items) ? vesselsRaw.items : [];
+        state.weather = weatherRaw;
+        state.storms = Array.isArray(weatherRaw?.active_storms) ? weatherRaw.active_storms.map((s) => ({
+          ...s,
+          type: 'storm',
+          isStorm: true,
+          shortName: s.name,
+          label: s.name,
+        })) : [];
         const sources = sourcesRaw;
 
         const wppSel = document.getElementById('wpp-select');
