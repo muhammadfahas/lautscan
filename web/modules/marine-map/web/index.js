@@ -334,6 +334,27 @@ const STYLE = `
   border-color: #060913;
   color: #FFFFFF;
 }
+.lautscan-marine-map .vessel-marker-pill {
+  border-color: rgba(56, 189, 248, 0.45);
+}
+.lautscan-marine-map.theme-night .vessel-marker-pill {
+  background: rgba(10, 22, 34, 0.94);
+  border: 1px solid rgba(56, 189, 248, 0.38);
+}
+.lautscan-marine-map .vessel-marker-dot {
+  background: #0284C7;
+  border-color: rgba(56, 189, 248, 0.6);
+}
+.lautscan-marine-map .species-marker[aria-pressed="true"] .vessel-marker-pill {
+  background: #FFFFFF !important;
+  border-color: #FFFFFF !important;
+  color: #060913 !important;
+}
+.lautscan-marine-map .species-marker[aria-pressed="true"] .vessel-marker-dot {
+  background: #060913 !important;
+  border-color: #060913 !important;
+  color: #FFFFFF !important;
+}
 .lautscan-marine-map .species-marker[aria-pressed="true"] .species-fish-icon {
   filter: none;
 }
@@ -527,6 +548,10 @@ function buildZoomOutSvg() {
 
 function buildSpeciesSvg() {
   return '<img class="species-fish-icon" src="/assets/icons/fish_2d.png" alt="" width="13" height="13" decoding="async" />';
+}
+
+function buildVesselSvg() {
+  return '<svg class="species-fish-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 21h20M19.38 20A11.6 11.6 0 0 0 21 14l-9-4-9 4c0 2.4.6 4.6 1.62 6M12 3v7"/></svg>';
 }
 
 function shortFishLabel(commonName, sciName) {
@@ -733,11 +758,12 @@ function normalizeMarkers(text) {
     const lat = parseNum(item.lat ?? item.latitude, NaN);
     const lon = parseNum(item.lon ?? item.longitude, NaN);
     if (!id || !Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+    const isVessel = item.type === 'vessel' || item.isVessel || !!item.mmsi;
     const label = parseStr(
-      item.common_name ?? item.commonName ?? item.scientific_name ?? item.scientificName ?? item.title,
+      item.common_name ?? item.commonName ?? item.scientific_name ?? item.scientificName ?? item.name ?? item.title,
       id,
     );
-    const sciName = parseStr(item.scientific_name ?? item.scientificName ?? item.title, label);
+    const sciName = parseStr(item.scientific_name ?? item.scientificName ?? item.name ?? item.title, label);
     const depthM = parseNum(item.depth_m ?? item.depthM, NaN);
     const countNum = parseNum(item.individual_count ?? item.individualCount, NaN);
     out.push({
@@ -745,15 +771,16 @@ function normalizeMarkers(text) {
       lat,
       lon,
       label,
-      shortName: shortFishLabel(label, sciName),
+      shortName: isVessel ? (item.shortName || item.name || 'Kapal Ikan') : shortFishLabel(label, sciName),
       scientificName: sciName,
       family: parseStr(item.family, ''),
       wppCode: parseStr(item.wpp_code ?? item.wppCode, ''),
       depthM: Number.isFinite(depthM) ? depthM : null,
       individualCount: Number.isFinite(countNum) ? countNum : null,
-      eventDateUtc: parseStr(item.event_date_utc ?? item.eventDateUtc, ''),
-      datasetName: parseStr(item.dataset_name ?? item.datasetName, ''),
-      habitatNote: parseStr(item.habitat_note ?? item.habitatNote, ''),
+      eventDateUtc: parseStr(item.event_date_utc ?? item.eventDateUtc ?? item.last_timestamp_utc, ''),
+      datasetName: parseStr(item.dataset_name ?? item.datasetName ?? item.source, ''),
+      habitatNote: parseStr(item.habitat_note ?? item.habitatNote ?? item.gear_type, ''),
+      isVessel,
     });
   }
   return out;
@@ -909,6 +936,7 @@ export class MarineMap {
     };
     this.currentsRasterVisible = false;
     this.showSpeciesPins = true;
+    this.showVesselPins = true;
     this.baseTiles = new Map();
     this.activeBaseZ = DEFAULT_ZOOM;
     this.rasterCache = new Map();
@@ -1005,6 +1033,7 @@ export class MarineMap {
     if (changed('currentsOpacity')) this.layers.currents.opacity = clamp(parseNum(safeProps.currentsOpacity, 0.88), 0, 1);
     if (changed('currentsRasterVisible')) this.currentsRasterVisible = parseBool(safeProps.currentsRasterVisible, false);
     if (changed('showSpeciesPins')) this.showSpeciesPins = parseBool(safeProps.showSpeciesPins, true);
+    if (changed('showVesselPins')) this.showVesselPins = parseBool(safeProps.showVesselPins, true);
 
     const dateChanged = changed('selectedDate');
     const baseUrlChanged = changed('tileBaseUrl');
@@ -2590,7 +2619,18 @@ export class MarineMap {
       if (id.startsWith('wpp:')) nextParts.set(id, el);
     }
 
-    if (!this.showSpeciesPins) {
+    if (!this.showSpeciesPins && !this.showVesselPins) {
+      this.parts = nextParts;
+      this.markersLayer.replaceChildren();
+      return;
+    }
+
+    const activeMarkers = this.markers.filter((m) => {
+      if (m.isVessel) return this.showVesselPins !== false;
+      return this.showSpeciesPins !== false;
+    });
+
+    if (activeMarkers.length === 0) {
       this.parts = nextParts;
       this.markersLayer.replaceChildren();
       return;
@@ -2601,15 +2641,17 @@ export class MarineMap {
     const isVeryWide = this.zoom < 4.5;
     const isWide = this.zoom < 5.75;
     const isMedium = this.zoom < 7.5;
-    const maxPins = isVeryWide ? 12 : isWide ? 22 : isMedium ? 48 : MAX_RENDERED_MARKERS;
+    const maxPins = isVeryWide ? 16 : isWide ? 26 : isMedium ? 54 : MAX_RENDERED_MARKERS;
     const wppDx = isVeryWide ? 68 : isWide ? 64 : isMedium ? 54 : 44;
     const wppDy = isVeryWide ? 30 : isWide ? 28 : isMedium ? 24 : 20;
-    const pinDx = isVeryWide ? 124 : isWide ? 104 : isMedium ? 76 : 54;
-    const pinDy = isVeryWide ? 44 : isWide ? 38 : isMedium ? 28 : 22;
+    const pinDx = isVeryWide ? 110 : isWide ? 92 : isMedium ? 68 : 50;
+    const pinDy = isVeryWide ? 40 : isWide ? 34 : isMedium ? 26 : 22;
 
-    const baseSorted = [...this.markers].sort((a, b) => {
+    const baseSorted = [...activeMarkers].sort((a, b) => {
       if (a.id === this.selectedMarkerId) return -1;
       if (b.id === this.selectedMarkerId) return 1;
+      if (a.isVessel && !b.isVessel) return -1;
+      if (!a.isVessel && b.isVessel) return 1;
       return (b.individualCount || 0) - (a.individualCount || 0);
     });
 
@@ -2619,7 +2661,7 @@ export class MarineMap {
       const secondary = [];
       const seenBuckets = new Set();
       for (const m of baseSorted) {
-        const bucket = `${m.wppCode || 'sea'}:${m.shortName}`;
+        const bucket = `${m.wppCode || 'sea'}:${m.shortName}:${m.isVessel ? 'v' : 's'}`;
         if (m.id === this.selectedMarkerId || !seenBuckets.has(bucket)) {
           seenBuckets.add(bucket);
           primary.push(m);
@@ -2650,29 +2692,29 @@ export class MarineMap {
       if (!btn) {
         btn = this.doc.createElement('button');
         btn.type = 'button';
-        btn.className = 'species-marker';
+        btn.className = marker.isVessel ? 'species-marker vessel-marker' : 'species-marker';
         btn.dataset.marker = marker.id;
-        btn.dataset.testid = `species-marker-${marker.id}`;
+        btn.dataset.testid = `${marker.isVessel ? 'vessel' : 'species'}-marker-${marker.id}`;
       }
-      btn.setAttribute('aria-label', `${marker.shortName} - ${marker.label}${marker.wppCode ? ` (WPP ${marker.wppCode})` : ''}`);
+      btn.setAttribute('aria-label', `${marker.shortName} - ${marker.label}${marker.wppCode ? ` (${marker.wppCode})` : ''}`);
       btn.setAttribute('aria-pressed', String(selected));
       btn.style.left = `${round(baseX, 1)}px`;
       btn.style.top = `${round(baseY, 1)}px`;
 
-      const dotColor = selected ? '#060913' : '#000000';
-      const drawnState = `${selected ? '1' : '0'}:${marker.shortName}`;
+      const dotColor = selected ? '#060913' : marker.isVessel ? '#0284C7' : '#000000';
+      const drawnState = `${selected ? '1' : '0'}:${marker.shortName}:${marker.isVessel ? 'v' : 's'}`;
       if (btn.dataset.drawn !== drawnState) {
         btn.dataset.drawn = drawnState;
         const pill = this.doc.createElement('span');
-        pill.className = 'species-marker-pill';
+        pill.className = marker.isVessel ? 'species-marker-pill vessel-marker-pill' : 'species-marker-pill';
         const dot = this.doc.createElement('span');
-        dot.className = 'species-marker-dot';
+        dot.className = marker.isVessel ? 'species-marker-dot vessel-marker-dot' : 'species-marker-dot';
         dot.style.background = dotColor;
         dot.style.color = '#FFFFFF';
-        dot.innerHTML = buildSpeciesSvg();
+        dot.innerHTML = marker.isVessel ? buildVesselSvg() : buildSpeciesSvg();
         const nameEl = this.doc.createElement('span');
         nameEl.className = 'species-marker-name';
-        nameEl.textContent = marker.shortName || 'Ikan';
+        nameEl.textContent = marker.shortName || (marker.isVessel ? 'Kapal' : 'Ikan');
         pill.append(dot, nameEl);
         btn.replaceChildren(pill);
       }
