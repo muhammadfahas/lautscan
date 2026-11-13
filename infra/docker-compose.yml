@@ -7,7 +7,7 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-lautscan}
       POSTGRES_USER: ${POSTGRES_USER:-lautscan}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-lautscan_dev_password}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-your_secure_db_password_here}
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
@@ -46,8 +46,8 @@ services:
       POSTGRES_PORT: 5432
       POSTGRES_DB: ${POSTGRES_DB:-lautscan}
       POSTGRES_USER: ${POSTGRES_USER:-lautscan}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-lautscan_dev_password}
-      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://lautscan:lautscan_dev_password@db:5432/lautscan}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-your_secure_db_password_here}
+      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://lautscan:your_secure_db_password_here@db:5432/lautscan}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
       TILE_CACHE_DIR: /data/tiles
       API_BASE_URL: ${API_BASE_URL:-http://127.0.0.1:8080}
@@ -86,8 +86,8 @@ services:
       POSTGRES_PORT: 5432
       POSTGRES_DB: ${POSTGRES_DB:-lautscan}
       POSTGRES_USER: ${POSTGRES_USER:-lautscan}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-lautscan_dev_password}
-      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://lautscan:lautscan_dev_password@db:5432/lautscan}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-your_secure_db_password_here}
+      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://lautscan:your_secure_db_password_here@db:5432/lautscan}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
       TILE_CACHE_DIR: /data/tiles
       ENVIRONMENT: ${ENVIRONMENT:-development}

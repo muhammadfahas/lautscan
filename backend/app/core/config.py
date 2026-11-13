@@ -57,7 +57,7 @@ class Settings(BaseSettings):
     )
 
     DATABASE_URL: str = (
-        "postgresql+asyncpg://lautscan:lautscan_dev_password@127.0.0.1:5432/lautscan"
+        "postgresql+asyncpg://lautscan:your_secure_db_password_here@127.0.0.1:5432/lautscan"
     )
     REDIS_URL: str = "redis://127.0.0.1:6379/0"
     TILE_CACHE_DIR: Path = Path("/data/tiles")

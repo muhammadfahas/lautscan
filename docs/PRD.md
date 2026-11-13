@@ -111,13 +111,17 @@ Seluruh sumber data mengutamakan akses terbuka, gratis, dan kejelasan lisensi.
 
 | Provider | Data | Mekanisme Akses Teknis | Prioritas | Catatan Lisensi & Risiko |
 |---|---|---|---|---|
+| **NASA CYGNSS** | Pusaran Siklon Tropis & Angin Permukaan Laut | Terbuka / Public Domain NASA Earth Science tanpa token | **P1 (Primer)** | Data ilmiah terbuka NASA; visualisasi pusaran siklon & streamline angin global. |
+| **NASA GPM IMERG** | Radar Presipitasi Hujan Satelit Global | Terbuka / Public Domain NASA GSFC tanpa token | **P1 (Primer)** | Radar presipitasi curah hujan & badai konvektif global. |
 | **NOAA CoastWatch / ERDDAP** | SST, Chlorophyll-a, Current | REST / ERDDAP subsetting (JSON, PNG, NetCDF) tanpa token rumit | **P1 (Primer)** | Public domain / terbuka; ideal untuk bootstrap cepat Indonesia bounding box. |
-| **OBIS (`api.obis.org`)** | Fish Occurrence & Taxon | REST API v3 terbuka (JSON / GeoJSON) | **P1 (Primer)** | Terbuka dengan atribusi data provider asli. |
-| **Copernicus Marine** | SST, Chlorophyll, Current, Salinity | Akun gratis + Python `copernicusmarine` Toolbox (NetCDF/Zarr/WMTS) | **P1 (Batch ETL)** | Wajib kredensial akun; diolah di worker terjadwal menjadi XYZ tiles & ringkasan PostGIS. |
+| **OBIS (`api.obis.org`)** | Fish Occurrence & Taxon | REST API v3 terbuka (JSON / GeoJSON) tanpa token | **P1 (Primer)** | Terbuka dengan atribusi data provider asli. |
+| **Copernicus Marine** | SST, Chlorophyll, Current, Salinity | Akun gratis + Python `copernicusmarine` Toolbox (NetCDF/Zarr/WMTS) | **P1 (Batch ETL)** | Diolah di worker terjadwal backend menjadi XYZ tiles & ringkasan PostGIS. Kredensial tidak pernah disertakan di repositori. |
 | **KKP PDPI** | Prakiraan Daerah Penangkapan Ikan | *Pluggable Adapter* (WMS/Raster/Portal koordinasi Pusdatin/BPISDKP) | **P1/P2 (Adapter)** | Akses API raw publik tidak selalu tersedia bebas; tidak boleh memblokir rilis P1. |
-| **Global Fishing Watch (GFW)** | Fishing Activity (AIS) | REST API v3 dengan Bearer Token & kuota per user | **P2 (Opt-in)** | Tier gratis **hanya untuk non-komersial / kepentingan publik**. Pengguna komersial wajib lisensi GFW atau *BYO-Token* terpisah agar tidak bertabrakan dengan lisensi MIT aplikasi. |
+| **Global Fishing Watch (GFW)** | Fishing Activity (AIS) | Telemetri armada AIS perikanan global | **P2 (Opt-in)** | Tier gratis **hanya untuk non-komersial / kepentingan publik**. Pengguna komersial wajib lisensi GFW atau *BYO-Token* terpisah agar tidak bertabrakan dengan lisensi MIT aplikasi. |
 
 **Official Sources:**
+- https://cygnss.engin.umich.edu/ & https://earthdata.nasa.gov/ (NASA CYGNSS)
+- https://gpm.nasa.gov/data/imerg (NASA GPM IMERG)
 - https://coastwatch.pfeg.noaa.gov/erddap/ & https://www.ncei.noaa.gov/
 - https://api.obis.org/
 - https://marine.copernicus.eu/
@@ -125,6 +129,14 @@ Seluruh sumber data mengutamakan akses terbuka, gratis, dan kejelasan lisensi.
 - https://globalfishingwatch.org/
 
 Setiap layer wajib menampilkan **atribusi sumber, waktu pembaruan terakhir, dan status kesehatan ingest** pada UI.
+
+### 5.1 Kebijakan Bebas Kredensial (Zero-Credential Policy)
+
+LAUT SCAN menerapkan prinsip keamanan ketat **Zero-Credential Policy** pada seluruh aset repositori dan deployment publik:
+- **100% Bebas Kredensial:** Tidak ada API key, token privat, password basis data, maupun kredensial akun pihak ketiga yang disimpan atau di-commit ke dalam repositori publik.
+- **Client & Edge Isolation:** Klien web dan Cloudflare Pages Edge Worker (`_worker.js`) beroperasi sepenuhnya secara independen tanpa memerlukan token rahasia pengguna maupun server.
+- **Open Scientific Access:** Seluruh data primer (NASA CYGNSS, NASA GPM IMERG, NOAA CoastWatch ERDDAP, dan OBIS API) diakses melalui protokol publik domain ilmiah tanpa token otorisasi tertutup.
+- **Backend Secret Management:** Jika backend server mandiri diaktifkan, variabel environment privat wajib diinjeksikan secara terpisah melalui secret manager runtime hosting dan **dilarang keras** di-hardcode di file konfigurasi repositori.
 
 ---
 

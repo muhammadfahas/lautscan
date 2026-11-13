@@ -10,7 +10,7 @@
 
 ## 1. System Overview & C4 Container Architecture
 
-LAUT SCAN separates declarative cross-platform UI (**Expo Exact**) from geospatial data ingestion, raster tiling, and spatial indexing (**FastAPI + ARQ + PostgreSQL/PostGIS + Redis**). All external API credentials (`COPERNICUS_USERNAME`, `COPERNICUS_PASSWORD`, `GFW_API_TOKEN`, `PDPI_BASE_URL`) stay strictly on the server side.
+LAUT SCAN separates declarative cross-platform UI (**Expo Exact**) from geospatial data ingestion, raster tiling, and spatial indexing (**FastAPI + ARQ + PostgreSQL/PostGIS + Redis**). Primary telemetry is powered by open scientific providers (**NASA CYGNSS**, **NASA GPM IMERG**, **NOAA CoastWatch**, and **OBIS**) requiring zero authentication. Any optional backend environment variables stay strictly on the server side under a strict **Zero-Credential Policy**.
 
 ```mermaid
 flowchart TB
@@ -36,11 +36,13 @@ flowchart TB
     end
 
     subgraph External["External Marine Data Providers"]
+        NASA_CYGNSS["NASA CYGNSS<br/>(P1 Open: Cyclone Vortices & Surface Winds)"]
+        NASA_GPM["NASA GPM IMERG<br/>(P1 Open: Precipitation Radar)"]
         NOAA["NOAA CoastWatch / ERDDAP<br/>(P1 Open: SST, Chlorophyll, Currents)"]
         OBIS["OBIS API v3<br/>(P1 Open: Species Occurrences)"]
-        Copernicus["Copernicus Marine Toolbox<br/>(P1 Batch: Account Credentials)"]
+        Copernicus["Copernicus Marine Toolbox<br/>(P1 Batch: Optional Ingest)"]
         PDPI["KKP PDPI Adapter<br/>(P1/P2 Pluggable Endpoint)"]
-        GFW["Global Fishing Watch v3<br/>(P2 Opt-in Non-Commercial / BYO-Token)"]
+        GFW["Global Fishing Watch v3<br/>(P2 Opt-in Non-Commercial Telemetry)"]
     end
 
     User --> Contract
@@ -603,8 +605,10 @@ Aligned directly with [`infra/docker-compose.yml`](../infra/docker-compose.yml) 
 | `api` | Python 3.11+ (`uvicorn app.main:app --port 8080`) | `8080` | `API_BASE_URL=http://127.0.0.1:8080`, `TILE_CACHE_DIR=/data/tiles` | OpenAPI 3.1.0 REST & XYZ tile serving |
 | `worker` | Python 3.11+ (`arq app.etl.worker.WorkerSettings`) | N/A | `NOAA_ERDDAP_BASE_URL`, `OBIS_API_BASE_URL`, `COPERNICUS_*`, `PDPI_BASE_URL`, `GFW_API_TOKEN` | Scheduled ETL, NetCDF download, tile pre-render |
 
-### Security & License Compliance Boundaries
+### Security & Zero-Credential Policy
 
-- **Credential Isolation:** `COPERNICUS_USERNAME`, `COPERNICUS_PASSWORD`, `PDPI_BASE_URL`, and `GFW_API_TOKEN` exist solely in backend `.env` / environment configuration and are never forwarded in API responses or frontend bundles.
-- **GFW Non-Commercial Boundary:** `GFW_API_TOKEN` is opt-in and disabled by default (`status = "disabled"` or `"unconfigured"` in `/v1/sources`). Free-tier Global Fishing Watch tokens are restricted to non-commercial / public-interest use; commercial deployments must supply an independent licensed BYO-Token to preserve LAUT SCAN's MIT license.
-- **Disclaimer Requirement:** `/v1/map/point` and the UI permanent badge surface acquisition timestamps, spatial resolution, source attribution, and the explicit notice that satellite/historical data are not real-time fish location guarantees and do not substitute official navigation safety advisories (BMKG / Pushidrosal / Basarnas).
+- **Strict Zero-Credential Guarantee:** The entire repository is 100% free of committed API keys, access tokens, production passwords, or confidential secrets. Automated secret scanning CI gates reject any hardcoded tokens or secret patterns.
+- **Client & Edge Isolation:** The public client interface and Cloudflare Pages Edge Worker (`_worker.js`) operate completely credential-free. Primary scientific layers (**NASA CYGNSS**, **NASA GPM IMERG**, **NOAA ERDDAP**, **OBIS**) communicate over unauthenticated public open-science protocols.
+- **Runtime Secret Injection:** Any private tokens or database credentials required for local or server-side backend services are injected strictly via non-committed runtime environment variables or secure secret managers, with zero leakage to version control.
+- **GFW Non-Commercial Boundary:** Global Fishing Watch data is strictly opt-in and restricted to non-commercial / public-interest use. Commercial operators must supply an independently licensed BYO-Token to preserve LAUT SCAN's MIT open-source license.
+- **Disclaimer Requirement:** `/v1/map/point` and the UI permanent badge surface acquisition timestamps, spatial resolution, source attribution, and the explicit notice that satellite/historical data are not real-time fish location guarantees and do not substitute official navigation safety advisories (Pushidrosal / Basarnas / BMKG).
