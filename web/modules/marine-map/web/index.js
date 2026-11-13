@@ -1247,6 +1247,8 @@ export class MarineMap {
       this.resize = new ResizeObserver(() => {
         const rect = this.map.getBoundingClientRect();
         this.size = { w: rect.width, h: rect.height };
+        this.zoom = this.clampZoom(this.zoom);
+        this.syncLayerStyles();
         this.draw();
       });
       this.resize.observe(this.map);
@@ -1358,8 +1360,27 @@ export class MarineMap {
     }
   }
 
+  effectiveMinZoom() {
+    const w = this.size?.w || 0;
+    const h = this.size?.h || 0;
+    if (!w || !h) return MIN_ZOOM;
+    return clamp(Math.max(MIN_ZOOM, Math.log2(Math.max(w, h) / TILE_SIZE)), MIN_ZOOM, this.maxZoom);
+  }
+
   clampZoom(z) {
-    return clamp(z, MIN_ZOOM, this.maxZoom);
+    return clamp(z, this.effectiveMinZoom(), this.maxZoom);
+  }
+
+  clampCenterForViewport(lat, lon, zoom = this.zoom) {
+    const wrappedLon = ((((lon + 180) % 360) + 360) % 360) - 180;
+    const h = this.size?.h || 0;
+    if (!h) return [clamp(lat, -85, 85), wrappedLon];
+    const worldPx = TILE_SIZE * (2 ** zoom);
+    if (worldPx <= h) return [0, wrappedLon];
+    const [, cy] = project(clamp(lat, -85, 85), wrappedLon, zoom);
+    const clampedCy = clamp(cy, h / 2, worldPx - h / 2);
+    const [clampedLat] = unproject(worldPx / 2, clampedCy, zoom);
+    return [clamp(clampedLat, -85, 85), wrappedLon];
   }
 
   focusWppZone(code) {
@@ -1413,7 +1434,7 @@ export class MarineMap {
     this.currentsCanvas.style.opacity = String(this.layers.currents.opacity);
     this.markersLayer.style.display = this.showSpeciesPins ? 'block' : 'none';
     this.zoomInBtn.disabled = this.zoom >= this.maxZoom;
-    this.zoomOutBtn.disabled = this.zoom <= MIN_ZOOM;
+    this.zoomOutBtn.disabled = this.zoom <= this.effectiveMinZoom() + 0.01;
     this.syncCurrentsAnimation();
     this.syncVortexAnimation();
   }
@@ -1633,7 +1654,7 @@ export class MarineMap {
     this.zoom = this.clampZoom(z0 + dz);
     const [ux, uy] = project(under[0], under[1], this.zoom);
     const [nextLat, nextLon] = unproject(ux - px, uy - py, this.zoom);
-    this.center = [clamp(nextLat, -85, 85), nextLon];
+    this.center = this.clampCenterForViewport(nextLat, nextLon, this.zoom);
     this.syncLayerStyles();
     if (deferFetch && !this.plain) {
       this.skipTileFetch = true;
@@ -1652,7 +1673,7 @@ export class MarineMap {
   panBy(dx, dy) {
     const [x, y] = project(this.center[0], this.center[1], this.zoom);
     const [nextLat, nextLon] = unproject(x + dx, y + dy, this.zoom);
-    this.center = [clamp(nextLat, -85, 85), nextLon];
+    this.center = this.clampCenterForViewport(nextLat, nextLon, this.zoom);
     this.draw();
   }
 
@@ -1738,6 +1759,8 @@ export class MarineMap {
     const rawLonSpan = ((w / k) / (TILE_SIZE * 2 ** z)) * 360;
     const lonStart = rawLonSpan >= 359 ? -180 : Math.floor(westLon / step) * step;
     const lonSpan = rawLonSpan >= 359 ? 360 : (eastLon >= westLon ? eastLon - westLon : 360 - westLon + eastLon);
+    const yMin = Math.max(0, -top * k);
+    const yMax = Math.min(h, (TILE_SIZE * (2 ** z) - top) * k);
     for (let offset = 0; offset <= lonSpan + step; offset += step) {
       const lon = ((((lonStart + offset + 180) % 360) + 360) % 360) - 180;
       const [px] = project(this.center[0], lon, z);
@@ -1747,10 +1770,10 @@ export class MarineMap {
       while (sx > w) sx -= worldW;
       if (sx < 0 || sx > w) continue;
       ctx.beginPath();
-      ctx.moveTo(sx, 0);
-      ctx.lineTo(sx, h);
+      ctx.moveTo(sx, yMin);
+      ctx.lineTo(sx, yMax);
       ctx.stroke();
-      ctx.fillText(`${lon.toFixed(step < 1 ? 1 : 0)}°`, Math.min(w - 34, sx + 4), 14);
+      ctx.fillText(`${lon.toFixed(step < 1 ? 1 : 0)}°`, Math.min(w - 34, sx + 4), Math.max(14, yMin + 14));
     }
   }
 
