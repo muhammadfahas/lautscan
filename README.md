@@ -2,149 +2,145 @@
 
 **Know the Ocean. Find the Fish.**
 
-LAUT SCAN is an open-source marine intelligence platform built for Indonesian waters. It brings together satellite oceanography, Indonesian Fisheries Management Area boundaries (**WPP-NRI 571 to 718**), and open marine biodiversity records in a fast, map-first interface designed for coastal researchers, fisheries managers, fleet operators, and fishers on both desktop and mobile browsers.
+LAUT SCAN adalah platform intelijen maritim dan oseanografi terbuka berbasis web (*open-source marine intelligence platform*) untuk perairan Indonesia dan samudra global. Platform ini mengintegrasikan data satelit oseanografi real-time, batas Wilayah Pengelolaan Perikanan Negara Republik Indonesia (**WPP-NRI 571 hingga 718**), pantauan armada kapal perikanan global (**Global Fishing Watch AIS**), telemetri siklon tropis & presipitasi satelit **NASA** (**NASA CYGNSS & NASA GPM IMERG**), serta inventaris keanekaragaman hayati laut (**OBIS / GBIF**).
 
 ---
 
-## Key Features
+## 🌐 Live Deployment
 
-- **Marine Intelligence Map (`/`)**: Full-bleed interactive workspace powered by the custom [`@lautscan/marine-map`](frontend/modules/marine-map/README.md) module, featuring multi-layer XYZ raster overlays for Sea Surface Temperature (SST), Chlorophyll-a, and Ocean Currents with independent opacity sliders, colorblind-safe perceptually uniform palettes (`plasma`, `viridis`, `cividis`), and **Daylight Maritime** / **Night Maritime** themes.
-- **WPP-NRI 571 to 718 Boundaries**: Spatial boundary overlays and metadata for all 11 Indonesian Fisheries Management Areas defined under *Permen-KP No. 18/PERMEN-KP/2014*, stored in PostgreSQL/PostGIS (`SRID 4326`) with zone filtering and accessible low-bandwidth summary tables.
-- **Ocean Conditions Point Inspector**: Click or tap any ocean coordinate (`GET /v1/map/point`) to inspect bilinear or nearest-neighbor interpolated SST (`°C` and `°F`), Chlorophyll-a (`mg/m³`), ocean current speed (`m/s` and `knots`), current bearing and 16-point compass direction, optional salinity and wave height, plus source attribution and acquisition timestamps.
-- **Species Explorer (`/species`)**: Search PostGIS-indexed marine species and fish occurrence records synced from OBIS (`GET /v1/species`) by scientific name, common name, family, WPP-NRI zone, or map viewport bounding box.
-- **Historical Trends (`/trends`)**: Compare oceanographic conditions across dates (`YYYY-MM-DD` or `latest`) and WPP-NRI zones to review seasonal patterns and monsoon shifts.
-- **Data Sources & Settings (`/sources`, `/settings`)**: Monitor external provider health, recent ETL sync logs, attribution, and licensing compliance, and configure display units (`°C`/`°F`, `knots`/`m/s`), theme mode, and low-bandwidth preferences.
-- **Post-MVP Forecasting Roadmap (P3)**: Planned machine learning and statistical forecasting models for fishing ground potential scoring once multi-season historical observations are accumulated and validated.
+Aplikasi LAUT SCAN telah di-deploy dan dapat diakses langsung secara publik di:
+
+👉 **[https://lautscan.pages.dev/](https://lautscan.pages.dev/)**
+
+- **Infrastruktur Hosting**: Cloudflare Pages + Edge Worker runtime (`_worker.js`).
+- **Kompatibilitas**: Peramban desktop dan mobile modern (Chrome, Safari, Edge, Firefox).
+- **Mode Tampilan**: *Night Maritime* (monokrom gelap kontras tinggi) dan *Daylight Maritime*.
 
 ---
 
-## Tech Stack
+## Fitur Utama
 
-| Layer | Technology |
+- **Peta Laut Interaktif Global & Nusantara (`/`)**:
+  - Ditenagai oleh custom engine Web Mercator tanpa ketergantungan Leaflet ([`@lautscan/marine-map`](frontend/modules/marine-map/README.md) / `web/modules/marine-map/web/index.js`).
+  - **4 Lapisan Lensa Laut**:
+    - **Zona Ikan (Potensi)**: Estimasi habitat ikan pelagis berdasarkan kombinasi suhu nyaman, pakan plankton, dan front termal laut.
+    - **Suhu Air (SST)**: Suhu permukaan laut satelit NOAA Coral Reef Watch / Geo-Polar Blended dengan kontur termal resolusi tinggi.
+    - **Pakan Alami (Klorofil-a)**: Konsentrasi klorofil fitoplankton satelit NASA MODIS & VIIRS.
+    - **Arus Laut**: Vektor dan aliran partikel arus permukaan laut dinamis.
+    - **Cuaca & Hujan**: Radar hujan presipitasi satelit **NASA GPM IMERG** dengan palet monokrom cyan/putih es dan visualisasi streamline pusaran siklon tropis **NASA CYGNSS**.
+- **Animasi Pusaran Siklon & Angin Global Gaya NASA**:
+  - Menggunakan integrasi trayektori Runge-Kutta orde-2 (RK2) kontinu untuk 14 sistem badai/siklon aktif dunia (Bibit Siklon 94S, Squall Line Natuna, Taifun Yinxing, Hurricane Kirk, Siklon Bheki, dsb.) serta angin pasat (*trade winds*), angin barat (*westerlies*), dan *subtropical gyres*.
+  - Dilengkapi fitur *dynamic zoom clamping* (`effectiveMinZoom`) dan *wrap-seam clipping* agar peta dunia tidak terduplikasi secara horizontal dan bebas dari garis artefak.
+- **Batas WPP-NRI 571 hingga 718**: Poligon batas 11 Wilayah Pengelolaan Perikanan RI sesuai *Permen-KP No. 18/PERMEN-KP/2014* dengan pelabelan chip interaktif dan filter dropdown dinamis.
+- **Pantauan Armada Kapal Global (GFW AIS Live)**:
+  - Tampilan ikon kapal navigasi (model *flight tracker* kapal) terhubung telemetri Global Fishing Watch.
+  - Klik kapal untuk membuka drawer informasi nama kapal, MMSI, bendera, tipe alat tangkap, kecepatan (knot), koordinat GPS, dan status operasi.
+- **Pemeriksa Titik Maritim (Point Inspector - "Kondisi Titik Ini")**:
+  - Klik koordinat laut mana pun untuk menganalisis data terinterpolasi: suhu air (°C/°F), klorofil-a, kecepatan & arah arus laut (16 arah mata angin), curah hujan satelit NASA IMERG, tinggi gelombang, status keselamatan navigasi, dan telemetri badai NASA CYGNSS.
+- **Eksplorasi Spesies Ikan (`/species`)**:
+  - Direktori ikan laut lengkap dengan foto asli bawah laut (*underwater photography*), nama ilmiah, nama lokal, famili, status konservasi IUCN, kedalaman jelajah, estimasi nilai pasar, dan titik sebaran OBIS.
+  - Pilihan tampilan kartu (*grid cards*) dan tabel data dengan filter pencarian, pengurutan (*sorting*), serta penomoran halaman (*pagination*).
+- **Tren Oseanografi & Sumber Data (`/trends`, `/sources`)**:
+  - Analisis tren musiman antar-WPP.
+  - Dashboard pemantauan status ketersediaan API dan dataset satelit (*healthy/active*).
+
+---
+
+## Arsitektur & Teknologi
+
+| Komponen | Teknologi |
 |---|---|
-| **Frontend Runtime** | [Expo Exact](https://github.com/expo/exact) (`app.contract`, `app.tamber`, `app.ts`, `shapes.contract`) + custom `@lautscan/marine-map` Web Mercator module |
-| **Backend API** | FastAPI (Python 3.11+), Pydantic v2, Uvicorn ASGI, SQLAlchemy 2.0 (`asyncpg`), GeoAlchemy2, Alembic |
-| **Database & Cache** | PostgreSQL 16 + PostGIS 3.4 (`SRID 4326`, GIST spatial indexes) and Redis 7 |
-| **Geospatial ETL & Tiling** | ARQ background worker (`app.etl.worker.WorkerSettings`), `xarray`, `netCDF4`, `numpy`, `Pillow`, `matplotlib` |
-| **API Specification** | OpenAPI 3.1.0 ([`docs/openapi-contract.yaml`](docs/openapi-contract.yaml)) |
+| **Edge Web Deployment** | Cloudflare Pages, Cloudflare Workers (`_worker.js`), HTML5 Canvas 2D, SVG, CSS Glassmorphism |
+| **Frontend Map Module** | Custom standalone Web Mercator Map Engine (`@lautscan/marine-map`) dengan dynamic tile renderer PNG terkompresi |
+| **Data Oseanografi & Satelit** | **NASA CYGNSS** (angin permukaan & siklon), **NASA GPM IMERG** (radar presipitasi hujan), **NOAA CoastWatch / ERDDAP** (SST & arus), **OBIS & GBIF** (keanekaragaman hayati), **Global Fishing Watch** (AIS) |
+| **Backend Services (Lokal / Server)** | FastAPI (Python 3.11+), Pydantic v2, PostgreSQL 16 + PostGIS 3.4 (`SRID 4326`), Redis 7, ARQ ETL worker |
 
 ---
 
-## Repository Structure
+## Struktur Repositori
 
 ```text
 lautscan/
+├── web/                  # Sumber kode produksi Cloudflare Pages & Web Engine
+│   ├── _worker.js        # Edge geospatial API, routing tile raster sintetis, dan point telemetry
+│   ├── index.html        # Halaman utama aplikasi LAUT SCAN (Peta, Jenis Ikan, Tren, Sumber Data)
+│   ├── app.css           # Styling maritim glassmorphism (Daylight & Night mode)
+│   ├── data/             # Dataset WPP-NRI, marine weather NASA, katalog sumber, dan armada GFW
+│   └── modules/          # Standalone @lautscan/marine-map engine (Canvas 2D + SVG markers + RK2 streamlines)
 ├── backend/              # FastAPI app, Alembic migrations, PostGIS models, ARQ ETL & tile renderer
-├── data/wpp-nri/         # WPP-NRI 571-718 GeoJSON seed dataset and official KKP conversion guide
-├── docs/                 # Product requirements (PRD.md), architecture spec, and OpenAPI contract
-├── frontend/             # Expo Exact contracts, TypeScript API seam, design tokens, and @lautscan/marine-map
-└── infra/                # Docker Compose stack, .env.example, WSL2 setup, and Windows environment checks
+├── data/wpp-nri/         # WPP-NRI 571-718 GeoJSON seed dataset dan panduan konversi KKP
+├── docs/                 # Product requirements (PRD.md), arsitektur spesifikasi, dan kontrak OpenAPI
+├── frontend/             # Expo Exact contracts dan spesifikasi desain antarmuka
+└── infra/                # Konfigurasi Docker Compose stack, script dev-check, dan WSL2 setup
 ```
 
 ---
 
-## Quick Start
+## Panduan Menjalankan Proyek
 
-### 1. Start the Backend Stack with Docker Compose
+### 1. Menjalankan Versi Web (Cloudflare Pages / Lokal)
 
-1. Copy the example environment file and adjust credentials if needed:
+Untuk menjalankan antarmuka web statis secara lokal:
+
+```bash
+# Menggunakan web server lokal sederhana (misal: serve / npx http-server)
+npx wrangler pages dev web
+```
+
+Buka peramban di `http://localhost:8788`.
+
+Untuk deploy ke Cloudflare Pages:
+
+```bash
+npx wrangler pages deploy web --project-name=lautscan --branch=main
+```
+
+### 2. Menjalankan Backend Stack (Docker Compose)
+
+1. Salin konfigurasi environment:
 
    ```bash
    cp infra/.env.example infra/.env
    ```
 
-2. Build and start PostgreSQL/PostGIS, Redis, the FastAPI API server, and the ARQ ETL worker:
+2. Jalankan PostgreSQL/PostGIS, Redis, API FastAPI, dan ETL Worker:
 
    ```bash
    docker compose -f infra/docker-compose.yml up -d --build
    ```
 
-3. Run database migrations and seed the 11 WPP-NRI zones:
+3. Jalankan migrasi basis data dan seed batas WPP-NRI:
 
    ```bash
    docker compose -f infra/docker-compose.yml exec api alembic upgrade head
    docker compose -f infra/docker-compose.yml exec api python -m app.db_seed
    ```
 
-4. Check the API health endpoint:
-
-   ```bash
-   curl http://127.0.0.1:8080/v1/health
-   ```
-
-   Interactive API documentation is served at `http://127.0.0.1:8080/docs`.
-
-### 2. Local Backend Development & Tests (Without Docker)
-
-Ensure PostgreSQL/PostGIS and Redis are running locally (update `DATABASE_URL` and `REDIS_URL` in your `.env` from `db`/`redis` to `127.0.0.1`), then install and run:
-
-```bash
-cd backend
-pip install -e ".[dev]"
-alembic upgrade head
-python -m app.db_seed
-uvicorn app.main:app --host 127.0.0.1 --port 8080 --reload
-```
-
-Run code quality checks and the test suite:
-
-```bash
-cd backend
-ruff check .
-ruff format --check .
-mypy app
-pytest
-```
-
-### 3. Local Expo Exact Web Development
-
-Expo Exact requires a Linux or WSL2 environment with Bun `1.4.2`, a stable Rust toolchain, Chrome or Chromium, and a sibling checkout of `expo/exact`.
-
-On Windows, verify your local prerequisites first:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File infra/scripts/dev-check.ps1
-```
-
-Inside Ubuntu/Debian or WSL2, install the toolchain and set up the sibling `../exact` directory:
-
-```bash
-bash infra/scripts/setup-wsl.sh
-```
-
-Validate the Exact Contract files against the sibling `../exact` checkout:
-
-```bash
-bun ../exact/scripts/exact.mjs contract build --json frontend/app.contract
-```
-
-Keep the FastAPI backend running at `http://127.0.0.1:8080` (matching `API_BASE_URL` in [`frontend/app.json`](frontend/app.json)) when previewing or running Exact web host checks.
+4. Verifikasi status API di `http://127.0.0.1:8080/v1/health` dan dokumentasi Swagger di `http://127.0.0.1:8080/docs`.
 
 ---
 
-## Data Sources, Licenses & Attribution
+## Sumber Data & Atribusi
 
-LAUT SCAN prioritizes open oceanographic and biodiversity feeds and separates optional credentialed or restricted integrations at the backend configuration layer:
+LAUT SCAN memprioritaskan penyedia data ilmiah terbuka (*open scientific data*):
 
-| Source | Data Provided | Tier | License & Compliance Notes |
-|---|---|---|---|
-| **NOAA CoastWatch / ERDDAP** | SST, Chlorophyll-a, Ocean Currents | P1 (Default) | Public domain / open scientific data; no API token required. |
-| **OBIS (`api.obis.org/v3`)** | Marine fish & species occurrences | P1 (Default) | Open REST API; retains original dataset attribution and per-record licenses. |
-| **Copernicus Marine Service** | Multi-parameter NetCDF ocean grids | P1 (Optional ETL) | Requires free user credentials (`COPERNICUS_USERNAME` and `COPERNICUS_PASSWORD` in `infra/.env`). |
-| **KKP PDPI Adapter** | Indonesian fishing ground advisories | P1/P2 (Adapter) | Pluggable adapter disabled by default unless an authorized `PDPI_BASE_URL` is configured. |
-| **Global Fishing Watch (GFW)** | AIS fishing effort & vessel activity | P2 (Opt-in) | Disabled by default (`GFW_API_TOKEN`). Free-tier GFW tokens are restricted to **non-commercial / public-interest** use. Commercial deployments must supply a separate licensed GFW BYO-Token so GFW terms do not conflict with LAUT SCAN's MIT license. |
-| **WPP-NRI Boundaries** | Indonesian Fisheries Management Areas 571 to 718 | P0 Seed | Based on *Permen-KP No. 18/PERMEN-KP/2014*. See [`data/wpp-nri/README.md`](data/wpp-nri/README.md) for replacing P0 seed polygons with official KKP/BIG shapefiles. |
-
-Every map view and `/v1/map/point` payload surfaces source attribution, spatial resolution, and satellite acquisition timestamps. External credentials are kept strictly on the backend and are never exposed in API responses or frontend bundles.
+| Sumber Data | Parameter | Status & Lisensi |
+|---|---|---|
+| **NASA CYGNSS** | Pusaran Siklon Tropis, Angin Permukaan Laut, Tinggi Gelombang | Public Domain / Open Data NASA Earth Science |
+| **NASA GPM IMERG** | Presipitasi Radar Hujan Global & Inti Konvektif Badai | Public Domain / NASA GSFC |
+| **NOAA CoastWatch / ERDDAP** | Suhu Permukaan Laut (SST) & Arus Laut | Public Domain / U.S. Government |
+| **Ocean Biodiversity Information System (OBIS)** | Rekor Keberadaan Spesies Ikan Laut | CC0 / CC-BY Data Provider Attribution |
+| **Global Fishing Watch (GFW)** | Telemetri Kapal Perikanan & AIS Pelayaran | Non-Commercial Research / GFW Attribution |
+| **Batas WPP-NRI** | 11 Wilayah Pengelolaan Perikanan Indonesia | *Permen-KP No. 18/PERMEN-KP/2014* |
 
 ---
 
-## Disclaimer
+## Disclaimer Keselamatan Pelayaran
 
-LAUT SCAN visualizes historical observations and satellite-derived oceanographic data that carry acquisition latency and spatial resolution limits. Ocean metrics, biodiversity records, and fishing ground overlays **do not guarantee** the real-time presence of fish at any coordinate. For maritime navigation, weather warnings, and safety at sea, always rely on official notices from authorized national agencies (**BMKG**, **Pushidrosal**, **Basarnas**, and **KKP**).
+Informasi yang disajikan pada LAUT SCAN merupakan agregasi observasi satelit dan pemodelan oseanografi untuk tujuan referensi perikanan dan penelitian. Estimasi keberadaan ikan tidak menjamin penangkapan pada titik koordinat persis. Untuk keselamatan pelayaran dan peringatan cuaca maritim resmi berstandar navigasi, seluruh operator pelayaran wajib merujuk pada otoritas maritim resmi (**Pushidrosal**, **Basarnas**, **BMKG**, dan **Kementerian Kelautan dan Perikanan**).
 
 ---
 
-## License
+## Lisensi
 
-LAUT SCAN is released under the [MIT License](LICENSE). Third-party marine datasets retain their respective upstream licenses and attribution terms listed above.
+LAUT SCAN dirilis di bawah lisensi [MIT License](LICENSE). Masing-masing dataset oseanografi dan satelit pihak ketiga mempertahankan lisensi dan atribusi penyedia data asalnya.
