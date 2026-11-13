@@ -3234,7 +3234,12 @@ export class MarineMap {
           break;
         }
         prevLon = pLon;
-        pts.push(this.projectPointToViewport(pLat, pLon, z, k, left, top, n));
+        const pt = this.projectPointToViewport(pLat, pLon, z, k, left, top, n);
+        if (pts.length > 0 && Math.abs(pt[0] - pts[pts.length - 1][0]) > 180) {
+          clipped = true;
+          break;
+        }
+        pts.push(pt);
       }
       if (clipped || pts.length < 4) continue;
       const headPt = pts[pts.length - 1];
