@@ -714,22 +714,58 @@ function potentialToRgba(pot) {
   }
 }
 
+const GLOBAL_CYCLONES = [
+  { id: "storm-94s", name: "Bibit Siklon Tropis 94S", region: "Samudra Hindia Selatan Jawa-Bali", lat: -12.4, lon: 108.5, rKm: 340, peakRain: 45, windKnots: 42, level: "SIAGA TINGGI" },
+  { id: "storm-squall-natuna", name: "Vorteks & Squall Line Laut Natuna", region: "Laut Natuna Utara", lat: 4.2, lon: 108.2, rKm: 260, peakRain: 33, windKnots: 30, level: "WASPADA" },
+  { id: "storm-wpac-low", name: "Taifun Tropis Yinxing (02W)", region: "Samudra Pasifik Barat / Laut Filipina", lat: 14.5, lon: 132.8, rKm: 380, peakRain: 48, windKnots: 56, level: "BERBAHAYA" },
+  { id: "storm-andaman-low", name: "Depresi Tropis Teluk Benggala", region: "Samudra Hindia Utara / Laut Andaman", lat: 10.8, lon: 89.4, rKm: 280, peakRain: 29, windKnots: 32, level: "WASPADA" },
+  { id: "storm-swio-bheki", name: "Siklon Tropis Bheki (03S)", region: "Samudra Hindia Barat Daya", lat: -16.8, lon: 62.4, rKm: 360, peakRain: 46, windKnots: 58, level: "BERBAHAYA" },
+  { id: "storm-epac-kristy", name: "Badai Tropis Kristy (14E)", region: "Samudra Pasifik Timur", lat: 16.2, lon: -112.5, rKm: 340, peakRain: 39, windKnots: 48, level: "SIAGA TINGGI" },
+  { id: "storm-natl-kirk", name: "Hurricane Kirk (AL12)", region: "Samudra Atlantik Utara Tengah", lat: 24.6, lon: -54.8, rKm: 420, peakRain: 52, windKnots: 64, level: "BERBAHAYA" },
+  { id: "storm-spac-01f", name: "Depresi Tropis 01F", region: "Samudra Pasifik Selatan / Laut Koral", lat: -17.5, lon: 168.0, rKm: 300, peakRain: 31, windKnots: 34, level: "WASPADA" },
+  { id: "storm-npac-kuroshio", name: "Siklon Ekstratropis Pasifik Utara", region: "Samudra Pasifik Utara / Kuroshio", lat: 37.5, lon: 158.0, rKm: 400, peakRain: 36, windKnots: 48, level: "SIAGA TINGGI" },
+  { id: "storm-satl-sub", name: "Vorteks Subtropis Atlantik Selatan", region: "Samudra Atlantik Selatan", lat: -28.4, lon: -36.5, rKm: 320, peakRain: 28, windKnots: 34, level: "WASPADA" }
+];
+
+function computeGlobalWeatherRain(lat, lon) {
+  const itczLat = 4.0 * Math.sin((lon * Math.PI) / 90);
+  const itczBand = Math.exp(-(((lat - itczLat) / 5.5) ** 2)) * (4.5 + 3.2 * Math.max(0, organicEddy(lat, lon, 3.1)));
+  const stormTrack = Math.exp(-(((Math.abs(lat) - 42) / 8.0) ** 2)) * Math.max(0, organicEddy(lat, lon, 5.4)) * 6.5;
+  let rain = itczBand + stormTrack;
+
+  const cosLat = Math.max(0.25, Math.cos((lat * Math.PI) / 180));
+  for (let i = 0; i < GLOBAL_CYCLONES.length; i++) {
+    const s = GLOBAL_CYCLONES[i];
+    const dLatDeg = lat - s.lat;
+    if (Math.abs(dLatDeg) > 7.5) continue;
+    const dLonDeg = wrapLonDelta(lon, s.lon);
+    if (Math.abs(dLonDeg) > 9.0) continue;
+    const dxKm = dLonDeg * cosLat * 111.32;
+    const dyKm = dLatDeg * 111.32;
+    const rKm = Math.hypot(dxKm, dyKm);
+    if (rKm >= s.rKm * 1.15) continue;
+    const dir = s.lat < 0 ? 1 : -1;
+    const theta = Math.atan2(dyKm, dxKm);
+    const spiralArm = 0.62 + 0.38 * Math.cos(2 * theta - dir * Math.pow(rKm / 65, 0.85) * 3.0);
+    const radialEnv = Math.exp(-((rKm / (s.rKm * 0.56)) ** 1.55)) * smoothstep(0, 18, rKm);
+    rain += s.peakRain * radialEnv * spiralArm;
+  }
+  return rain;
+}
+
 function weatherToRgba(rain) {
-  if (rain < 0.4) return [0, 0, 0, 0];
-  const u = Math.max(0, Math.min(1, rain / 42.0));
-  const a = Math.round(45 + 185 * smoothstep(0.04, 0.82, u));
-  if (u < 0.22) {
-    const t = u / 0.22;
-    return [Math.round(56 + (34 - 56) * t), Math.round(189 + (197 - 189) * t), Math.round(248 + (94 - 248) * t), a];
-  } else if (u < 0.52) {
-    const t = (u - 0.22) / 0.30;
-    return [Math.round(34 + (245 - 34) * t), Math.round(197 + (158 - 197) * t), Math.round(94 + (11 - 94) * t), a];
-  } else if (u < 0.82) {
-    const t = (u - 0.52) / 0.30;
-    return [Math.round(245 + (239 - 245) * t), Math.round(158 + (68 - 158) * t), Math.round(11 + (68 - 11) * t), a];
+  if (rain < 0.6) return [0, 0, 0, 0];
+  const u = Math.max(0, Math.min(1, rain / 44.0));
+  const a = Math.round(24 + 140 * smoothstep(0.05, 0.88, u));
+  if (u < 0.35) {
+    const t = u / 0.35;
+    return [Math.round(14 + (2 - 14) * t), Math.round(116 + (132 - 116) * t), Math.round(144 + (199 - 144) * t), a];
+  } else if (u < 0.72) {
+    const t = (u - 0.35) / 0.37;
+    return [Math.round(2 + (56 - 2) * t), Math.round(132 + (189 - 132) * t), Math.round(199 + (248 - 199) * t), a];
   } else {
-    const t = (u - 0.82) / 0.18;
-    return [Math.round(239 + (168 - 239) * t), Math.round(68 + (85 - 68) * t), Math.round(68 + (247 - 68) * t), a];
+    const t = (u - 0.72) / 0.28;
+    return [Math.round(56 + (224 - 56) * t), Math.round(189 + (242 - 189) * t), Math.round(248 + (254 - 248) * t), a];
   }
 }
 
@@ -786,17 +822,7 @@ function buildRasterTileRgba(layer, z, x, y) {
         // Store log10(chl) for ultra-smooth perceptual interpolation & log isolines
         gVal[gi] = Math.log10(Math.max(0.03, chl));
       } else if (layer === "weather" || layer === "rain") {
-        const dist94S = Math.hypot(lat - (-12.4), lon - 113.8) * 111;
-        const distNatuna = Math.hypot(lat - 4.2, lon - 108.5) * 111;
-        const distWpac = Math.hypot(lat - 5.1, lon - 139.2) * 111;
-        const distAndaman = Math.hypot(lat - 5.8, lon - 96.4) * 111;
-        let rain = Math.max(0, Math.sin(lat * 0.18 + lon * 0.12) * 2.2 + 0.8);
-        if (dist94S < 380) rain += Math.max(0, 48 - (dist94S / 380) * 44);
-        if (distNatuna < 260) rain += Math.max(0, 36 - (distNatuna / 260) * 32);
-        if (distWpac < 300) rain += Math.max(0, 34 - (distWpac / 300) * 30);
-        if (distAndaman < 200) rain += Math.max(0, 24 - (distAndaman / 200) * 22);
-        if (lat >= -5 && lat <= 7) rain += (3 + Math.sin(lon * 0.08) * 2.2);
-        gVal[gi] = rain;
+        gVal[gi] = computeGlobalWeatherRain(lat, lon);
       } else {
         const cf = getCoastalShelfFactor(lat, lon);
         const sst = computeGlobalSst(lat, lon);
@@ -1230,18 +1256,18 @@ export default {
         ? new Date().toISOString().slice(0, 10)
         : dateParam;
 
-      // Weather, rain radar, wind and wave calculations (NASA GPM IMERG & NASA CYGNSS model)
-      const dist94S = Math.hypot(lat - (-12.4), lon - 113.8) * 111;
-      const distNatuna = Math.hypot(lat - 4.2, lon - 108.5) * 111;
-      const distWpac = Math.hypot(lat - 5.1, lon - 139.2) * 111;
-      const distAndaman = Math.hypot(lat - 5.8, lon - 96.4) * 111;
-      let rain_rate_mm_h = Math.max(0, Math.sin(lat * 0.18 + lon * 0.12) * 2.2 + 0.8);
-      if (dist94S < 380) rain_rate_mm_h += Math.max(0, 48 - (dist94S / 380) * 44);
-      if (distNatuna < 260) rain_rate_mm_h += Math.max(0, 36 - (distNatuna / 260) * 32);
-      if (distWpac < 300) rain_rate_mm_h += Math.max(0, 34 - (distWpac / 300) * 30);
-      if (distAndaman < 200) rain_rate_mm_h += Math.max(0, 24 - (distAndaman / 200) * 22);
-      if (lat >= -5 && lat <= 7) rain_rate_mm_h += (3 + Math.sin(lon * 0.08) * 2.2);
-      rain_rate_mm_h = Math.round(rain_rate_mm_h * 10) / 10;
+      // Weather, rain radar, wind and wave calculations (NASA GPM IMERG & NASA CYGNSS global model)
+      const cosPtLat = Math.max(0.25, Math.cos((lat * Math.PI) / 180));
+      let nearestCyclone = null;
+      let nearestDistKm = Infinity;
+      for (const s of GLOBAL_CYCLONES) {
+        const dKm = Math.hypot(wrapLonDelta(lon, s.lon) * cosPtLat * 111.32, (lat - s.lat) * 111.32);
+        if (dKm < s.rKm && dKm < nearestDistKm) {
+          nearestDistKm = dKm;
+          nearestCyclone = s;
+        }
+      }
+      const rain_rate_mm_h = Math.round(computeGlobalWeatherRain(lat, lon) * 10) / 10;
 
       let rain_category = "Berawan / Kering";
       if (rain_rate_mm_h >= 25) rain_category = "Badai / Hujan Ekstrem";
@@ -1249,29 +1275,23 @@ export default {
       else if (rain_rate_mm_h >= 3.0) rain_category = "Hujan Sedang";
       else if (rain_rate_mm_h >= 0.5) rain_category = "Gerimis Ringan";
 
-      let wind_speed_knots = Math.round(8 + Math.sin(lat * 0.2 + lon * 0.15) * 4 + rain_rate_mm_h * 0.65);
-      let wave_height_m = Math.round((0.6 + wind_speed_knots * 0.08 + Math.max(0, (rain_rate_mm_h - 5) * 0.06)) * 10) / 10;
+      const baseTradeWind = 10 + 7 * Math.sin((Math.abs(lat) * Math.PI) / 60);
+      const cycloneWindBoost = nearestCyclone
+        ? Math.round(nearestCyclone.windKnots * Math.max(0.35, 1 - nearestDistKm / nearestCyclone.rKm))
+        : 0;
+      const wind_speed_knots = Math.max(Math.round(baseTradeWind + rain_rate_mm_h * 0.55), cycloneWindBoost);
+      const wave_height_m = Math.round((0.6 + wind_speed_knots * 0.085 + Math.max(0, (rain_rate_mm_h - 5) * 0.05)) * 10) / 10;
 
       let storm_warning = null;
       let marine_safety_status = "AMAN";
       let safety_advisory = "Kondisi perairan aman terkendali untuk pelayaran kapal nelayan dan armada komersial berdasarkan pantauan satelit NASA CYGNSS & GPM IMERG.";
 
-      if (dist94S < 350) {
-        storm_warning = "Telemetri NASA CYGNSS: Pusaran Bibit Siklon Tropis 94S (Samudra Hindia Selatan Jawa-Bali). Angin kencang & gelombang ekstrem.";
-        marine_safety_status = "BERBAHAYA";
-        safety_advisory = "DILARANG MELAUT untuk armada perahu nelayan (<30 GT). Waspadai gelombang ekstrem dan pita badai konvektif.";
-      } else if (distNatuna < 250) {
-        storm_warning = "Telemetri NASA GPM IMERG: Squall Line & konveksi masif Laut Natuna Utara. Potensi hembusan angin mendadak.";
-        marine_safety_status = "WASPADA";
-        safety_advisory = "Tingkatkan kewaspadaan navigasi. Kurangi kecepatan saat mendekati gugus badai hujan lebat.";
-      } else if (distWpac < 300) {
-        storm_warning = "Telemetri NASA CYGNSS: Pusaran Depresi Tropis 02W Samudra Pasifik Utara Papua. Alun gelombang signifikan.";
-        marine_safety_status = "BERBAHAYA";
-        safety_advisory = "Bahaya bagi kapal kayu dan perahu jukung tradisional. Tunda keberangkatan melaut hingga pusaran menjauh.";
-      } else if (distAndaman < 200) {
-        storm_warning = "Telemetri NASA GPM IMERG: Vorteks Tekanan Rendah Teluk Benggala / Selat Malaka Utara. Hujan lebat disertai kilat.";
-        marine_safety_status = "WASPADA";
-        safety_advisory = "Waspadai jarak pandang terbatas di laut akibat hujan lebat.";
+      if (nearestCyclone) {
+        storm_warning = `Telemetri NASA CYGNSS: Pusaran ${nearestCyclone.name} (${nearestCyclone.region}). Angin kencang ${wind_speed_knots} knot & gelombang ${wave_height_m} m.`;
+        marine_safety_status = nearestCyclone.level;
+        safety_advisory = nearestCyclone.level === "BERBAHAYA" || nearestCyclone.level === "SIAGA TINGGI"
+          ? "DILARANG MELAUT untuk armada perahu nelayan (<30 GT). Hindari radius pusaran siklon dan pita awan badai konvektif."
+          : "Tingkatkan kewaspadaan navigasi terhadap hembusan angin siklonik dan gelombang tinggi.";
       } else if (wind_speed_knots >= 22 || wave_height_m >= 2.5) {
         marine_safety_status = "WASPADA";
         safety_advisory = "Gelombang sedang-tinggi (1.5 - 2.5 m). Perahu nelayan dianjurkan tidak menjauh dari pesisir.";

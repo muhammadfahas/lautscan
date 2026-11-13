@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/app.css?v=20261113N">
+  <link rel="stylesheet" href="/app.css?v=20261113P">
 </head>
 <body>
   <div class="app-shell">
@@ -624,7 +624,7 @@
   </div>
 
   <script type="module">
-    import { create, setProps } from '/modules/marine-map/web/index.js?v=20261113m';
+    import { create, setProps } from '/modules/marine-map/web/index.js?v=20261113p';
 
     const urlParams = new URLSearchParams(window.location.search);
     const rawApiParam = (urlParams.get('api') || '').trim();
@@ -1276,16 +1276,16 @@
           </div>
           <div class="legend-tiers">
             <div class="tier-chip">
-              <span class="tier-swatch" style="background:#22c55e;"></span>
+              <span class="tier-swatch" style="background:#0284c7;"></span>
               <span class="tier-text"><span class="tier-name">Gerimis</span><span class="tier-range">0.5-3 mm/j</span></span>
             </div>
             <div class="tier-chip">
-              <span class="tier-swatch" style="background:#eab308;"></span>
+              <span class="tier-swatch" style="background:#38bdf8;"></span>
               <span class="tier-text"><span class="tier-name">Hujan Sedang</span><span class="tier-range">3-10 mm/j</span></span>
             </div>
             <div class="tier-chip">
-              <span class="tier-swatch" style="background:#ef4444;"></span>
-              <span class="tier-text"><span class="tier-name">Lebat / Badai</span><span class="tier-range">&gt;10 mm/j</span></span>
+              <span class="tier-swatch" style="background:#e0f2fe;"></span>
+              <span class="tier-text"><span class="tier-name">Inti Badai / Awan</span><span class="tier-range">&gt;10 mm/j</span></span>
             </div>
           </div>
         `;

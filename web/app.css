@@ -649,7 +649,7 @@ html, body {
 .scale-potential { background: linear-gradient(90deg, rgba(20,184,166,0.2) 0%, #14B8A6 42%, #22C55E 72%, #F59E0B 100%); }
 .scale-sst { background: linear-gradient(90deg, #0d0887 0%, #6a00a8 25%, #b12a90 50%, #e16462 72%, #fca636 88%, #f0f921 100%); }
 .scale-chlorophyll { background: linear-gradient(90deg, #440154 0%, #3b528b 25%, #21918c 55%, #5ec962 80%, #fde725 100%); }
-.scale-weather { background: linear-gradient(90deg, #38bdf8 0%, #22c55e 28%, #eab308 60%, #ef4444 85%, #a855f7 100%); }
+.scale-weather { background: linear-gradient(90deg, rgba(14,116,144,0.35) 0%, #0284c7 35%, #38bdf8 70%, #e0f2fe 100%); }
 .legend-tiers {
   display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; width: 100%;
 }

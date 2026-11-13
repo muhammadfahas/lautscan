@@ -493,26 +493,26 @@ const STYLE = `
   z-index: 40;
 }
 .lautscan-marine-map .cyclone-wrap {
-  width: 56px;
-  height: 56px;
+  width: 28px;
+  height: 28px;
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  filter: drop-shadow(0 0 12px rgba(239, 68, 68, 0.45));
+  filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.55));
 }
 .lautscan-marine-map .cyclone-icon-svg {
-  width: 56px;
-  height: 56px;
+  width: 28px;
+  height: 28px;
   overflow: visible;
 }
 .lautscan-marine-map .cyclone-outer-band {
-  transform-origin: 28px 28px;
-  animation: cycloneSpin 6s linear infinite;
+  transform-origin: 14px 14px;
+  animation: cycloneSpin 7s linear infinite;
 }
 .lautscan-marine-map .cyclone-inner-blades {
-  transform-origin: 28px 28px;
-  animation: cycloneSpin 2.6s linear infinite;
+  transform-origin: 14px 14px;
+  animation: cycloneSpin 3.2s linear infinite;
 }
 .lautscan-marine-map .cyclone-outer-band.ccw {
   animation-direction: reverse;
@@ -521,8 +521,8 @@ const STYLE = `
   animation-direction: reverse;
 }
 .lautscan-marine-map .cyclone-radar-pulse {
-  animation: radarPulse 2.2s cubic-bezier(0.24, 0, 0.38, 1) infinite;
-  transform-origin: 28px 28px;
+  animation: radarPulse 2.4s cubic-bezier(0.24, 0, 0.38, 1) infinite;
+  transform-origin: 14px 14px;
 }
 @keyframes cycloneSpin {
   from { transform: rotate(0deg); }
@@ -543,7 +543,7 @@ const STYLE = `
   padding: 4px 8px;
   border-radius: 6px;
   background: rgba(15, 23, 42, 0.95);
-  border: 1px solid rgba(239, 68, 68, 0.6);
+  border: 1px solid rgba(56, 189, 248, 0.65);
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6);
   color: #F8FAFC;
   font-family: inherit;
@@ -761,26 +761,21 @@ function buildSpeciesSvg() {
 }
 
 function buildCycloneSvg(warningLevel = 'WASPADA', selected = false, isSouthern = true) {
-  const isExtreme = /BERBAHAYA|AWAS|SIAGA/i.test(warningLevel);
-  const coreColor = selected ? '#FFFFFF' : (isExtreme ? '#EF4444' : '#F59E0B');
-  const bandColor = selected ? '#BAE6FD' : (isExtreme ? '#FB923C' : '#38BDF8');
+  const coreColor = selected ? '#FFFFFF' : '#E0F2FE';
+  const arcColor = selected ? '#FFFFFF' : '#38BDF8';
   const dirCls = isSouthern ? '' : ' ccw';
-  return `<svg class="cyclone-icon-svg" width="56" height="56" viewBox="0 0 56 56" fill="none">
-    <circle cx="28" cy="28" r="24" stroke="${coreColor}" stroke-width="1" stroke-opacity="0.35" class="cyclone-radar-pulse"/>
+  return `<svg class="cyclone-icon-svg" width="28" height="28" viewBox="0 0 28 28" fill="none">
+    <circle cx="14" cy="14" r="12" stroke="${arcColor}" stroke-width="0.9" stroke-opacity="0.35" class="cyclone-radar-pulse"/>
     <g class="cyclone-outer-band${dirCls}">
-      <circle cx="28" cy="28" r="21" stroke="${bandColor}" stroke-width="1.3" stroke-dasharray="10 6 4 6" stroke-opacity="0.65" stroke-linecap="round"/>
-      <path d="M28 5 C39 5 48 12 50 22" stroke="${coreColor}" stroke-width="1.8" stroke-linecap="round" stroke-opacity="0.7"/>
-      <path d="M28 51 C17 51 8 44 6 34" stroke="${coreColor}" stroke-width="1.8" stroke-linecap="round" stroke-opacity="0.7"/>
+      <path d="M14 3.5 C20 3.5 24.5 8 24.5 14" stroke="${arcColor}" stroke-width="1.2" stroke-linecap="round" stroke-opacity="0.8"/>
+      <path d="M14 24.5 C8 24.5 3.5 20 3.5 14" stroke="${arcColor}" stroke-width="1.2" stroke-linecap="round" stroke-opacity="0.8"/>
     </g>
     <g class="cyclone-inner-blades${dirCls}">
-      <path d="M28 11 C36 11 41 18 35 25 C39 19 33 15 28 16 Z" fill="${coreColor}" fill-opacity="0.92"/>
-      <path d="M45 28 C45 36 38 41 31 35 C37 39 41 33 40 28 Z" fill="${bandColor}" fill-opacity="0.9"/>
-      <path d="M28 45 C20 45 15 38 21 31 C17 37 23 41 28 40 Z" fill="${coreColor}" fill-opacity="0.92"/>
-      <path d="M11 28 C11 20 18 15 25 21 C19 17 15 23 16 28 Z" fill="${bandColor}" fill-opacity="0.9"/>
-      <circle cx="28" cy="28" r="8.5" stroke="${coreColor}" stroke-width="1.6" stroke-dasharray="5 3" stroke-opacity="0.9"/>
+      <path d="M14 7.2 C18.2 7.2 20.8 10.6 18 14 C19.4 10.8 16.8 9 14 9.5 Z" fill="${coreColor}" fill-opacity="0.88"/>
+      <path d="M14 20.8 C9.8 20.8 7.2 17.4 10 14 C8.6 17.2 11.2 19 14 18.5 Z" fill="${coreColor}" fill-opacity="0.88"/>
     </g>
-    <circle cx="28" cy="28" r="4.2" fill="#060B19" stroke="${coreColor}" stroke-width="1.8"/>
-    <circle cx="28" cy="28" r="1.4" fill="${selected ? '#FFFFFF' : bandColor}"/>
+    <circle cx="14" cy="14" r="2.8" fill="#060B19" stroke="${coreColor}" stroke-width="1.3"/>
+    <circle cx="14" cy="14" r="1" fill="${arcColor}"/>
   </svg>`;
 }
 
@@ -1242,6 +1237,10 @@ export class MarineMap {
     this.vortexRaf = null;
     this.vortexLastFrameTs = 0;
     this.vortexPhase = 0;
+    this.windParticles = [];
+    this.vortexParticles = [];
+    this.windViewKey = '';
+    this.windStormSig = '';
     this._renderedWppScreenPts = [];
 
     if (typeof ResizeObserver === 'function') {
@@ -1425,7 +1424,7 @@ export class MarineMap {
 
   syncVortexAnimation() {
     const hasStorms = this.markers.some((m) => m.isStorm);
-    const active = hasStorms && !this.plain && !this.prefersReducedMotion();
+    const active = (hasStorms || this.layers.weather.visible) && !this.plain && !this.prefersReducedMotion();
     if (!active) {
       if (this.vortexRaf !== null) {
         cancelAnimationFrame(this.vortexRaf);
@@ -1440,7 +1439,8 @@ export class MarineMap {
     if (this.vortexRaf !== null || typeof requestAnimationFrame !== 'function') return;
     this.vortexLastFrameTs = 0;
     const stepFrame = (ts) => {
-      if (!this.map.isConnected || !this.markers.some((m) => m.isStorm)) {
+      const stillActive = (this.markers.some((m) => m.isStorm) || this.layers.weather.visible);
+      if (!this.map.isConnected || !stillActive) {
         this.vortexRaf = null;
         return;
       }
@@ -1450,6 +1450,7 @@ export class MarineMap {
         this.vortexPhase += dt;
         const { w, h } = this.size;
         if (w && h) {
+          this.advanceWindAndVortexParticles(dt, w, h);
           const z = Math.min(this.maxZoom, Math.max(0, Math.round(this.zoom)));
           const k = 2 ** (this.zoom - z);
           const [cx, cy] = project(this.center[0], this.center[1], z);
@@ -1665,7 +1666,7 @@ export class MarineMap {
   overlayTileUrl(layer, z, x, y) {
     const rawDate = this.selectedDate || 'latest';
     const effectiveDate = rawDate === 'latest' ? new Date().toISOString().slice(0, 10) : rawDate;
-    const safeDate = encodeURIComponent(`${effectiveDate}-v6`);
+    const safeDate = encodeURIComponent(`${effectiveDate}-v7`);
     const path = `/v1/tiles/${encodeURIComponent(layer)}/${safeDate}/${z}/${x}/${y}.png`;
     return this.tileBaseUrl ? `${this.tileBaseUrl}${path}` : path;
   }
@@ -2839,6 +2840,296 @@ export class MarineMap {
     }
   }
 
+  sampleGlobalWindVelocity(lat, lon) {
+    const itczLat = 4.0 * Math.sin((lon * Math.PI) / 90);
+    const dLatItcz = lat - itczLat;
+    const absLat = Math.abs(lat);
+    let u = 0;
+    let v = 0;
+
+    if (absLat < 28) {
+      u = -11.5 * Math.cos((lat / 30) * (Math.PI / 2));
+      v = -Math.sin(dLatItcz * 0.14) * 3.8;
+    } else if (absLat < 62) {
+      u = 16.5 * Math.sin(((absLat - 24) / 38) * Math.PI);
+      v = 5.2 * Math.sin((lon * Math.PI) / 45 + Math.sign(lat || 1) * 0.8);
+    } else {
+      u = -8.5 * Math.cos(((absLat - 62) / 22) * (Math.PI / 2));
+      v = 1.8 * Math.cos((lon * Math.PI) / 40);
+    }
+
+    u += 1.8 * Math.sin((lat * Math.PI) / 28) * Math.cos((lon * Math.PI) / 50);
+    v += 1.6 * Math.cos((lat * Math.PI) / 24) * Math.sin((lon * Math.PI) / 42);
+
+    const cosLat = Math.max(0.25, Math.cos((lat * Math.PI) / 180));
+    const storms = this.markers;
+    for (let i = 0; i < storms.length; i++) {
+      const s = storms[i];
+      if (!s.isStorm) continue;
+      let dLon = lon - s.lon;
+      while (dLon > 180) dLon -= 360;
+      while (dLon < -180) dLon += 360;
+      const dx = dLon * cosLat;
+      const dy = lat - s.lat;
+      const rDeg = Math.hypot(dx, dy);
+      const Rdeg = clamp((s.radiusKm || 320) / 111.32, 2.0, 4.2);
+      if (rDeg > 0.05 && rDeg < Rdeg * 3.2) {
+        const dir = s.lat < 0 ? 1 : -1;
+        const tx = dir * (dy / rDeg);
+        const ty = -dir * (dx / rDeg);
+        const rx = dx / rDeg;
+        const ry = dy / rDeg;
+        const vxUnit = 0.92 * tx - 0.39 * rx;
+        const vyUnit = 0.92 * ty - 0.39 * ry;
+        const rEye = 0.42;
+        const profile = rDeg < rEye ? (rDeg / rEye) : Math.exp(-Math.pow((rDeg - rEye) / (Rdeg * 0.95), 1.35));
+        const blend = clamp(1 - rDeg / (Rdeg * 3.2), 0, 1);
+        const vortexSpeed = clamp((s.maxWindKnots || 38) * 0.72, 18, 42) * profile * blend;
+        u = u * (1 - blend * 0.75) + vxUnit * vortexSpeed;
+        v = v * (1 - blend * 0.75) + vyUnit * vortexSpeed;
+      }
+    }
+
+    const spd = Math.max(0.5, Math.hypot(u, v));
+    return { u, v, spd };
+  }
+
+  seedWindParticle(p, vb, randomAge = false) {
+    const minLon = vb ? vb.minLon : -180;
+    const maxLon = vb ? vb.maxLon : 180;
+    const minLat = vb ? clamp(vb.minLat, -78, 78) : -72;
+    const maxLat = vb ? clamp(vb.maxLat, -78, 78) : 72;
+    const lat = minLat + Math.random() * Math.max(1, maxLat - minLat);
+    const lonSpan = maxLon - minLon;
+    const lon = lonSpan >= 359
+      ? -180 + Math.random() * 360
+      : minLon + Math.random() * Math.max(1, lonSpan);
+
+    p.lat = lat;
+    p.lon = ((((lon + 180) % 360) + 360) % 360) - 180;
+    p.maxAge = 2.0 + Math.random() * 1.8;
+    p.age = randomAge ? Math.random() * p.maxAge * 0.75 : 0;
+    p.spd = this.sampleGlobalWindVelocity(p.lat, p.lon).spd;
+    p.trailCount = 1;
+    p.trailHead = 0;
+    const cap = p.trailLat.length;
+    for (let i = 0; i < cap; i++) {
+      p.trailLat[i] = p.lat;
+      p.trailLon[i] = p.lon;
+    }
+  }
+
+  stepWindParticle(p, dt, degPerPx, vb, wrapAge = true) {
+    p.age += dt;
+    if (wrapAge && p.age >= p.maxAge) {
+      this.seedWindParticle(p, vb, false);
+      return;
+    }
+
+    const v1 = this.sampleGlobalWindVelocity(p.lat, p.lon);
+    const spdScale = clamp(0.52 + v1.spd / 26, 0.52, 2.0);
+    const stepDeg1 = degPerPx * dt * spdScale;
+    const cos1 = Math.max(0.25, Math.cos((p.lat * Math.PI) / 180));
+    const midLat = clamp(p.lat + (v1.v / v1.spd) * stepDeg1 * 0.5, -82, 82);
+    const midLon = ((((p.lon + ((v1.u / v1.spd) / cos1) * stepDeg1 * 0.5) + 180) % 360) + 360) % 360 - 180;
+
+    const v2 = this.sampleGlobalWindVelocity(midLat, midLon);
+    const spdScale2 = clamp(0.52 + v2.spd / 26, 0.52, 2.0);
+    const stepDeg2 = degPerPx * dt * spdScale2;
+    const cos2 = Math.max(0.25, Math.cos((midLat * Math.PI) / 180));
+    const nextLat = clamp(p.lat + (v2.v / v2.spd) * stepDeg2, -82, 82);
+    const nextLon = ((((p.lon + ((v2.u / v2.spd) / cos2) * stepDeg2) + 180) % 360) + 360) % 360 - 180;
+
+    p.lat = nextLat;
+    p.lon = nextLon;
+    p.spd = v2.spd;
+    const cap = p.trailLat.length;
+    p.trailHead = (p.trailHead + 1) % cap;
+    p.trailLat[p.trailHead] = nextLat;
+    p.trailLon[p.trailHead] = nextLon;
+    if (p.trailCount < cap) p.trailCount++;
+  }
+
+  initGlobalWindParticles(vb) {
+    const count = this.zoom < 4.5 ? 210 : 185;
+    const cap = 26;
+    const particles = [];
+    const pxPerDeg = (TILE_SIZE * (2 ** clamp(this.zoom, 1.5, 11))) / 360;
+    const degPerPx = clamp(64 + (this.zoom - 2) * 9.5, 58, 128) / Math.max(1.5, pxPerDeg);
+    for (let i = 0; i < count; i++) {
+      const p = {
+        lat: 0,
+        lon: 0,
+        age: 0,
+        maxAge: 2.5,
+        spd: 12,
+        trailLat: new Float64Array(cap),
+        trailLon: new Float64Array(cap),
+        trailCount: 0,
+        trailHead: 0,
+      };
+      this.seedWindParticle(p, vb, true);
+      const warmup = 10 + (i % 14);
+      for (let s = 0; s < warmup; s++) {
+        this.stepWindParticle(p, 0.032, degPerPx, vb, false);
+      }
+      particles.push(p);
+    }
+    this.windParticles = particles;
+  }
+
+  sampleVortexLocalVel(nx, ny, dir) {
+    const r = Math.hypot(nx, ny);
+    if (r < 0.04) return { vx: 0, vy: 0, r };
+    const tx = dir * (ny / r);
+    const ty = -dir * (nx / r);
+    const ix = -nx / r;
+    const iy = -ny / r;
+    const spdNorm = 0.68 + 0.62 * clamp(1.35 - r, 0, 1.25);
+    return {
+      vx: (0.93 * tx + 0.36 * ix) * spdNorm,
+      vy: (0.93 * ty + 0.36 * iy) * spdNorm,
+      r,
+    };
+  }
+
+  seedVortexParticle(p, randomAge = false) {
+    const ang = Math.random() * Math.PI * 2;
+    const r = randomAge ? (0.28 + Math.random() * 1.12) : (0.62 + Math.random() * 0.80);
+    p.nx = Math.cos(ang) * r;
+    p.ny = Math.sin(ang) * r;
+    p.maxAge = 1.6 + Math.random() * 1.3;
+    p.age = randomAge ? Math.random() * p.maxAge * 0.7 : 0;
+    p.trailCount = 1;
+    p.trailHead = 0;
+    const cap = p.trailNx.length;
+    for (let i = 0; i < cap; i++) {
+      p.trailNx[i] = p.nx;
+      p.trailNy[i] = p.ny;
+    }
+  }
+
+  stepVortexParticle(p, dt, dir, wrapAge = true) {
+    p.age += dt;
+    const curR = Math.hypot(p.nx, p.ny);
+    if (wrapAge && (p.age >= p.maxAge || curR < 0.14 || curR > 1.52)) {
+      this.seedVortexParticle(p, false);
+      return;
+    }
+    const v1 = this.sampleVortexLocalVel(p.nx, p.ny, dir);
+    const midNx = p.nx + v1.vx * dt * 0.5;
+    const midNy = p.ny + v1.vy * dt * 0.5;
+    const v2 = this.sampleVortexLocalVel(midNx, midNy, dir);
+    p.nx += v2.vx * dt;
+    p.ny += v2.vy * dt;
+
+    const cap = p.trailNx.length;
+    p.trailHead = (p.trailHead + 1) % cap;
+    p.trailNx[p.trailHead] = p.nx;
+    p.trailNy[p.trailHead] = p.ny;
+    if (p.trailCount < cap) p.trailCount++;
+  }
+
+  initCycloneVortexParticles(storms) {
+    const cap = 22;
+    const list = [];
+    for (const storm of storms) {
+      const dir = storm.lat < 0 ? 1 : -1;
+      for (let i = 0; i < 36; i++) {
+        const p = {
+          stormId: storm.id,
+          nx: 0,
+          ny: 0,
+          age: 0,
+          maxAge: 2.0,
+          trailNx: new Float32Array(cap),
+          trailNy: new Float32Array(cap),
+          trailCount: 0,
+          trailHead: 0,
+        };
+        this.seedVortexParticle(p, true);
+        const warmup = 8 + (i % 12);
+        for (let s = 0; s < warmup; s++) {
+          this.stepVortexParticle(p, 0.032, dir, false);
+        }
+        list.push(p);
+      }
+    }
+    this.vortexParticles = list;
+  }
+
+  advanceWindAndVortexParticles(dt, w, h) {
+    const vb = this.viewportIndonesiaBounds(w, h);
+    const pxPerDeg = (TILE_SIZE * (2 ** clamp(this.zoom, 1.5, 11))) / 360;
+    const degPerPx = clamp(64 + (this.zoom - 2) * 9.5, 58, 128) / Math.max(1.5, pxPerDeg);
+
+    const viewKey = vb
+      ? `${Math.round(this.zoom * 2)}:${Math.round(vb.minLon / 10)},${Math.round(vb.minLat / 8)},${Math.round(vb.maxLon / 10)},${Math.round(vb.maxLat / 8)}`
+      : 'global';
+    if (this.windParticles.length === 0 || viewKey !== this.windViewKey) {
+      this.windViewKey = viewKey;
+      this.initGlobalWindParticles(vb);
+    }
+
+    const storms = this.markers.filter((m) => m.isStorm);
+    const stormSig = storms.map((s) => s.id).join(',');
+    if (storms.length > 0 && (this.vortexParticles.length === 0 || stormSig !== this.windStormSig)) {
+      this.windStormSig = stormSig;
+      this.initCycloneVortexParticles(storms);
+    } else if (storms.length === 0 && this.vortexParticles.length > 0) {
+      this.windStormSig = '';
+      this.vortexParticles = [];
+    }
+
+    for (let i = 0; i < this.windParticles.length; i++) {
+      const p = this.windParticles[i];
+      if (vb && (vb.maxLon - vb.minLon) < 350) {
+        const mLon = (vb.maxLon - vb.minLon) * 0.25;
+        const mLat = (vb.maxLat - vb.minLat) * 0.25;
+        if (p.lat < vb.minLat - mLat || p.lat > vb.maxLat + mLat || p.lon < vb.minLon - mLon || p.lon > vb.maxLon + mLon) {
+          this.seedWindParticle(p, vb, false);
+          continue;
+        }
+      }
+      this.stepWindParticle(p, dt, degPerPx, vb, true);
+    }
+
+    if (storms.length > 0) {
+      const stormById = new Map(storms.map((s) => [s.id, s]));
+      for (let i = 0; i < this.vortexParticles.length; i++) {
+        const p = this.vortexParticles[i];
+        const s = stormById.get(p.stormId);
+        if (!s) continue;
+        this.stepVortexParticle(p, dt, s.lat < 0 ? 1 : -1, true);
+      }
+    }
+  }
+
+  drawStreamlinePath(ctx, pts, r, g, b, peakAlpha, lineWidth, night) {
+    if (pts.length < 4) return;
+    const tailPt = pts[0];
+    const headPt = pts[pts.length - 1];
+    if (Math.hypot(headPt[0] - tailPt[0], headPt[1] - tailPt[1]) < 3) return;
+
+    const grad = ctx.createLinearGradient(tailPt[0], tailPt[1], headPt[0], headPt[1]);
+    grad.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0)`);
+    grad.addColorStop(0.45, `rgba(${r}, ${g}, ${b}, ${(peakAlpha * 0.36).toFixed(3)})`);
+    grad.addColorStop(0.85, `rgba(${r}, ${g}, ${b}, ${(peakAlpha * 0.86).toFixed(3)})`);
+    grad.addColorStop(1, night ? `rgba(255, 255, 255, ${peakAlpha.toFixed(3)})` : `rgba(${r}, ${g}, ${b}, ${peakAlpha.toFixed(3)})`);
+
+    ctx.beginPath();
+    ctx.moveTo(pts[0][0], pts[0][1]);
+    for (let i = 1; i < pts.length - 1; i++) {
+      const mx = (pts[i][0] + pts[i + 1][0]) * 0.5;
+      const my = (pts[i][1] + pts[i + 1][1]) * 0.5;
+      ctx.quadraticCurveTo(pts[i][0], pts[i][1], mx, my);
+    }
+    ctx.lineTo(headPt[0], headPt[1]);
+    ctx.strokeStyle = grad;
+    ctx.lineWidth = lineWidth;
+    ctx.stroke();
+  }
+
   drawStormVortices(w, h, z, k, left, top, n) {
     const canvas = this.vortexCanvas;
     if (!canvas) return;
@@ -2856,89 +3147,110 @@ export class MarineMap {
     ctx.clearRect(0, 0, w, h);
 
     const storms = this.markers.filter((m) => m.isStorm);
-    if (storms.length === 0) return;
+    if (storms.length === 0 && !this.layers.weather.visible) return;
 
+    const vb = this.viewportIndonesiaBounds(w, h);
+    if (this.windParticles.length === 0) {
+      this.initGlobalWindParticles(vb);
+    }
+    if (storms.length > 0 && this.vortexParticles.length === 0) {
+      this.initCycloneVortexParticles(storms);
+    }
+
+    const night = this.baseStyle === 'night';
     const pxPerDeg = (TILE_SIZE * (2 ** this.zoom)) / 360;
-    const phase = this.vortexPhase || 0;
+    const isWeatherFocused = this.layers.weather.visible;
 
+    // 1. Monochrome NASA satellite cloud-shield radial haze around visible storms
+    const visibleStormMap = new Map();
     for (const storm of storms) {
       const [cx, cy] = this.projectPointToViewport(storm.lat, storm.lon, z, k, left, top, n);
-      const R = clamp(((storm.radiusKm || 260) / 111.32) * pxPerDeg, 64, 210);
-      if (cx + R < 0 || cx - R > w || cy + R < 0 || cy - R > h) continue;
+      const Rdeg = clamp((storm.radiusKm || 320) / 111.32, 2.0, 4.2);
+      const Rpx = clamp(Rdeg * pxPerDeg, 44, 185);
+      if (cx + Rpx * 1.5 < 0 || cx - Rpx * 1.5 > w || cy + Rpx * 1.5 < 0 || cy - Rpx * 1.5 > h) continue;
+      visibleStormMap.set(storm.id, { storm, cx, cy, Rdeg });
 
-      const dir = storm.lat < 0 ? 1 : -1;
-      const isExtreme = /BERBAHAYA|AWAS|SIAGA/i.test(storm.warningLevel);
-      const coreRgb = isExtreme ? [239, 68, 68] : [245, 158, 11];
-      const midRgb = isExtreme ? [249, 115, 22] : [56, 189, 248];
-      const outerRgb = isExtreme ? [168, 85, 247] : [34, 197, 94];
-
-      // 1. Radial vortex pressure field
-      const grad = ctx.createRadialGradient(cx, cy, R * 0.03, cx, cy, R);
-      grad.addColorStop(0.0, 'rgba(4, 10, 24, 0.42)');
-      grad.addColorStop(0.14, `rgba(${coreRgb[0]}, ${coreRgb[1]}, ${coreRgb[2]}, ${(0.30 + 0.08 * Math.sin(phase * 2.6)).toFixed(3)})`);
-      grad.addColorStop(0.52, `rgba(${midRgb[0]}, ${midRgb[1]}, ${midRgb[2]}, 0.15)`);
-      grad.addColorStop(1.0, `rgba(${outerRgb[0]}, ${outerRgb[1]}, ${outerRgb[2]}, 0)`);
+      const grad = ctx.createRadialGradient(cx, cy, Rpx * 0.04, cx, cy, Rpx * 1.18);
+      grad.addColorStop(0.0, 'rgba(4, 10, 22, 0.44)');
+      grad.addColorStop(0.16, night ? 'rgba(224, 242, 254, 0.16)' : 'rgba(2, 132, 199, 0.18)');
+      grad.addColorStop(0.50, night ? 'rgba(56, 189, 248, 0.09)' : 'rgba(14, 116, 144, 0.10)');
+      grad.addColorStop(1.0, 'rgba(56, 189, 248, 0)');
       ctx.beginPath();
-      ctx.arc(cx, cy, R, 0, Math.PI * 2);
+      ctx.arc(cx, cy, Rpx * 1.18, 0, Math.PI * 2);
       ctx.fillStyle = grad;
       ctx.fill();
+    }
 
-      // 2. 4 logarithmic spiral rainband arms
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      for (let arm = 0; arm < 4; arm++) {
-        const baseAng = (arm * Math.PI) / 2 + dir * phase * 0.9;
-        ctx.beginPath();
-        for (let s = 0; s <= 26; s++) {
-          const rFrac = 0.11 + (s / 26) * 0.85;
-          const r = R * rFrac;
-          const ang = baseAng - dir * Math.pow(rFrac, 0.85) * 3.5;
-          const px = cx + Math.cos(ang) * r;
-          const py = cy + Math.sin(ang) * r;
-          if (s === 0) ctx.moveTo(px, py);
-          else ctx.lineTo(px, py);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    // 2. Global atmospheric wind streamlines across world oceans (subtle backdrop or full brightness in Weather lens)
+    const windAlphaBase = isWeatherFocused ? (night ? 0.62 : 0.66) : (night ? 0.34 : 0.38);
+    const windRgb = night ? [125, 211, 252] : [2, 132, 199];
+    const windWidth = isWeatherFocused ? 1.45 : 1.15;
+
+    for (let i = 0; i < this.windParticles.length; i++) {
+      const p = this.windParticles[i];
+      const cnt = p.trailCount;
+      if (cnt < 5) continue;
+      const life = Math.sin((p.age / p.maxAge) * Math.PI);
+      if (life < 0.08) continue;
+
+      const cap = p.trailLat.length;
+      const startIdx = (p.trailHead - cnt + 1 + cap) % cap;
+      const pts = [];
+      let clipped = false;
+      let prevLon = 0;
+      for (let j = 0; j < cnt; j++) {
+        const idx = (startIdx + j) % cap;
+        const pLat = p.trailLat[idx];
+        const pLon = p.trailLon[idx];
+        if (j > 0 && Math.abs(pLon - prevLon) > 30) {
+          clipped = true;
+          break;
         }
-        ctx.strokeStyle = `rgba(${midRgb[0]}, ${midRgb[1]}, ${midRgb[2]}, 0.34)`;
-        ctx.lineWidth = 2.4;
-        ctx.stroke();
+        prevLon = pLon;
+        pts.push(this.projectPointToViewport(pLat, pLon, z, k, left, top, n));
       }
+      if (clipped || pts.length < 4) continue;
+      const headPt = pts[pts.length - 1];
+      if (headPt[0] < -50 || headPt[0] > w + 50 || headPt[1] < -50 || headPt[1] > h + 50) continue;
 
-      // 3. 44 swirling wind-streak particles
-      for (let i = 0; i < 44; i++) {
-        const speed = 0.22 + (i % 6) * 0.045;
-        const p = (phase * speed + i * 0.071) % 1;
-        const alpha = Math.sin(p * Math.PI) * 0.88;
-        if (alpha < 0.04) continue;
+      const peakAlpha = clamp(life * windAlphaBase * (0.75 + Math.min(0.45, p.spd / 40)), 0.08, 0.82);
+      this.drawStreamlinePath(ctx, pts, windRgb[0], windRgb[1], windRgb[2], peakAlpha, windWidth, night);
+    }
 
-        let headX = cx;
-        let headY = cy;
-        ctx.beginPath();
-        for (let step = 0; step <= 5; step++) {
-          const pStep = Math.max(0, p - step * 0.018);
-          const rStep = R * (0.96 - pStep * 0.84);
-          const angStep = (i * 2.39996) + dir * (phase * 1.9 + Math.pow(1 - rStep / R, 1.35) * 4.6);
-          const sx = cx + Math.cos(angStep) * rStep;
-          const sy = cy + Math.sin(angStep) * rStep;
-          if (step === 0) {
-            headX = sx;
-            headY = sy;
-            ctx.moveTo(sx, sy);
-          } else {
-            ctx.lineTo(sx, sy);
-          }
-        }
-        const rgb = p > 0.65 ? coreRgb : (p > 0.32 ? midRgb : outerRgb);
-        ctx.strokeStyle = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${alpha.toFixed(3)})`;
-        ctx.lineWidth = 1.8;
-        ctx.stroke();
+    // 3. Dedicated NASA-style RK2 cyclonic spiral streamlines inside each visible vortex
+    const vortexRgb = night ? [224, 242, 254] : [3, 105, 161];
+    const vortexOuterRgb = night ? [56, 189, 248] : [2, 132, 199];
+    const vortexAlphaBase = isWeatherFocused ? 0.88 : 0.72;
 
-        ctx.beginPath();
-        ctx.arc(headX, headY, 1.6, 0, Math.PI * 2);
-        ctx.fillStyle = p > 0.65
-          ? `rgba(255, 255, 255, ${alpha.toFixed(3)})`
-          : `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${alpha.toFixed(3)})`;
-        ctx.fill();
+    for (let i = 0; i < this.vortexParticles.length; i++) {
+      const p = this.vortexParticles[i];
+      const entry = visibleStormMap.get(p.stormId);
+      if (!entry) continue;
+      const cnt = p.trailCount;
+      if (cnt < 5) continue;
+      const rNow = Math.hypot(p.nx, p.ny);
+      const eyeFade = clamp((rNow - 0.12) / 0.14, 0, 1);
+      const life = Math.sin((p.age / p.maxAge) * Math.PI) * eyeFade;
+      if (life < 0.06) continue;
+
+      const { storm, Rdeg } = entry;
+      const cosStormLat = Math.max(0.25, Math.cos((storm.lat * Math.PI) / 180));
+      const cap = p.trailNx.length;
+      const startIdx = (p.trailHead - cnt + 1 + cap) % cap;
+      const pts = [];
+      for (let j = 0; j < cnt; j++) {
+        const idx = (startIdx + j) % cap;
+        const pLat = clamp(storm.lat + p.trailNy[idx] * Rdeg, -84, 84);
+        const pLon = ((((storm.lon + (p.trailNx[idx] * Rdeg) / cosStormLat) + 180) % 360) + 360) % 360 - 180;
+        pts.push(this.projectPointToViewport(pLat, pLon, z, k, left, top, n));
       }
+      const isInner = rNow < 0.72;
+      const rgb = isInner ? vortexRgb : vortexOuterRgb;
+      const peakAlpha = clamp(life * vortexAlphaBase, 0.10, 0.94);
+      this.drawStreamlinePath(ctx, pts, rgb[0], rgb[1], rgb[2], peakAlpha, isInner ? 1.8 : 1.45, night);
     }
   }
 
@@ -3142,8 +3454,7 @@ export class MarineMap {
 
           const tagEl = this.doc.createElement('span');
           tagEl.className = 'storm-tag-label';
-          const badgeBg = marker.warningLevel === 'AWAS' || marker.warningLevel === 'BERBAHAYA' ? '#EF4444' : '#F59E0B';
-          tagEl.innerHTML = `<span>⛈️</span><span>${marker.shortName}</span><span style="font-size:9px;padding:1px 4px;border-radius:3px;background:${badgeBg};color:#000;font-weight:800;">${marker.warningLevel}</span>`;
+          tagEl.innerHTML = `<span style="color:#38BDF8;">◎</span><span>${marker.shortName}</span><span style="font-size:9px;padding:1px 5px;border-radius:3px;background:#38BDF8;color:#060B19;font-weight:800;">${marker.warningLevel}</span>`;
 
           btn.replaceChildren(stormWrap, tagEl);
         } else if (marker.isVessel) {
@@ -3413,6 +3724,8 @@ export class MarineMap {
       cancelAnimationFrame(this.vortexRaf);
       this.vortexRaf = null;
     }
+    this.windParticles = [];
+    this.vortexParticles = [];
     this.clearOverlayTiles(true);
     this.currentsCache?.clear?.();
     this.currentsAbort?.abort?.();
