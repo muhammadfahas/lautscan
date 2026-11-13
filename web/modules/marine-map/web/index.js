@@ -3270,12 +3270,19 @@ export class MarineMap {
       const cap = p.trailNx.length;
       const startIdx = (p.trailHead - cnt + 1 + cap) % cap;
       const pts = [];
+      let clipped = false;
       for (let j = 0; j < cnt; j++) {
         const idx = (startIdx + j) % cap;
         const pLat = clamp(storm.lat + p.trailNy[idx] * Rdeg, -84, 84);
         const pLon = ((((storm.lon + (p.trailNx[idx] * Rdeg) / cosStormLat) + 180) % 360) + 360) % 360 - 180;
-        pts.push(this.projectPointToViewport(pLat, pLon, z, k, left, top, n));
+        const pt = this.projectPointToViewport(pLat, pLon, z, k, left, top, n);
+        if (pts.length > 0 && Math.abs(pt[0] - pts[pts.length - 1][0]) > 180) {
+          clipped = true;
+          break;
+        }
+        pts.push(pt);
       }
+      if (clipped || pts.length < 4) continue;
       const isInner = rNow < 0.72;
       const rgb = isInner ? vortexRgb : vortexOuterRgb;
       const peakAlpha = clamp(life * vortexAlphaBase, 0.10, 0.94);
