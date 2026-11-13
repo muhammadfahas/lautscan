@@ -1666,7 +1666,7 @@ export class MarineMap {
   overlayTileUrl(layer, z, x, y) {
     const rawDate = this.selectedDate || 'latest';
     const effectiveDate = rawDate === 'latest' ? new Date().toISOString().slice(0, 10) : rawDate;
-    const safeDate = encodeURIComponent(`${effectiveDate}-v7`);
+    const safeDate = encodeURIComponent(`${effectiveDate}-v8`);
     const path = `/v1/tiles/${encodeURIComponent(layer)}/${safeDate}/${z}/${x}/${y}.png`;
     return this.tileBaseUrl ? `${this.tileBaseUrl}${path}` : path;
   }
@@ -2858,10 +2858,33 @@ export class MarineMap {
       v = 1.8 * Math.cos((lon * Math.PI) / 40);
     }
 
-    u += 1.8 * Math.sin((lat * Math.PI) / 28) * Math.cos((lon * Math.PI) / 50);
-    v += 1.6 * Math.cos((lat * Math.PI) / 24) * Math.sin((lon * Math.PI) / 42);
+    u += 2.6 * Math.sin((lat * Math.PI) / 22) * Math.cos((lon * Math.PI) / 36);
+    v += 2.8 * Math.cos((lat * Math.PI) / 20) * Math.sin((lon * Math.PI) / 32);
 
+    // Planetary subtropical highs (anticyclonic gyres) for realistic NASA global circulation
+    const gyres = [
+      { lat: 31, lon: -145, dir: -1, rad: 18, spd: 11 }, // North Pacific High
+      { lat: -29, lon: -108, dir: 1, rad: 18, spd: 11 }, // South Pacific High
+      { lat: 32, lon: -42, dir: -1, rad: 16, spd: 10 },  // Azores / N. Atlantic High
+      { lat: -27, lon: -15, dir: 1, rad: 16, spd: 10 },  // South Atlantic High
+      { lat: -30, lon: 78, dir: 1, rad: 17, spd: 10 },   // Mascarene / Indian High
+    ];
     const cosLat = Math.max(0.25, Math.cos((lat * Math.PI) / 180));
+    for (let i = 0; i < gyres.length; i++) {
+      const g = gyres[i];
+      let dLon = lon - g.lon;
+      while (dLon > 180) dLon -= 360;
+      while (dLon < -180) dLon += 360;
+      const dx = dLon * cosLat;
+      const dy = lat - g.lat;
+      const rDeg = Math.hypot(dx, dy);
+      if (rDeg > 0.2 && rDeg < g.rad * 1.4) {
+        const wGyre = Math.exp(-Math.pow((rDeg - g.rad * 0.48) / (g.rad * 0.55), 2));
+        u += (g.dir * (dy / rDeg)) * g.spd * wGyre;
+        v += (-g.dir * (dx / rDeg)) * g.spd * wGyre;
+      }
+    }
+
     const storms = this.markers;
     for (let i = 0; i < storms.length; i++) {
       const s = storms[i];
@@ -2895,13 +2918,14 @@ export class MarineMap {
   }
 
   seedWindParticle(p, vb, randomAge = false) {
-    const minLon = vb ? vb.minLon : -180;
-    const maxLon = vb ? vb.maxLon : 180;
+    const isGlobalScale = this.zoom < 4.5;
+    const minLon = (!isGlobalScale && vb) ? vb.minLon : -180;
+    const maxLon = (!isGlobalScale && vb) ? vb.maxLon : 180;
     const minLat = vb ? clamp(vb.minLat, -78, 78) : -72;
     const maxLat = vb ? clamp(vb.maxLat, -78, 78) : 72;
     const lat = minLat + Math.random() * Math.max(1, maxLat - minLat);
     const lonSpan = maxLon - minLon;
-    const lon = lonSpan >= 359
+    const lon = (isGlobalScale || lonSpan >= 350)
       ? -180 + Math.random() * 360
       : minLon + Math.random() * Math.max(1, lonSpan);
 
@@ -2951,7 +2975,7 @@ export class MarineMap {
   }
 
   initGlobalWindParticles(vb) {
-    const count = this.zoom < 4.5 ? 210 : 185;
+    const count = this.zoom < 4.5 ? 320 : 210;
     const cap = 26;
     const particles = [];
     const pxPerDeg = (TILE_SIZE * (2 ** clamp(this.zoom, 1.5, 11))) / 360;
@@ -3083,7 +3107,7 @@ export class MarineMap {
 
     for (let i = 0; i < this.windParticles.length; i++) {
       const p = this.windParticles[i];
-      if (vb && (vb.maxLon - vb.minLon) < 350) {
+      if (vb && this.zoom >= 4.5 && (vb.maxLon - vb.minLon) < 350) {
         const mLon = (vb.maxLon - vb.minLon) * 0.25;
         const mLat = (vb.maxLat - vb.minLat) * 0.25;
         if (p.lat < vb.minLat - mLat || p.lat > vb.maxLat + mLat || p.lon < vb.minLon - mLon || p.lon > vb.maxLon + mLon) {
@@ -3378,7 +3402,7 @@ export class MarineMap {
     const isVeryWide = this.zoom < 4.5;
     const isWide = this.zoom < 5.75;
     const isMedium = this.zoom < 7.5;
-    const maxPins = isVeryWide ? 16 : isWide ? 26 : isMedium ? 54 : MAX_RENDERED_MARKERS;
+    const maxPins = isVeryWide ? 24 : isWide ? 28 : isMedium ? 54 : MAX_RENDERED_MARKERS;
     const wppDx = isVeryWide ? 68 : isWide ? 64 : isMedium ? 54 : 44;
     const wppDy = isVeryWide ? 30 : isWide ? 28 : isMedium ? 24 : 20;
     const pinDx = isVeryWide ? 110 : isWide ? 92 : isMedium ? 68 : 50;

@@ -724,7 +724,11 @@ const GLOBAL_CYCLONES = [
   { id: "storm-natl-kirk", name: "Hurricane Kirk (AL12)", region: "Samudra Atlantik Utara Tengah", lat: 24.6, lon: -54.8, rKm: 420, peakRain: 52, windKnots: 64, level: "BERBAHAYA" },
   { id: "storm-spac-01f", name: "Depresi Tropis 01F", region: "Samudra Pasifik Selatan / Laut Koral", lat: -17.5, lon: 168.0, rKm: 300, peakRain: 31, windKnots: 34, level: "WASPADA" },
   { id: "storm-npac-kuroshio", name: "Siklon Ekstratropis Pasifik Utara", region: "Samudra Pasifik Utara / Kuroshio", lat: 37.5, lon: 158.0, rKm: 400, peakRain: 36, windKnots: 48, level: "SIAGA TINGGI" },
-  { id: "storm-satl-sub", name: "Vorteks Subtropis Atlantik Selatan", region: "Samudra Atlantik Selatan", lat: -28.4, lon: -36.5, rKm: 320, peakRain: 28, windKnots: 34, level: "WASPADA" }
+  { id: "storm-satl-sub", name: "Vorteks Subtropis Atlantik Selatan", region: "Samudra Atlantik Selatan", lat: -28.4, lon: -36.5, rKm: 320, peakRain: 28, windKnots: 34, level: "WASPADA" },
+  { id: "storm-arabian-04a", name: "Siklon Tropis Laut Arab (04A)", region: "Samudra Hindia Barat Laut / Laut Arab", lat: 14.2, lon: 61.8, rKm: 330, peakRain: 38, windKnots: 44, level: "SIAGA TINGGI" },
+  { id: "storm-npac-aleutian", name: "Siklon Ekstratropis Aleutian", region: "Samudra Pasifik Utara Tengah", lat: 48.5, lon: -164.0, rKm: 460, peakRain: 35, windKnots: 52, level: "SIAGA TINGGI" },
+  { id: "storm-natl-iceland", name: "Vorteks Ekstratropis Atlantik Utara", region: "Samudra Atlantik Utara / Laut Labrador", lat: 55.2, lon: -32.4, rKm: 450, peakRain: 34, windKnots: 50, level: "SIAGA TINGGI" },
+  { id: "storm-south-ocean", name: "Pusaran Badai Samudra Selatan", region: "Samudra Antarktika / Australia Selatan", lat: -51.6, lon: 138.0, rKm: 480, peakRain: 32, windKnots: 54, level: "BERBAHAYA" }
 ];
 
 function computeGlobalWeatherRain(lat, lon) {

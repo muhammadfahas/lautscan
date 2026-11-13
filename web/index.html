@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/app.css?v=20261113P">
+  <link rel="stylesheet" href="/app.css?v=20261113Q">
 </head>
 <body>
   <div class="app-shell">
@@ -624,7 +624,7 @@
   </div>
 
   <script type="module">
-    import { create, setProps } from '/modules/marine-map/web/index.js?v=20261113p';
+    import { create, setProps } from '/modules/marine-map/web/index.js?v=20261113q';
 
     const urlParams = new URLSearchParams(window.location.search);
     const rawApiParam = (urlParams.get('api') || '').trim();
@@ -1935,7 +1935,7 @@
         const speciesPromise = fetchWithFallback(API ? `${API}/v1/species?limit=250` : null, '/data/species.json');
         const sourcesPromise = fetchWithFallback(API ? `${API}/v1/sources` : null, '/data/sources.json');
         const vesselsPromise = fetchWithFallback(null, '/data/vessels_gfw.json');
-        const weatherPromise = fetchWithFallback(null, '/data/marine_weather.json');
+        const weatherPromise = fetchWithFallback(null, '/data/marine_weather.json?v=20261113q');
 
         const [healthRaw, wppRaw, speciesRaw, sourcesRaw, vesselsRaw, weatherRaw] = await Promise.all([
           healthPromise,
