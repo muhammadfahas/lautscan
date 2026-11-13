@@ -334,26 +334,116 @@ const STYLE = `
   border-color: #060913;
   color: #FFFFFF;
 }
-.lautscan-marine-map .vessel-marker-pill {
-  border-color: rgba(56, 189, 248, 0.45);
+/* Flight-tracker style vessel marker */
+.lautscan-marine-map .vessel-flight-btn {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 32px;
+  height: 32px;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+  cursor: pointer;
+  z-index: 8;
+  transition: transform 160ms cubic-bezier(0.16, 1, 0.3, 1);
 }
-.lautscan-marine-map.theme-night .vessel-marker-pill {
-  background: rgba(10, 22, 34, 0.94);
-  border: 1px solid rgba(56, 189, 248, 0.38);
+.lautscan-marine-map .vessel-flight-btn:hover {
+  transform: translate(-50%, -50%) scale(1.18);
+  z-index: 30;
 }
-.lautscan-marine-map .vessel-marker-dot {
-  background: #0284C7;
-  border-color: rgba(56, 189, 248, 0.6);
+.lautscan-marine-map .vessel-flight-btn[aria-pressed="true"] {
+  transform: translate(-50%, -50%) scale(1.25);
+  z-index: 35;
 }
-.lautscan-marine-map .species-marker[aria-pressed="true"] .vessel-marker-pill {
+.lautscan-marine-map .vessel-hull-wrap {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  transition: transform 200ms ease, filter 200ms ease;
+}
+.lautscan-marine-map .vessel-hull-svg {
+  display: block;
+  width: 24px;
+  height: 24px;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.85));
+}
+.lautscan-marine-map .vessel-radar-pulse {
+  animation: radarPulse 2s cubic-bezier(0.24, 0, 0.38, 1) infinite;
+  transform-origin: 12px 12px;
+}
+@keyframes radarPulse {
+  0% { r: 6px; opacity: 0.9; }
+  50% { r: 11px; opacity: 0.3; }
+  100% { r: 12px; opacity: 0; }
+}
+/* Default state: Label is hidden */
+.lautscan-marine-map .vessel-tag-label {
+  display: none;
+}
+/* Hover or Clicked/Selected state: Name tag appears like flight tracker */
+.lautscan-marine-map .vessel-flight-btn:hover .vessel-tag-label,
+.lautscan-marine-map .vessel-flight-btn[aria-pressed="true"] .vessel-tag-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  position: absolute;
+  bottom: calc(100% + 5px);
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  background: rgba(13, 21, 36, 0.95);
+  border: 1px solid #38BDF8;
+  color: #F8FAFC;
+  font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+  padding: 3px 8px;
+  border-radius: 5px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.85), 0 0 10px rgba(56, 189, 248, 0.4);
+  backdrop-filter: blur(8px);
+  pointer-events: none;
+  animation: vesselTagPop 160ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.lautscan-marine-map .vessel-flight-btn[aria-pressed="true"] .vessel-tag-label {
   background: #FFFFFF !important;
   border-color: #FFFFFF !important;
   color: #060913 !important;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.9), 0 0 12px rgba(255, 255, 255, 0.5) !important;
 }
-.lautscan-marine-map .species-marker[aria-pressed="true"] .vessel-marker-dot {
-  background: #060913 !important;
-  border-color: #060913 !important;
-  color: #FFFFFF !important;
+.lautscan-marine-map .vessel-flight-btn:hover .vessel-tag-label::after,
+.lautscan-marine-map .vessel-flight-btn[aria-pressed="true"] .vessel-tag-label::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 4px solid transparent;
+  border-top-color: #38BDF8;
+}
+.lautscan-marine-map .vessel-flight-btn[aria-pressed="true"] .vessel-tag-label::after {
+  border-top-color: #FFFFFF !important;
+}
+.lautscan-marine-map .vessel-flight-btn[aria-pressed="true"] .vessel-hull-wrap {
+  filter: drop-shadow(0 0 10px #38BDF8);
+}
+@keyframes vesselTagPop {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(3px) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
 }
 .lautscan-marine-map .species-marker[aria-pressed="true"] .species-fish-icon {
   filter: none;
@@ -550,8 +640,18 @@ function buildSpeciesSvg() {
   return '<img class="species-fish-icon" src="/assets/icons/fish_2d.png" alt="" width="13" height="13" decoding="async" />';
 }
 
-function buildVesselSvg() {
-  return '<svg class="species-fish-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 21h20M19.38 20A11.6 11.6 0 0 0 21 14l-9-4-9 4c0 2.4.6 4.6 1.62 6M12 3v7"/></svg>';
+function buildVesselHullSvg(isFishing = true, selected = false) {
+  const hullFill = selected ? '#FFFFFF' : (isFishing ? '#38BDF8' : '#94A3B8');
+  const strokeColor = selected ? '#0284C7' : '#04101E';
+  const pulseEl = isFishing ? `<circle cx="12" cy="12" r="10" fill="none" stroke="${hullFill}" stroke-width="1.2" class="vessel-radar-pulse"/>` : '';
+
+  return `<svg class="vessel-hull-svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+    ${pulseEl}
+    <path d="M12 2 C14.2 5.5 17.5 10.5 17.5 16.5 C17.5 19.8 15.2 21.2 12 21.2 C8.8 21.2 6.5 19.8 6.5 16.5 C6.5 10.5 9.8 5.5 12 2 Z"
+          fill="${hullFill}" stroke="${strokeColor}" stroke-width="1.4" stroke-linejoin="round"/>
+    <rect x="10.8" y="11" width="2.4" height="6.5" rx="1.2" fill="${strokeColor}" fill-opacity="0.8"/>
+    <circle cx="12" cy="7.5" r="1" fill="${strokeColor}"/>
+  </svg>`;
 }
 
 function shortFishLabel(commonName, sciName) {
@@ -781,6 +881,10 @@ function normalizeMarkers(text) {
       datasetName: parseStr(item.dataset_name ?? item.datasetName ?? item.source, ''),
       habitatNote: parseStr(item.habitat_note ?? item.habitatNote ?? item.gear_type, ''),
       isVessel,
+      courseDeg: parseNum(item.course_deg ?? item.courseDeg, 0),
+      speedKnots: parseNum(item.speed_knots ?? item.speedKnots, 0),
+      flag: parseStr(item.flag, ''),
+      status: parseStr(item.status, 'Menangkap Ikan'),
     });
   }
   return out;
@@ -2681,8 +2785,10 @@ export class MarineMap {
         if (baseX < -24 || baseX > w + 24 || baseY < -24 || baseY > h + 24) continue;
       } else {
         if (baseX < 20 || baseX > w - 20 || baseY < 18 || baseY > h - 18) continue;
+        const curPinDx = marker.isVessel ? 28 : pinDx;
+        const curPinDy = marker.isVessel ? 28 : pinDy;
         const hitsWpp = wppPts.some(([wx, wy]) => Math.abs(baseX - wx) < wppDx && Math.abs(baseY - wy) < wppDy);
-        const hitsPin = placedPts.some(([px, py]) => Math.abs(baseX - px) < pinDx && Math.abs(baseY - py) < pinDy);
+        const hitsPin = placedPts.some(([px, py]) => Math.abs(baseX - px) < curPinDx && Math.abs(baseY - py) < curPinDy);
         if (hitsWpp || hitsPin) continue;
       }
 
@@ -2692,7 +2798,7 @@ export class MarineMap {
       if (!btn) {
         btn = this.doc.createElement('button');
         btn.type = 'button';
-        btn.className = marker.isVessel ? 'species-marker vessel-marker' : 'species-marker';
+        btn.className = marker.isVessel ? 'species-marker vessel-flight-btn' : 'species-marker';
         btn.dataset.marker = marker.id;
         btn.dataset.testid = `${marker.isVessel ? 'vessel' : 'species'}-marker-${marker.id}`;
       }
@@ -2701,22 +2807,37 @@ export class MarineMap {
       btn.style.left = `${round(baseX, 1)}px`;
       btn.style.top = `${round(baseY, 1)}px`;
 
-      const dotColor = selected ? '#060913' : marker.isVessel ? '#0284C7' : '#000000';
-      const drawnState = `${selected ? '1' : '0'}:${marker.shortName}:${marker.isVessel ? 'v' : 's'}`;
+      const drawnState = `${selected ? '1' : '0'}:${marker.shortName}:${marker.isVessel ? `v:${marker.courseDeg}` : 's'}`;
       if (btn.dataset.drawn !== drawnState) {
         btn.dataset.drawn = drawnState;
-        const pill = this.doc.createElement('span');
-        pill.className = marker.isVessel ? 'species-marker-pill vessel-marker-pill' : 'species-marker-pill';
-        const dot = this.doc.createElement('span');
-        dot.className = marker.isVessel ? 'species-marker-dot vessel-marker-dot' : 'species-marker-dot';
-        dot.style.background = dotColor;
-        dot.style.color = '#FFFFFF';
-        dot.innerHTML = marker.isVessel ? buildVesselSvg() : buildSpeciesSvg();
-        const nameEl = this.doc.createElement('span');
-        nameEl.className = 'species-marker-name';
-        nameEl.textContent = marker.shortName || (marker.isVessel ? 'Kapal' : 'Ikan');
-        pill.append(dot, nameEl);
-        btn.replaceChildren(pill);
+        if (marker.isVessel) {
+          const isFishing = marker.status === 'Menangkap Ikan';
+          const vesselWrap = this.doc.createElement('div');
+          vesselWrap.className = 'vessel-hull-wrap';
+          vesselWrap.style.transform = `rotate(${marker.courseDeg || 0}deg)`;
+          vesselWrap.innerHTML = buildVesselHullSvg(isFishing, selected);
+
+          const tagEl = this.doc.createElement('span');
+          tagEl.className = 'vessel-tag-label';
+          const flagSymbol = marker.flag ? marker.flag.split(' ')[0] : '⚓';
+          tagEl.innerHTML = `<span class="vessel-tag-flag">${flagSymbol}</span><span>${marker.shortName || 'Kapal Ikan'}</span>`;
+
+          btn.replaceChildren(vesselWrap, tagEl);
+        } else {
+          const dotColor = selected ? '#060913' : '#000000';
+          const pill = this.doc.createElement('span');
+          pill.className = 'species-marker-pill';
+          const dot = this.doc.createElement('span');
+          dot.className = 'species-marker-dot';
+          dot.style.background = dotColor;
+          dot.style.color = '#FFFFFF';
+          dot.innerHTML = buildSpeciesSvg();
+          const nameEl = this.doc.createElement('span');
+          nameEl.className = 'species-marker-name';
+          nameEl.textContent = marker.shortName || 'Ikan';
+          pill.append(dot, nameEl);
+          btn.replaceChildren(pill);
+        }
       }
       nextParts.set(marker.id, btn);
       rendered.push(btn);
