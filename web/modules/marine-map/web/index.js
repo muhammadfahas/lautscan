@@ -126,6 +126,14 @@ const STYLE = `
   z-index: 5;
   transition: opacity 200ms ease;
 }
+.lautscan-marine-map .vortex-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 6;
+}
 .lautscan-marine-map .tile {
   position: absolute;
   left: 0;
@@ -485,16 +493,36 @@ const STYLE = `
   z-index: 40;
 }
 .lautscan-marine-map .cyclone-wrap {
-  width: 32px;
-  height: 32px;
+  width: 56px;
+  height: 56px;
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  animation: cycloneSpin 8s linear infinite;
+  filter: drop-shadow(0 0 12px rgba(239, 68, 68, 0.45));
+}
+.lautscan-marine-map .cyclone-icon-svg {
+  width: 56px;
+  height: 56px;
+  overflow: visible;
+}
+.lautscan-marine-map .cyclone-outer-band {
+  transform-origin: 28px 28px;
+  animation: cycloneSpin 6s linear infinite;
+}
+.lautscan-marine-map .cyclone-inner-blades {
+  transform-origin: 28px 28px;
+  animation: cycloneSpin 2.6s linear infinite;
+}
+.lautscan-marine-map .cyclone-outer-band.ccw {
+  animation-direction: reverse;
+}
+.lautscan-marine-map .cyclone-inner-blades.ccw {
+  animation-direction: reverse;
 }
 .lautscan-marine-map .cyclone-radar-pulse {
   animation: radarPulse 2.2s cubic-bezier(0.24, 0, 0.38, 1) infinite;
-  transform-origin: 12px 12px;
+  transform-origin: 28px 28px;
 }
 @keyframes cycloneSpin {
   from { transform: rotate(0deg); }
@@ -732,13 +760,27 @@ function buildSpeciesSvg() {
   return '<img class="species-fish-icon" src="/assets/icons/fish_2d.png" alt="" width="13" height="13" decoding="async" />';
 }
 
-function buildCycloneSvg(warningLevel = 'WASPADA', selected = false) {
-  const isExtreme = warningLevel === 'AWAS' || warningLevel === 'BERBAHAYA';
-  const color = selected ? '#FFFFFF' : (isExtreme ? '#EF4444' : '#F59E0B');
-  return `<svg class="cyclone-icon-svg" width="28" height="28" viewBox="0 0 24 24" fill="none">
-    <circle cx="12" cy="12" r="10" stroke="${color}" stroke-width="1.2" stroke-dasharray="3 2" class="cyclone-radar-pulse"/>
-    <path d="M12 2.5 C16.5 2.5 19.5 6 19 10 C18.5 14 14.5 16.5 12 16.5 C14.5 14.5 15 12 13.5 10.5 C12 9 9.5 10 8.5 12 C7.5 14 8.5 17 11 19 C7 19.5 4.5 16.5 4.5 13 C4.5 9 8 5.5 12 5.5 C9.5 7.5 9.5 10 11 11.5 C12.5 13 14.5 12 15.5 10 C16 9 15 7 13.5 6 C12.8 4 12.4 2.5 12 2.5 Z" fill="${color}" fill-rule="evenodd"/>
-    <circle cx="12" cy="12" r="2.2" fill="${color}"/>
+function buildCycloneSvg(warningLevel = 'WASPADA', selected = false, isSouthern = true) {
+  const isExtreme = /BERBAHAYA|AWAS|SIAGA/i.test(warningLevel);
+  const coreColor = selected ? '#FFFFFF' : (isExtreme ? '#EF4444' : '#F59E0B');
+  const bandColor = selected ? '#BAE6FD' : (isExtreme ? '#FB923C' : '#38BDF8');
+  const dirCls = isSouthern ? '' : ' ccw';
+  return `<svg class="cyclone-icon-svg" width="56" height="56" viewBox="0 0 56 56" fill="none">
+    <circle cx="28" cy="28" r="24" stroke="${coreColor}" stroke-width="1" stroke-opacity="0.35" class="cyclone-radar-pulse"/>
+    <g class="cyclone-outer-band${dirCls}">
+      <circle cx="28" cy="28" r="21" stroke="${bandColor}" stroke-width="1.3" stroke-dasharray="10 6 4 6" stroke-opacity="0.65" stroke-linecap="round"/>
+      <path d="M28 5 C39 5 48 12 50 22" stroke="${coreColor}" stroke-width="1.8" stroke-linecap="round" stroke-opacity="0.7"/>
+      <path d="M28 51 C17 51 8 44 6 34" stroke="${coreColor}" stroke-width="1.8" stroke-linecap="round" stroke-opacity="0.7"/>
+    </g>
+    <g class="cyclone-inner-blades${dirCls}">
+      <path d="M28 11 C36 11 41 18 35 25 C39 19 33 15 28 16 Z" fill="${coreColor}" fill-opacity="0.92"/>
+      <path d="M45 28 C45 36 38 41 31 35 C37 39 41 33 40 28 Z" fill="${bandColor}" fill-opacity="0.9"/>
+      <path d="M28 45 C20 45 15 38 21 31 C17 37 23 41 28 40 Z" fill="${coreColor}" fill-opacity="0.92"/>
+      <path d="M11 28 C11 20 18 15 25 21 C19 17 15 23 16 28 Z" fill="${bandColor}" fill-opacity="0.9"/>
+      <circle cx="28" cy="28" r="8.5" stroke="${coreColor}" stroke-width="1.6" stroke-dasharray="5 3" stroke-opacity="0.9"/>
+    </g>
+    <circle cx="28" cy="28" r="4.2" fill="#060B19" stroke="${coreColor}" stroke-width="1.8"/>
+    <circle cx="28" cy="28" r="1.4" fill="${selected ? '#FFFFFF' : bandColor}"/>
   </svg>`;
 }
 
@@ -994,10 +1036,11 @@ function normalizeMarkers(text) {
       habitatNote: parseStr(item.habitat_note ?? item.habitatNote ?? item.gear_type, ''),
       isVessel,
       isStorm,
-      stormIntensity: parseStr(item.intensity || item.severity, 'Sedang'),
+      stormIntensity: parseStr(item.intensity || item.severity || item.system_type, 'Siklon Tropis'),
       maxWindKnots: parseNum(item.max_wind_knots, 35),
-      maxWaveM: parseNum(item.max_wave_m, 3.5),
-      warningLevel: parseStr(item.warning_level, 'WASPADA'),
+      maxWaveM: parseNum(item.max_wave_m ?? item.wave_height_m, 3.5),
+      warningLevel: parseStr(item.warning_level || item.alert_level, 'WASPADA'),
+      radiusKm: parseNum(item.radius_km ?? item.radiusKm, 260),
       courseDeg: parseNum(item.course_deg ?? item.courseDeg, 0),
       speedKnots: parseNum(item.speed_knots ?? item.speedKnots, 0),
       flag: parseStr(item.flag, ''),
@@ -1078,6 +1121,10 @@ export class MarineMap {
     this.currentsCanvas.className = 'currents-canvas';
     this.currentsCanvas.setAttribute('aria-hidden', 'true');
 
+    this.vortexCanvas = doc.createElement('canvas');
+    this.vortexCanvas.className = 'vortex-canvas';
+    this.vortexCanvas.setAttribute('aria-hidden', 'true');
+
     this.wppSvg = doc.createElementNS('http://www.w3.org/2000/svg', 'svg');
     this.wppSvg.setAttribute('class', 'wpp-svg');
     this.wppSvg.setAttribute('aria-hidden', 'true');
@@ -1128,6 +1175,7 @@ export class MarineMap {
       this.potentialLayer,
       this.currentsLayer,
       this.currentsCanvas,
+      this.vortexCanvas,
       this.wppSvg,
       this.wppLabelsLayer,
       this.markersLayer,
@@ -1191,6 +1239,9 @@ export class MarineMap {
     this.currentsAbort = null;
     this.currentsRaf = null;
     this.currentsLastFrameTs = 0;
+    this.vortexRaf = null;
+    this.vortexLastFrameTs = 0;
+    this.vortexPhase = 0;
     this._renderedWppScreenPts = [];
 
     if (typeof ResizeObserver === 'function') {
@@ -1365,10 +1416,49 @@ export class MarineMap {
     this.zoomInBtn.disabled = this.zoom >= this.maxZoom;
     this.zoomOutBtn.disabled = this.zoom <= MIN_ZOOM;
     this.syncCurrentsAnimation();
+    this.syncVortexAnimation();
   }
 
   prefersReducedMotion() {
     return typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches === true;
+  }
+
+  syncVortexAnimation() {
+    const hasStorms = this.markers.some((m) => m.isStorm);
+    const active = hasStorms && !this.plain && !this.prefersReducedMotion();
+    if (!active) {
+      if (this.vortexRaf !== null) {
+        cancelAnimationFrame(this.vortexRaf);
+        this.vortexRaf = null;
+      }
+      const ctx = this.vortexCanvas?.getContext?.('2d');
+      if (ctx && this.vortexCanvas.width > 0 && this.vortexCanvas.height > 0) {
+        ctx.clearRect(0, 0, this.vortexCanvas.width, this.vortexCanvas.height);
+      }
+      return;
+    }
+    if (this.vortexRaf !== null || typeof requestAnimationFrame !== 'function') return;
+    this.vortexLastFrameTs = 0;
+    const stepFrame = (ts) => {
+      if (!this.map.isConnected || !this.markers.some((m) => m.isStorm)) {
+        this.vortexRaf = null;
+        return;
+      }
+      if (!this.vortexLastFrameTs || ts - this.vortexLastFrameTs >= 32) {
+        const dt = this.vortexLastFrameTs ? Math.min(0.06, (ts - this.vortexLastFrameTs) / 1000) : 0.033;
+        this.vortexLastFrameTs = ts;
+        this.vortexPhase += dt;
+        const { w, h } = this.size;
+        if (w && h) {
+          const z = Math.min(this.maxZoom, Math.max(0, Math.round(this.zoom)));
+          const k = 2 ** (this.zoom - z);
+          const [cx, cy] = project(this.center[0], this.center[1], z);
+          this.drawStormVortices(w, h, z, k, cx - w / 2 / k, cy - h / 2 / k, 2 ** z);
+        }
+      }
+      this.vortexRaf = requestAnimationFrame(stepFrame);
+    };
+    this.vortexRaf = requestAnimationFrame(stepFrame);
   }
 
   syncCurrentsAnimation() {
@@ -1597,6 +1687,7 @@ export class MarineMap {
     this.drawBaseTiles(w, h, z, k, left, top, n);
     this.drawOverlayTiles(w, h, z, k, left, top, n);
     this.drawCurrentsVectors(w, h, z, k, left, top, n);
+    this.drawStormVortices(w, h, z, k, left, top, n);
     this.drawWppGeoJson(w, h, z, k, left, top, n);
     this.drawMarkers(w, h, z, k, left, top, n);
     this.drawPin(z, k, left, top);
@@ -2748,6 +2839,109 @@ export class MarineMap {
     }
   }
 
+  drawStormVortices(w, h, z, k, left, top, n) {
+    const canvas = this.vortexCanvas;
+    if (!canvas) return;
+    const dpr = typeof window !== 'undefined' && window.devicePixelRatio ? Math.min(window.devicePixelRatio, 2) : 1;
+    const pw = Math.max(1, Math.round(w * dpr));
+    const ph = Math.max(1, Math.round(h * dpr));
+    if (canvas.width !== pw || canvas.height !== ph) {
+      canvas.width = pw;
+      canvas.height = ph;
+    }
+    const ctx = canvas.getContext?.('2d');
+    if (!ctx) return;
+
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+
+    const storms = this.markers.filter((m) => m.isStorm);
+    if (storms.length === 0) return;
+
+    const pxPerDeg = (TILE_SIZE * (2 ** this.zoom)) / 360;
+    const phase = this.vortexPhase || 0;
+
+    for (const storm of storms) {
+      const [cx, cy] = this.projectPointToViewport(storm.lat, storm.lon, z, k, left, top, n);
+      const R = clamp(((storm.radiusKm || 260) / 111.32) * pxPerDeg, 64, 210);
+      if (cx + R < 0 || cx - R > w || cy + R < 0 || cy - R > h) continue;
+
+      const dir = storm.lat < 0 ? 1 : -1;
+      const isExtreme = /BERBAHAYA|AWAS|SIAGA/i.test(storm.warningLevel);
+      const coreRgb = isExtreme ? [239, 68, 68] : [245, 158, 11];
+      const midRgb = isExtreme ? [249, 115, 22] : [56, 189, 248];
+      const outerRgb = isExtreme ? [168, 85, 247] : [34, 197, 94];
+
+      // 1. Radial vortex pressure field
+      const grad = ctx.createRadialGradient(cx, cy, R * 0.03, cx, cy, R);
+      grad.addColorStop(0.0, 'rgba(4, 10, 24, 0.42)');
+      grad.addColorStop(0.14, `rgba(${coreRgb[0]}, ${coreRgb[1]}, ${coreRgb[2]}, ${(0.30 + 0.08 * Math.sin(phase * 2.6)).toFixed(3)})`);
+      grad.addColorStop(0.52, `rgba(${midRgb[0]}, ${midRgb[1]}, ${midRgb[2]}, 0.15)`);
+      grad.addColorStop(1.0, `rgba(${outerRgb[0]}, ${outerRgb[1]}, ${outerRgb[2]}, 0)`);
+      ctx.beginPath();
+      ctx.arc(cx, cy, R, 0, Math.PI * 2);
+      ctx.fillStyle = grad;
+      ctx.fill();
+
+      // 2. 4 logarithmic spiral rainband arms
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      for (let arm = 0; arm < 4; arm++) {
+        const baseAng = (arm * Math.PI) / 2 + dir * phase * 0.9;
+        ctx.beginPath();
+        for (let s = 0; s <= 26; s++) {
+          const rFrac = 0.11 + (s / 26) * 0.85;
+          const r = R * rFrac;
+          const ang = baseAng - dir * Math.pow(rFrac, 0.85) * 3.5;
+          const px = cx + Math.cos(ang) * r;
+          const py = cy + Math.sin(ang) * r;
+          if (s === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.strokeStyle = `rgba(${midRgb[0]}, ${midRgb[1]}, ${midRgb[2]}, 0.34)`;
+        ctx.lineWidth = 2.4;
+        ctx.stroke();
+      }
+
+      // 3. 44 swirling wind-streak particles
+      for (let i = 0; i < 44; i++) {
+        const speed = 0.22 + (i % 6) * 0.045;
+        const p = (phase * speed + i * 0.071) % 1;
+        const alpha = Math.sin(p * Math.PI) * 0.88;
+        if (alpha < 0.04) continue;
+
+        let headX = cx;
+        let headY = cy;
+        ctx.beginPath();
+        for (let step = 0; step <= 5; step++) {
+          const pStep = Math.max(0, p - step * 0.018);
+          const rStep = R * (0.96 - pStep * 0.84);
+          const angStep = (i * 2.39996) + dir * (phase * 1.9 + Math.pow(1 - rStep / R, 1.35) * 4.6);
+          const sx = cx + Math.cos(angStep) * rStep;
+          const sy = cy + Math.sin(angStep) * rStep;
+          if (step === 0) {
+            headX = sx;
+            headY = sy;
+            ctx.moveTo(sx, sy);
+          } else {
+            ctx.lineTo(sx, sy);
+          }
+        }
+        const rgb = p > 0.65 ? coreRgb : (p > 0.32 ? midRgb : outerRgb);
+        ctx.strokeStyle = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${alpha.toFixed(3)})`;
+        ctx.lineWidth = 1.8;
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(headX, headY, 1.6, 0, Math.PI * 2);
+        ctx.fillStyle = p > 0.65
+          ? `rgba(255, 255, 255, ${alpha.toFixed(3)})`
+          : `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${alpha.toFixed(3)})`;
+        ctx.fill();
+      }
+    }
+  }
+
   projectPointToViewport(lat, lon, z, k, left, top, n) {
     const worldPx = TILE_SIZE * n;
     const [wx, wy] = project(lat, lon, z);
@@ -2918,7 +3112,7 @@ export class MarineMap {
         const curPinDy = marker.isStorm ? 36 : (marker.isVessel ? 28 : pinDy);
         const hitsWpp = wppPts.some(([wx, wy]) => Math.abs(baseX - wx) < wppDx && Math.abs(baseY - wy) < wppDy);
         const hitsPin = placedPts.some(([px, py]) => Math.abs(baseX - px) < curPinDx && Math.abs(baseY - py) < curPinDy);
-        if (hitsWpp || hitsPin) continue;
+        if (!marker.isStorm && (hitsWpp || hitsPin)) continue;
       }
 
       placedPts.push([baseX, baseY]);
@@ -2938,13 +3132,13 @@ export class MarineMap {
       btn.style.left = `${round(baseX, 1)}px`;
       btn.style.top = `${round(baseY, 1)}px`;
 
-      const drawnState = `${selected ? '1' : '0'}:${marker.shortName}:${marker.isStorm ? `t:${marker.warningLevel}` : (marker.isVessel ? 'v' : 's')}`;
+      const drawnState = `${selected ? '1' : '0'}:${marker.shortName}:${marker.isStorm ? `t:${marker.warningLevel}:${marker.lat < 0 ? 's' : 'n'}` : (marker.isVessel ? 'v' : 's')}`;
       if (btn.dataset.drawn !== drawnState) {
         btn.dataset.drawn = drawnState;
         if (marker.isStorm) {
           const stormWrap = this.doc.createElement('div');
           stormWrap.className = 'cyclone-wrap';
-          stormWrap.innerHTML = buildCycloneSvg(marker.warningLevel, selected);
+          stormWrap.innerHTML = buildCycloneSvg(marker.warningLevel, selected, marker.lat < 0);
 
           const tagEl = this.doc.createElement('span');
           tagEl.className = 'storm-tag-label';
@@ -3214,6 +3408,10 @@ export class MarineMap {
     if (this.currentsRaf !== null) {
       cancelAnimationFrame(this.currentsRaf);
       this.currentsRaf = null;
+    }
+    if (this.vortexRaf !== null) {
+      cancelAnimationFrame(this.vortexRaf);
+      this.vortexRaf = null;
     }
     this.clearOverlayTiles(true);
     this.currentsCache?.clear?.();

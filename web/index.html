@@ -244,7 +244,7 @@
           <span id="freshness-badge" class="badge ok">Menghubungkan data laut...</span>
         </div>
         <div class="footer-disclaimer">
-          Data satelit &amp; riwayat untuk referensi. Keselamatan pelayaran wajib mengikuti informasi BMKG, Pushidrosal, dan Basarnas.
+          Data satelit NASA Earthdata, NOAA CoastWatch, OBIS &amp; GFW untuk referensi oseanografi dan keselamatan navigasi maritim.
         </div>
       </footer>
     </section>
@@ -543,19 +543,19 @@
                   <td><span class="badge ok">Aktif</span></td>
                 </tr>
                 <tr>
-                  <td><strong>BMKG Pusat Meteorologi Maritim</strong></td>
-                  <td>Peringatan Dini Badai, Bibit Siklon, &amp; Tinggi Gelombang</td>
-                  <td>BMKG RI (Stasiun Maritim &amp; Buoy Nusantara)</td>
-                  <td class="tabular-nums">0.1° (~11 km) / Stasiun</td>
-                  <td>Tiap 3–6 Jam (Peringatan Real-Time)</td>
+                  <td><strong>NASA CYGNSS &amp; Earthdata Tropical Cyclone</strong></td>
+                  <td>Pusaran Siklon Tropis, Angin Permukaan Laut &amp; Tinggi Gelombang</td>
+                  <td>NASA Earth Science (CYGNSS Microsatellite Constellation)</td>
+                  <td class="tabular-nums">0.25° (~25 km)</td>
+                  <td>Real-Time Swath (~3 Jam)</td>
                   <td><span class="badge ok">Aktif</span></td>
                 </tr>
                 <tr>
-                  <td><strong>NOAA GFS &amp; NASA GPM IMERG Precipitation</strong></td>
-                  <td>Presipitasi Radar Hujan Satelit &amp; Angin Permukaan</td>
-                  <td>NOAA NCEP &amp; NASA Earth Science</td>
+                  <td><strong>NASA GPM IMERG Global Precipitation</strong></td>
+                  <td>Presipitasi Radar Hujan Satelit &amp; Inti Konvektif Badai</td>
+                  <td>NASA Goddard Space Flight Center</td>
                   <td class="tabular-nums">0.1° (~10 km)</td>
-                  <td>Interval 30 Menit – 1 Jam</td>
+                  <td>Interval 30 Menit (NRT)</td>
                   <td><span class="badge ok">Aktif</span></td>
                 </tr>
               </tbody>
@@ -624,7 +624,7 @@
   </div>
 
   <script type="module">
-    import { create, setProps } from '/modules/marine-map/web/index.js?v=20261113k';
+    import { create, setProps } from '/modules/marine-map/web/index.js?v=20261113m';
 
     const urlParams = new URLSearchParams(window.location.search);
     const rawApiParam = (urlParams.get('api') || '').trim();
@@ -1166,7 +1166,7 @@
           detail = 'Warna hijau terang menandai perairan subur plankton makanan ikan kecil';
         }
       } else if (state.activeLens === 'weather') {
-        detail = 'Radar presipitasi hujan satelit (NOAA/NASA) dan titik pusaran badai/siklon maritim BMKG';
+        detail = 'Radar presipitasi hujan satelit NASA GPM IMERG dan pusaran siklon tropis NASA CYGNSS';
       } else if (state.speedUnit === 'ms') {
         detail = 'Aliran biru tenang (<0.15 m/s), hijau mengalir (0.15-0.46 m/s), jingga deras (>0.46 m/s)';
       } else {
@@ -1271,7 +1271,7 @@
       } else if (state.activeLens === 'weather') {
         legendEl.innerHTML = `
           <div class="legend-head">
-            <span class="legend-caption">Presipitasi radar hujan satelit (NOAA/NASA) &amp; sistem badai BMKG</span>
+            <span class="legend-caption">Presipitasi radar hujan satelit NASA GPM IMERG &amp; pusaran siklon NASA CYGNSS</span>
             <div class="scale-bar scale-weather" aria-hidden="true"></div>
           </div>
           <div class="legend-tiers">
@@ -1414,6 +1414,7 @@
         state.selectedVessel = null;
         state.selectedFish = null;
         openInspectorDrawer();
+        const warnLvl = storm.warning_level || storm.alert_level || 'BERBAHAYA';
         const stormPt = {
           lat: storm.lat,
           lon: storm.lon,
@@ -1432,10 +1433,10 @@
           rain_rate_mm_h: storm.rain_rate_mm_h || 38.5,
           rain_category: 'Badai / Hujan Ekstrem',
           wind_speed_knots: storm.max_wind_knots || 35,
-          wave_height_m: storm.max_wave_m || 4.2,
-          marine_safety_status: storm.warning_level || 'BERBAHAYA',
-          storm_warning: `Pusat Badai / Bibit Siklon: ${storm.name}. ${storm.description}`,
-          safety_advisory: storm.advisory || 'DILARANG MELAUT. Pusaran angin kencang dan gelombang ekstrem membahayakan seluruh armada nelayan.',
+          wave_height_m: storm.wave_height_m ?? storm.max_wave_m ?? 4.2,
+          marine_safety_status: warnLvl,
+          storm_warning: `Deteksi Satelit NASA CYGNSS: ${storm.name}. ${storm.description || storm.warning_text || ''}`,
+          safety_advisory: storm.advisory || storm.warning_text || 'DILARANG MELAUT. Pusaran angin kencang dan gelombang ekstrem terdeteksi oleh satelit NASA CYGNSS.',
           is_storm: true,
           storm: storm,
         };
@@ -1585,9 +1586,13 @@
 
       let fishCardHtml = '';
       if (storm) {
-        const stormDate = formatWibDateTime(storm.timestamp_utc, 'BMKG Maritim');
-        const isDangerous = storm.warning_level === 'AWAS' || storm.warning_level === 'BERBAHAYA';
+        const stormDate = formatWibDateTime(storm.timestamp_utc, 'NASA CYGNSS & IMERG');
+        const warnLvl = storm.warning_level || storm.alert_level || 'BERBAHAYA';
+        const isDangerous = warnLvl === 'AWAS' || warnLvl === 'BERBAHAYA';
         const badgeColor = isDangerous ? '#EF4444' : '#F59E0B';
+        const waveVal = storm.max_wave_m ?? storm.wave_height_m ?? 4.2;
+        const moveDir = storm.movement_direction || (storm.movement ? storm.movement.split(',')[0] : 'Barat Daya');
+        const moveSpd = storm.movement_speed_knots ?? 12;
         fishCardHtml = `
           <div class="fish-banner" style="flex-direction:column;align-items:stretch;border-left:3px solid ${badgeColor};background:rgba(239,68,68,0.06);">
             <div style="display:flex;align-items:flex-start;gap:12px;">
@@ -1599,21 +1604,21 @@
               <div style="min-width:0;flex:1;">
                 <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:wrap;">
                   <strong style="font-size:15px;color:var(--ink-primary);">${storm.name}</strong>
-                  <span class="badge" style="font-size:11px;background:${badgeColor};color:#000;font-weight:800;">${storm.warning_level}</span>
+                  <span class="badge" style="font-size:11px;background:${badgeColor};color:#000;font-weight:800;">${warnLvl}</span>
                 </div>
                 <div style="font-size:12px;color:var(--ink-secondary);margin-top:2px;">
-                  ${storm.waters_label} · Intensitas: <strong>${storm.intensity}</strong> · ${stormDate}
+                  ${storm.waters_label} · Intensitas: <strong>${storm.intensity || 'Siklon Tropis'}</strong> · ${stormDate}
                 </div>
               </div>
             </div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;padding-top:10px;border-top:var(--border-hairline);font-size:12px;">
               <div>
                 <span style="color:var(--ink-muted);font-size:11px;">Angin Maksimum:</span>
-                <div class="tabular-nums font-mono" style="font-weight:600;color:#EF4444;">${storm.max_wind_knots} knot (Beaufort ${Math.round(storm.max_wind_knots / 5)})</div>
+                <div class="tabular-nums font-mono" style="font-weight:600;color:#EF4444;">${storm.max_wind_knots} knot (Beaufort ${Math.round((storm.max_wind_knots || 30) / 5)})</div>
               </div>
               <div>
                 <span style="color:var(--ink-muted);font-size:11px;">Gelombang Maksimum:</span>
-                <div class="tabular-nums font-mono" style="font-weight:600;color:#EF4444;">${storm.max_wave_m} meter</div>
+                <div class="tabular-nums font-mono" style="font-weight:600;color:#EF4444;">${waveVal} meter</div>
               </div>
               <div>
                 <span style="color:var(--ink-muted);font-size:11px;">Intensitas Hujan:</span>
@@ -1621,11 +1626,11 @@
               </div>
               <div>
                 <span style="color:var(--ink-muted);font-size:11px;">Arah Pergerakan:</span>
-                <div style="font-weight:600;color:var(--ink-primary);">${storm.movement_direction} (${storm.movement_speed_knots} knot)</div>
+                <div style="font-weight:600;color:var(--ink-primary);">${moveDir} (${moveSpd} knot)</div>
               </div>
             </div>
             <div style="font-size:11.5px;color:#FCA5A5;background:rgba(239,68,68,0.12);padding:8px 10px;border-radius:6px;margin-top:8px;border:1px solid rgba(239,68,68,0.3);line-height:1.45;">
-              <strong>Peringatan BMKG:</strong> ${storm.advisory}
+              <strong>Telemetri Badai NASA CYGNSS:</strong> ${storm.advisory || storm.warning_text}
             </div>
           </div>
         `;
@@ -1833,7 +1838,7 @@
           ${pt.storm_warning ? `<div style="font-size:11.5px;color:#FCA5A5;background:rgba(239,68,68,0.12);padding:7px 9px;border-radius:6px;border:1px solid rgba(239,68,68,0.3);line-height:1.45;"><strong>Peringatan Badai:</strong> ${pt.storm_warning}</div>` : ''}
 
           <div style="font-size:11.5px;color:var(--ink-secondary);line-height:1.45;border-top:var(--border-hairline);padding-top:8px;">
-            <strong style="color:var(--ink-primary);">Panduan BMKG:</strong> ${pt.safety_advisory || (pt.marine_safety_status === 'BERBAHAYA' ? 'DILARANG MELAUT untuk perahu nelayan (<30 GT).' : (pt.marine_safety_status === 'WASPADA' ? 'Waspadai gelombang sedang-tinggi dan hembusan angin mendadak.' : 'Kondisi perairan aman terkendali untuk pelayaran kapal nelayan dan armada komersial.'))}
+            <strong style="color:var(--ink-primary);">Analisis Satelit NASA:</strong> ${pt.safety_advisory || (pt.marine_safety_status === 'BERBAHAYA' ? 'DILARANG MELAUT untuk perahu nelayan (<30 GT).' : (pt.marine_safety_status === 'WASPADA' ? 'Waspadai gelombang sedang-tinggi dan hembusan angin mendadak.' : 'Kondisi perairan aman terkendali untuk pelayaran kapal nelayan dan armada komersial.'))}
           </div>
         </div>
 
@@ -1993,6 +1998,11 @@
           isStorm: true,
           shortName: s.name,
           label: s.name,
+          warning_level: s.warning_level || s.alert_level || 'BERBAHAYA',
+          max_wave_m: s.max_wave_m ?? s.wave_height_m ?? 4.2,
+          radius_km: s.radius_km || 220,
+          advisory: s.advisory || s.warning_text,
+          description: s.description || s.warning_text,
         })) : [];
         const sources = sourcesRaw;
 
