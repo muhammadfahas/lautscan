@@ -2,169 +2,173 @@
 
 **Know the Ocean. Find the Fish.**
 
-LAUT SCAN adalah platform intelijen maritim dan oseanografi terbuka berbasis web (*open-source marine intelligence platform*) untuk perairan Indonesia dan samudra global. Platform ini mengintegrasikan data satelit oseanografi real-time, batas Wilayah Pengelolaan Perikanan Negara Republik Indonesia (**WPP-NRI 571 hingga 718**), pantauan armada kapal perikanan global (**Global Fishing Watch AIS**), telemetri siklon tropis & presipitasi satelit **NASA** (**NASA CYGNSS & NASA GPM IMERG**), serta inventaris keanekaragaman hayati laut (**OBIS / GBIF**).
+LAUT SCAN is an open-source, web-based marine intelligence and oceanographic platform covering Indonesian waters and the global ocean. It synthesizes near-real-time satellite telemetry, the official Republic of Indonesia Fisheries Management Areas (**WPP-NRI 571 through 718**), real-time global fishing vessel tracking via **Global Fishing Watch (GFW AIS)**, **NASA** cyclonic vortex & precipitation telemetry (**NASA CYGNSS & NASA GPM IMERG**), and marine biodiversity records from **OBIS / GBIF**.
 
 ---
 
 ## 🌐 Live Deployment
 
-Aplikasi LAUT SCAN telah di-deploy dan dapat diakses langsung secara publik di:
+The latest version of LAUT SCAN is live and publicly accessible:
 
 👉 **[https://lautscan.pages.dev/](https://lautscan.pages.dev/)**
 
-- **Infrastruktur Hosting**: Cloudflare Pages + Edge Worker runtime (`_worker.js`).
-- **Kompatibilitas**: Peramban desktop dan mobile modern (Chrome, Safari, Edge, Firefox).
-- **Mode Tampilan**: *Night Maritime* (monokrom gelap kontras tinggi) dan *Daylight Maritime*.
+- **Hosting Infrastructure**: Cloudflare Pages + Edge Worker runtime (`_worker.js`).
+- **Compatibility**: Modern desktop and mobile browsers (Chrome, Safari, Edge, Firefox).
+- **Theme Modes**: High-contrast dark *Night Maritime* (monochrome HUD) and *Daylight Maritime*.
 
 ---
 
-## 📸 Tampilan Antarmuka (Screenshots)
+## 📸 User Interface & Live Screenshots
 
-### 1. Peta Global & Streamline Angin / Siklon Satelit NASA
-Visualisasi streamline angin global dan pusaran siklon tropis monokrom cyan/putih es berbasis Runge-Kutta orde-2 (RK2) dan proyeksi tanpa duplikasi benua:
+### 1. Global Marine Map & NASA Satellite Wind Streamlines
+Runge-Kutta 2nd-order (RK2) continuous wind streamline trajectories and cyclonic storm vortices in NASA cyan/ice-white monochrome palette across world oceans:
 
-![Peta Global & Streamline Angin NASA](docs/screenshots/nasa_global_weather_streamlines.png)
+![Global Marine Map & NASA Wind Streamlines](docs/screenshots/nasa_global_weather_streamlines.png)
 
-### 2. Telemetri Badai NASA CYGNSS & Radar Hujan NASA GPM IMERG
-Pemeriksaan titik maritim (*Point Inspector*) menampilkan status keselamatan, kecepatan angin maksimum, tinggi gelombang, serta curah hujan radar satelit:
+### 2. NASA CYGNSS Storm Telemetry & GPM IMERG Satellite Precipitation Radar
+Marine Point Inspector showing coordinates, SST, chlorophyll-a, ocean currents, NASA IMERG precipitation radar, wave height, maximum wind speed, and maritime safety navigation status:
 
-![Telemetri Badai NASA](docs/screenshots/nasa_storm_inspector.png)
+![NASA Storm Telemetry & Point Inspector](docs/screenshots/nasa_storm_inspector.png)
 
-### 3. Pantauan Armada Kapal Ikan Real-Time (Global Fishing Watch AIS)
-Peta armada kapal perikanan dengan ikon kapal navigasi bergaya *flight tracker*:
+### 3. Real-Time Fishing Fleet Tracking (Global Fishing Watch AIS)
+Interactive flight-tracker style fishing vessel markers with vessel name, MMSI, flag country, gear type, speed (knots), and coordinates:
 
-![Pantauan Armada Kapal GFW](docs/screenshots/gfw_fleet_map.png)
+![Global Fishing Watch Fleet Tracking](docs/screenshots/gfw_fleet_map.png)
 
-### 4. Direktori Jenis Ikan & Foto Asli Bawah Laut
-Katalog keanekaragaman hayati laut lengkap dengan foto asli bawah laut, data biologis, harga pasar, dan status konservasi:
+### 4. Marine Species Catalog & Underwater Photography
+Comprehensive pelagic biodiversity explorer with authentic underwater photography, scientific taxonomy, ecological depth ranges, market pricing, and conservation status:
 
-![Direktori Jenis Ikan](docs/screenshots/species_explorer_cards.png)
-
----
-
-## Fitur Utama
-
-- **Peta Laut Interaktif Global & Nusantara (`/`)**:
-  - Ditenagai oleh custom engine Web Mercator tanpa ketergantungan Leaflet ([`@lautscan/marine-map`](frontend/modules/marine-map/README.md) / `web/modules/marine-map/web/index.js`).
-  - **4 Lapisan Lensa Laut**:
-    - **Zona Ikan (Potensi)**: Estimasi habitat ikan pelagis berdasarkan kombinasi suhu nyaman, pakan plankton, dan front termal laut.
-    - **Suhu Air (SST)**: Suhu permukaan laut satelit NOAA Coral Reef Watch / Geo-Polar Blended dengan kontur termal resolusi tinggi.
-    - **Pakan Alami (Klorofil-a)**: Konsentrasi klorofil fitoplankton satelit NASA MODIS & VIIRS.
-    - **Arus Laut**: Vektor dan aliran partikel arus permukaan laut dinamis.
-    - **Cuaca & Hujan**: Radar hujan presipitasi satelit **NASA GPM IMERG** dengan palet monokrom cyan/putih es dan visualisasi streamline pusaran siklon tropis **NASA CYGNSS**.
-- **Animasi Pusaran Siklon & Angin Global Gaya NASA**:
-  - Menggunakan integrasi trayektori Runge-Kutta orde-2 (RK2) kontinu untuk 14 sistem badai/siklon aktif dunia (Bibit Siklon 94S, Squall Line Natuna, Taifun Yinxing, Hurricane Kirk, Siklon Bheki, dsb.) serta angin pasat (*trade winds*), angin barat (*westerlies*), dan *subtropical gyres*.
-  - Dilengkapi fitur *dynamic zoom clamping* (`effectiveMinZoom`) dan *wrap-seam clipping* agar peta dunia tidak terduplikasi secara horizontal dan bebas dari garis artefak.
-- **Batas WPP-NRI 571 hingga 718**: Poligon batas 11 Wilayah Pengelolaan Perikanan RI sesuai *Permen-KP No. 18/PERMEN-KP/2014* dengan pelabelan chip interaktif dan filter dropdown dinamis.
-- **Pantauan Armada Kapal Global (GFW AIS Live)**:
-  - Tampilan ikon kapal navigasi (model *flight tracker* kapal) terhubung telemetri Global Fishing Watch.
-  - Klik kapal untuk membuka drawer informasi nama kapal, MMSI, bendera, tipe alat tangkap, kecepatan (knot), koordinat GPS, dan status operasi.
-- **Pemeriksa Titik Maritim (Point Inspector - "Kondisi Titik Ini")**:
-  - Klik koordinat laut mana pun untuk menganalisis data terinterpolasi: suhu air (°C/°F), klorofil-a, kecepatan & arah arus laut (16 arah mata angin), curah hujan satelit NASA IMERG, tinggi gelombang, status keselamatan navigasi, dan telemetri badai NASA CYGNSS.
-- **Eksplorasi Spesies Ikan (`/species`)**:
-  - Direktori ikan laut lengkap dengan foto asli bawah laut (*underwater photography*), nama ilmiah, nama lokal, famili, status konservasi IUCN, kedalaman jelajah, estimasi nilai pasar, dan titik sebaran OBIS.
-  - Pilihan tampilan kartu (*grid cards*) dan tabel data dengan filter pencarian, pengurutan (*sorting*), serta penomoran halaman (*pagination*).
-- **Tren Oseanografi & Sumber Data (`/trends`, `/sources`)**:
-  - Analisis tren musiman antar-WPP.
-  - Dashboard pemantauan status ketersediaan API dan dataset satelit (*healthy/active*).
+![Marine Species Catalog](docs/screenshots/species_explorer_cards.png)
 
 ---
 
-## Arsitektur & Teknologi
+## Key Features
 
-| Komponen | Teknologi |
+- **Interactive Global & Archipelago Ocean Map (`/`)**:
+  - Powered by a custom zero-dependency Web Mercator map engine (`@lautscan/marine-map` / `web/modules/marine-map/web/index.js`).
+  - **4 Core Oceanographic Lenses**:
+    - **Fish Potential Zones**: Estimated pelagic habitat suitability based on thermal comfort, plankton food availability, and thermal ocean fronts.
+    - **Sea Surface Temperature (SST)**: NOAA Coral Reef Watch / Geo-Polar Blended satellite SST with high-resolution thermal contours.
+    - **Natural Feed (Chlorophyll-a)**: Phytoplankton chlorophyll-a concentration from NASA MODIS and VIIRS satellite sensors.
+    - **Ocean Currents**: Dynamic ocean surface current vectors and particle flow simulation.
+    - **Weather & Storms**: **NASA GPM IMERG** precipitation radar combined with **NASA CYGNSS** cyclonic storm vortices and planetary wind streamlines.
+- **NASA-Style Global Wind & Vortex Simulation**:
+  - Continuous Runge-Kutta 2nd-order (RK2) particle advection integrating 14 active global cyclonic systems (e.g. Cyclone Seed 94S, Natuna Squall Line, Typhoon Yinxing, Hurricane Kirk, Cyclone Bheki) with planetary trade winds, westerlies, and subtropical gyres.
+  - Implements dynamic viewport zoom clamping (`effectiveMinZoom`) and wrap-seam clipping at the antimeridian (`±180°`) to eliminate duplicate continents and visual tear artifacts.
+- **WPP-NRI Zones 571 to 718**:
+  - Official boundary polygons for all 11 Indonesian Fisheries Management Areas according to *Minister of Marine Affairs and Fisheries Regulation (Permen-KP) No. 18/2014*.
+  - Full-width non-truncated dropdown selector and interactive interactive hover chips.
+- **Global Fishing Watch (GFW AIS) Fleet Monitoring**:
+  - Live vessel markers rendered in a clean maritime flight-tracker style.
+  - Detailed vessel drawer with MMSI, vessel class, gear classification, navigation speed, flag, and coordinates.
+- **Maritime Point Inspector ("Inspect Point")**:
+  - Click any oceanic coordinate to compute interpolated multi-source telemetry: water temperature (°C/°F), chlorophyll-a, ocean current speed & 16-point compass direction, NASA IMERG precipitation rate, wave height, navigation safety tier, and NASA CYGNSS storm tracking.
+- **Species Biodiversity Explorer (`/species`)**:
+  - Catalog of commercially and ecologically important marine species complete with real underwater photos, biological taxonomy, IUCN conservation status, depth distribution, market value, and OBIS occurrence points.
+  - Grid card and tabular views with search, category filtering, column sorting, and pagination.
+- **Oceanographic Trends & Data Sources (`/trends`, `/sources`)**:
+  - Seasonal climate anomaly tracking across marine zones.
+  - Transparent data health status dashboard displaying satellite feed availability and latency.
+
+---
+
+## Architecture & Technology Stack
+
+| Component | Technology |
 |---|---|
-| **Edge Web Deployment** | Cloudflare Pages, Cloudflare Workers (`_worker.js`), HTML5 Canvas 2D, SVG, CSS Glassmorphism |
-| **Frontend Map Module** | Custom standalone Web Mercator Map Engine (`@lautscan/marine-map`) dengan dynamic tile renderer PNG terkompresi |
-| **Data Oseanografi & Satelit** | **NASA CYGNSS** (angin permukaan & siklon), **NASA GPM IMERG** (radar presipitasi hujan), **NOAA CoastWatch / ERDDAP** (SST & arus), **OBIS & GBIF** (keanekaragaman hayati), **Global Fishing Watch** (AIS) |
-| **Backend Services (Lokal / Server)** | FastAPI (Python 3.11+), Pydantic v2, PostgreSQL 16 + PostGIS 3.4 (`SRID 4326`), Redis 7, ARQ ETL worker |
+| **Edge Web Deployment** | Cloudflare Pages, Cloudflare Workers runtime (`_worker.js`), HTML5 Canvas 2D, SVG, Glassmorphism CSS |
+| **Frontend Map Module** | Custom standalone Web Mercator Map Engine (`@lautscan/marine-map`) with dynamic compressed raster tile generator |
+| **Oceanographic & Satellite Telemetry** | **NASA CYGNSS** (surface wind & cyclones), **NASA GPM IMERG** (precipitation radar), **NOAA CoastWatch / ERDDAP** (SST & currents), **OBIS & GBIF** (biodiversity), **Global Fishing Watch** (AIS fleet telemetry) |
+| **Backend & Pipeline (Local / Server)** | FastAPI (Python 3.11+), Pydantic v2, PostgreSQL 16 + PostGIS 3.4 (`SRID 4326`), Redis 7, ARQ ETL worker |
 
 ---
 
-## Struktur Repositori
+## Repository Structure
 
 ```text
 lautscan/
-├── web/                  # Sumber kode produksi Cloudflare Pages & Web Engine
-│   ├── _worker.js        # Edge geospatial API, routing tile raster sintetis, dan point telemetry
-│   ├── index.html        # Halaman utama aplikasi LAUT SCAN (Peta, Jenis Ikan, Tren, Sumber Data)
-│   ├── app.css           # Styling maritim glassmorphism (Daylight & Night mode)
-│   ├── data/             # Dataset WPP-NRI, marine weather NASA, katalog sumber, dan armada GFW
-│   └── modules/          # Standalone @lautscan/marine-map engine (Canvas 2D + SVG markers + RK2 streamlines)
-├── backend/              # FastAPI app, Alembic migrations, PostGIS models, ARQ ETL & tile renderer
-├── data/wpp-nri/         # WPP-NRI 571-718 GeoJSON seed dataset dan panduan konversi KKP
-├── docs/                 # Product requirements (PRD.md), arsitektur spesifikasi, dan kontrak OpenAPI
-├── frontend/             # Expo Exact contracts dan spesifikasi desain antarmuka
-└── infra/                # Konfigurasi Docker Compose stack, script dev-check, dan WSL2 setup
+├── web/                  # Production Cloudflare Pages static web client & Edge Worker
+│   ├── _worker.js        # Cloudflare Edge Worker API router, raster tile engine & point telemetry
+│   ├── index.html        # Single-page web application (Ocean Map, Species, Trends, Data Sources)
+│   ├── app.css           # Glassmorphism design system (Night & Daylight maritime modes)
+│   ├── data/             # WPP-NRI zones, NASA marine weather, source registry & GFW fleet telemetry
+│   └── modules/          # Standalone @lautscan/marine-map engine (Canvas 2D + SVG + RK2 advection)
+├── backend/              # FastAPI application, Alembic migrations, PostGIS models, ARQ ETL workers
+├── data/wpp-nri/         # WPP-NRI 571-718 GeoJSON seed datasets and KKP conversion scripts
+├── docs/                 # Product requirements (PRD.md), architecture design & OpenAPI specifications
+├── frontend/             # Mobile and alternative UI component contracts
+└── infra/                # Docker Compose stack, local development scripts & environment configuration
 ```
+
+> **Note on Security & Privacy**: Production Cloudflare deployments are strictly isolated to the `web/` directory. Internal development assets, product requirement documents (`docs/`), test suites, and backend infrastructure files are excluded from edge static hosting and are blocked with HTTP 404 guards.
 
 ---
 
-## Panduan Menjalankan Proyek
+## Getting Started
 
-### 1. Menjalankan Versi Web (Cloudflare Pages / Lokal)
+### 1. Running the Web Client (Cloudflare Pages / Local)
 
-Untuk menjalankan antarmuka web statis secara lokal:
+To test the edge client locally:
 
 ```bash
-# Menggunakan web server lokal sederhana (misal: serve / npx http-server)
+# Start local emulation with Wrangler
 npx wrangler pages dev web
 ```
 
-Buka peramban di `http://localhost:8788`.
+Open `http://localhost:8788` in your browser.
 
-Untuk deploy ke Cloudflare Pages:
+To deploy to Cloudflare Pages:
 
 ```bash
 npx wrangler pages deploy web --project-name=lautscan --branch=main
 ```
 
-### 2. Menjalankan Backend Stack (Docker Compose)
+### 2. Running the Backend Stack (Docker Compose)
 
-1. Salin konfigurasi environment:
+1. Copy the environment configuration:
 
    ```bash
    cp infra/.env.example infra/.env
    ```
 
-2. Jalankan PostgreSQL/PostGIS, Redis, API FastAPI, dan ETL Worker:
+2. Launch PostgreSQL/PostGIS, Redis, the FastAPI service, and the ETL worker:
 
    ```bash
    docker compose -f infra/docker-compose.yml up -d --build
    ```
 
-3. Jalankan migrasi basis data dan seed batas WPP-NRI:
+3. Run database migrations and seed WPP-NRI zone boundaries:
 
    ```bash
    docker compose -f infra/docker-compose.yml exec api alembic upgrade head
    docker compose -f infra/docker-compose.yml exec api python -m app.db_seed
    ```
 
-4. Verifikasi status API di `http://127.0.0.1:8080/v1/health` dan dokumentasi Swagger di `http://127.0.0.1:8080/docs`.
+4. Verify health endpoints at `http://127.0.0.1:8080/v1/health` and OpenAPI documentation at `http://127.0.0.1:8080/docs`.
 
 ---
 
-## Sumber Data & Atribusi
+## Data Sources & Attribution
 
-LAUT SCAN memprioritaskan penyedia data ilmiah terbuka (*open scientific data*):
+LAUT SCAN relies on open scientific data providers:
 
-| Sumber Data | Parameter | Status & Lisensi |
+| Data Provider | Telemetry / Layer | License & Attribution |
 |---|---|---|
-| **NASA CYGNSS** | Pusaran Siklon Tropis, Angin Permukaan Laut, Tinggi Gelombang | Public Domain / Open Data NASA Earth Science |
-| **NASA GPM IMERG** | Presipitasi Radar Hujan Global & Inti Konvektif Badai | Public Domain / NASA GSFC |
-| **NOAA CoastWatch / ERDDAP** | Suhu Permukaan Laut (SST) & Arus Laut | Public Domain / U.S. Government |
-| **Ocean Biodiversity Information System (OBIS)** | Rekor Keberadaan Spesies Ikan Laut | CC0 / CC-BY Data Provider Attribution |
-| **Global Fishing Watch (GFW)** | Telemetri Kapal Perikanan & AIS Pelayaran | Non-Commercial Research / GFW Attribution |
-| **Batas WPP-NRI** | 11 Wilayah Pengelolaan Perikanan Indonesia | *Permen-KP No. 18/PERMEN-KP/2014* |
+| **NASA CYGNSS** | Cyclone Vortices, Ocean Surface Winds, Significant Wave Heights | Public Domain / NASA Earth Science Open Data |
+| **NASA GPM IMERG** | Global Satellite Precipitation Radar & Storm Convective Cores | Public Domain / NASA GSFC |
+| **NOAA CoastWatch / ERDDAP** | Sea Surface Temperature (SST) & Surface Currents | Public Domain / U.S. Government Open Data |
+| **Ocean Biodiversity Information System (OBIS)** | Marine Pelagic Occurrence Records | CC0 / CC-BY Data Provider Attribution |
+| **Global Fishing Watch (GFW)** | Fishing Fleet Telemetry & Maritime AIS Tracking | Non-Commercial Research / GFW Attribution |
+| **WPP-NRI Boundaries** | 11 Republic of Indonesia Fisheries Management Areas | *Permen-KP No. 18/PERMEN-KP/2014* |
 
 ---
 
-## Disclaimer Keselamatan Pelayaran
+## Maritime Safety Disclaimer
 
-Informasi yang disajikan pada LAUT SCAN merupakan agregasi observasi satelit dan pemodelan oseanografi untuk tujuan referensi perikanan dan penelitian. Estimasi keberadaan ikan tidak menjamin penangkapan pada titik koordinat persis. Untuk keselamatan pelayaran dan peringatan cuaca maritim resmi berstandar navigasi, seluruh operator pelayaran wajib merujuk pada otoritas maritim resmi (**Pushidrosal**, **Basarnas**, **BMKG**, dan **Kementerian Kelautan dan Perikanan**).
+The data and forecasts presented by LAUT SCAN are aggregated from satellite observations and numerical ocean models for reference, scientific analysis, and research purposes. Fish habitat estimates do not guarantee catches at exact geographical points. For navigation safety and official maritime severe weather warnings, vessel masters and mariners must always adhere to authoritative notices issued by official hydrographic and meteorological authorities (**Pushidrosal**, **Basarnas**, **BMKG**, and maritime administration agencies).
 
 ---
 
-## Lisensi
+## License
 
-LAUT SCAN dirilis di bawah lisensi [MIT License](LICENSE). Masing-masing dataset oseanografi dan satelit pihak ketiga mempertahankan lisensi dan atribusi penyedia data asalnya.
+LAUT SCAN is licensed under the [MIT License](LICENSE). Third-party oceanographic, meteorological, and biodiversity datasets retain their respective provider licenses and attributions.

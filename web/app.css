@@ -337,6 +337,11 @@ html, body {
   user-select: none;
 }
 
+#wpp-dropdown-wrap .dropdown-trigger {
+  max-width: 380px;
+  min-width: 200px;
+}
+
 #fish-dropdown-wrap .dropdown-trigger {
   max-width: 175px;
   min-width: 130px;
@@ -494,6 +499,27 @@ html, body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* WPP Dropdown Menu - Wide container so regional ocean names are never truncated */
+#wpp-dropdown-wrap .dropdown-menu {
+  width: max-content;
+  min-width: 100%;
+  max-width: min(640px, calc(100vw - 32px));
+}
+
+#wpp-dropdown-wrap .dropdown-item {
+  white-space: normal;
+  gap: 12px;
+  padding: 8px 12px;
+  align-items: center;
+}
+
+#wpp-dropdown-wrap .dropdown-item .item-text {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  line-height: 1.35;
 }
 .pill-select, .pill-btn {
   height: 30px; min-height: 30px; border-radius: 6px;
@@ -1335,6 +1361,13 @@ th { font-weight: 600; color: var(--ink-muted); font-size: 11px; text-transform:
     top: 6px; left: 6px; right: 6px; width: auto; max-width: none; gap: 4px;
   }
   .quick-bar { width: 100%; gap: 4px; }
+  #wpp-dropdown-wrap, #wpp-dropdown-wrap .dropdown-trigger {
+    max-width: 100%;
+    flex: 1 1 auto;
+  }
+  #wpp-dropdown-wrap .dropdown-menu {
+    max-width: calc(100vw - 16px);
+  }
   .pill-select { flex: 1 1 130px; max-width: 100%; }
   .pill-btn { flex: 0 1 auto; padding: 0 8px; }
   .area-insight-pill { width: 100%; padding: 4px 8px; font-size: 10.5px; }

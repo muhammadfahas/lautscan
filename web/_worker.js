@@ -1412,7 +1412,24 @@ export default {
       }, 404);
     }
 
-    // 9. Delegate all non-/v1/ paths to static assets
+    // 9. Strict privacy guard: explicitly block internal docs, PRDs, configs and backend files
+    const lowerPath = url.pathname.toLowerCase();
+    if (
+      lowerPath.startsWith("/docs") ||
+      lowerPath.startsWith("/backend") ||
+      lowerPath.startsWith("/infra") ||
+      lowerPath.startsWith("/tests") ||
+      lowerPath.startsWith("/data/wpp-nri") ||
+      lowerPath.endsWith(".md") ||
+      lowerPath.endsWith(".env") ||
+      lowerPath.endsWith(".yml") ||
+      lowerPath.endsWith(".yaml") ||
+      lowerPath.endsWith(".lock")
+    ) {
+      return new Response("Not found", { status: 404 });
+    }
+
+    // 10. Delegate all non-/v1/ paths to static assets
     if (env?.ASSETS?.fetch) {
       return env.ASSETS.fetch(request);
     }
