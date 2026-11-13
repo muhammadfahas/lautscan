@@ -18,6 +18,30 @@ Aplikasi LAUT SCAN telah di-deploy dan dapat diakses langsung secara publik di:
 
 ---
 
+## 📸 Tampilan Antarmuka (Screenshots)
+
+### 1. Peta Global & Streamline Angin / Siklon Satelit NASA
+Visualisasi streamline angin global dan pusaran siklon tropis monokrom cyan/putih es berbasis Runge-Kutta orde-2 (RK2) dan proyeksi tanpa duplikasi benua:
+
+![Peta Global & Streamline Angin NASA](docs/screenshots/nasa_global_weather_streamlines.png)
+
+### 2. Telemetri Badai NASA CYGNSS & Radar Hujan NASA GPM IMERG
+Pemeriksaan titik maritim (*Point Inspector*) menampilkan status keselamatan, kecepatan angin maksimum, tinggi gelombang, serta curah hujan radar satelit:
+
+![Telemetri Badai NASA](docs/screenshots/nasa_storm_inspector.png)
+
+### 3. Pantauan Armada Kapal Ikan Real-Time (Global Fishing Watch AIS)
+Peta armada kapal perikanan dengan ikon kapal navigasi bergaya *flight tracker*:
+
+![Pantauan Armada Kapal GFW](docs/screenshots/gfw_fleet_map.png)
+
+### 4. Direktori Jenis Ikan & Foto Asli Bawah Laut
+Katalog keanekaragaman hayati laut lengkap dengan foto asli bawah laut, data biologis, harga pasar, dan status konservasi:
+
+![Direktori Jenis Ikan](docs/screenshots/species_explorer_cards.png)
+
+---
+
 ## Fitur Utama
 
 - **Peta Laut Interaktif Global & Nusantara (`/`)**:
