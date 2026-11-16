@@ -528,6 +528,30 @@ html, body {
   color: var(--ink-primary); font: 500 12px var(--font-sans);
   cursor: pointer; transition: all 140ms ease;
 }
+.pill-btn.active {
+  background: rgba(56, 189, 248, 0.15);
+  border-color: rgba(56, 189, 248, 0.4);
+  color: #38BDF8;
+}
+#trend-chart-container {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+#trend-chart-container svg {
+  min-width: 580px;
+}
+.inspector-action-row .btn {
+  background: var(--surface-subtle);
+  border: var(--border-hairline);
+  color: var(--ink-primary);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 140ms ease;
+}
+.inspector-action-row .btn:hover {
+  background: var(--surface-hover);
+  border-color: var(--border-hover);
+}
 .pill-select {
   padding: 0 26px 0 10px; max-width: 220px; min-width: 0; outline: none;
   text-overflow: ellipsis; white-space: nowrap; overflow: hidden;

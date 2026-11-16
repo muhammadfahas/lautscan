@@ -61,13 +61,16 @@ Comprehensive pelagic biodiversity explorer with authentic underwater photograph
 - **Global Fishing Watch (GFW AIS) Fleet Monitoring**:
   - Live vessel markers rendered in a clean maritime flight-tracker style.
   - Detailed vessel drawer with MMSI, vessel class, gear classification, navigation speed, flag, and coordinates.
-- **Maritime Point Inspector ("Inspect Point")**:
+- **Maritime Point Inspector ("Inspect Point") & Telemetry Exporter**:
   - Click any oceanic coordinate to compute interpolated multi-source telemetry: water temperature (°C/°F), chlorophyll-a, ocean current speed & 16-point compass direction, NASA IMERG precipitation rate, wave height, navigation safety tier, and NASA CYGNSS storm tracking.
+  - **Quick Telemetry Sharing & Export**: One-click clipboard copy of formatted oceanic coordinates and downloadable `.txt` telemetry reports for research and voyage logging.
+  - **Fullscreen Marine Navigation Mode**: Immersive full-window bridge mode toggle (`Layar Penuh`).
 - **Species Biodiversity Explorer (`/species`)**:
   - Catalog of commercially and ecologically important marine species complete with real underwater photos, biological taxonomy, IUCN conservation status, depth distribution, market value, and OBIS occurrence points.
   - Grid card and tabular views with search, category filtering, column sorting, and pagination.
-- **Oceanographic Trends & Data Sources (`/trends`, `/sources`)**:
-  - Seasonal climate anomaly tracking across marine zones.
+- **Oceanographic Trends & Seasonal Upwelling (`/trends`, `/sources`)**:
+  - **Interactive 12-Month Seasonal Cycle Chart**: Dynamic SVG chart tracking monthly SST curves, phytoplankton chlorophyll spikes, and fish habitat potential across Indonesian waters.
+  - **National Upwelling & Fishing Calendar Matrix**: Comprehensive seasonal guide comparing peak, moderate, and lean fishing seasons for pelagic, demersal, and crustacean stocks across monsoon cycles.
   - Transparent data health status dashboard displaying satellite feed availability and latency.
 
 ---

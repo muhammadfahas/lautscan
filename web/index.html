@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/app.css?v=20261116">
+  <link rel="stylesheet" href="/app.css?v=20261116b">
 </head>
 <body>
   <div class="app-shell">
@@ -131,6 +131,12 @@
                 <circle cx="12" cy="12" r="10"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/>
               </svg>
               <span>Cek Titik</span>
+            </button>
+            <button id="toggle-fullscreen-btn" class="pill-btn" type="button" aria-label="Mode layar penuh peta" title="Layar Penuh">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+              </svg>
+              <span>Layar Penuh</span>
             </button>
           </div>
 
@@ -400,6 +406,106 @@
             <span class="kpi-label">Kondisi Dominan Laut</span>
             <span class="kpi-value" style="color:#22C55E;">Produktif</span>
             <span class="kpi-sub">Zona tangkapan aktif dengan pertemuan arus selat</span>
+          </div>
+        </div>
+
+        <!-- 1. Interactive 12-Month Oceanographic Cycle & Upwelling Trend Chart -->
+        <div class="card" style="padding:16px;margin-bottom:14px;">
+          <div class="row-between" style="flex-wrap:wrap;gap:10px;margin-bottom:12px;">
+            <div>
+              <h2 style="font-size:15px;margin:0 0 4px 0;display:flex;align-items:center;gap:8px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+                Siklus Oseanografi &amp; Musim Upwelling 12 Bulan
+              </h2>
+              <div style="font-size:12px;color:var(--ink-secondary);">Fluktuasi suhu permukaan laut (SST), kelimpahan klorofil fitoplankton, dan indeks potensi tangkapan ikan berdasarkan dinamika monsun Indonesia.</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <label for="trend-zone-select" style="font-size:11.5px;color:var(--ink-muted);font-weight:600;">Pilih Wilayah WPP:</label>
+              <select id="trend-zone-select" class="select-box" style="height:28px;min-height:28px;font-size:11.5px;max-width:320px;">
+                <option value="573">WPP 573: Samudra Hindia Sel. Jawa &amp; Bali (Pusat Upwelling)</option>
+                <option value="714">WPP 714: Laut Banda &amp; Teluk Tolo (Upwelling Dalam)</option>
+                <option value="711">WPP 711: Laut Natuna &amp; Selat Karimata</option>
+                <option value="712">WPP 712: Laut Jawa (Paparan Sunda Subur)</option>
+                <option value="571">WPP 571: Selat Malaka &amp; Laut Andaman</option>
+                <option value="572">WPP 572: Samudra Hindia Barat Sumatera</option>
+                <option value="713">WPP 713: Selat Makassar &amp; Laut Flores</option>
+                <option value="715">WPP 715: Teluk Tomini &amp; Laut Maluku</option>
+                <option value="716">WPP 716: Laut Sulawesi</option>
+                <option value="717">WPP 717: Samudera Pasifik &amp; Teluk Cendrawasih</option>
+                <option value="718">WPP 718: Laut Arafuru (Udang &amp; Demersal Utama)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Dynamic SVG Chart Container -->
+          <div id="trend-chart-container" style="width:100%;min-height:190px;background:var(--surface-subtle);border-radius:8px;padding:12px 14px;border:var(--border-hairline);margin-bottom:12px;overflow-x:auto;"></div>
+
+          <!-- Upwelling Alert Pill -->
+          <div id="trend-upwelling-pill" style="padding:10px 12px;border-radius:6px;background:rgba(2,132,199,0.08);border:1px solid rgba(56,189,248,0.25);font-size:12px;color:var(--ink-secondary);display:flex;align-items:flex-start;gap:10px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#38BDF8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <div id="trend-upwelling-text" style="flex:1;">
+              <strong>Puncak Upwelling:</strong> Puncak upwelling di WPP 573 terjadi pada <em>Juli – Agustus</em> (Musim Timur). Angin tenggara kuat memicu kenaikan massa air dingin kaya nutrien dari kedalaman ke permukaan, melipatgandakan klorofil dan mengundang kawanan tuna sirip kuning &amp; cakalang.
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. Kalender Musim Penangkapan Ikan Nusantara (Upwelling & Pelagic Season Matrix) -->
+        <div class="card" style="padding:16px;margin-bottom:14px;">
+          <div style="margin-bottom:12px;">
+            <h2 style="font-size:15px;margin:0 0 4px 0;display:flex;align-items:center;gap:8px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cta)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              Kalender Musim Penangkapan Ikan &amp; Monsun Nusantara
+            </h2>
+            <div style="font-size:12px;color:var(--ink-secondary);">Panduan musim penangkapan ikan komersial utama berdasarkan siklus angin muson dan oseanografi kepulauan Indonesia.</div>
+          </div>
+
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Kelompok Komoditas</th>
+                  <th>Spesies Kunci</th>
+                  <th>Musim Puncak (Peak)</th>
+                  <th>Musim Sedang (Moderate)</th>
+                  <th>Musim Paceklik (Low)</th>
+                  <th>Wilayah Tangkap Utama</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Pelagis Besar</strong></td>
+                  <td>Tuna Sirip Kuning, Cakalang, Madidihang</td>
+                  <td><span class="badge ok">Juni – Oktober (Musim Timur)</span></td>
+                  <td>Maret – Mei (Peralihan I)</td>
+                  <td>Desember – Februari (Musim Barat)</td>
+                  <td>WPP 572, 573, 714, 715, 717</td>
+                </tr>
+                <tr>
+                  <td><strong>Pelagis Kecil</strong></td>
+                  <td>Kembung, Layang, Lemuru, Selar</td>
+                  <td><span class="badge ok">Juli – November</span></td>
+                  <td>April – Juni</td>
+                  <td>Januari – Maret</td>
+                  <td>WPP 711, 712, 713, 573 (Selat Bali)</td>
+                </tr>
+                <tr>
+                  <td><strong>Demersal &amp; Karang</strong></td>
+                  <td>Kakap Merah, Kerapu, Baronang</td>
+                  <td><span class="badge ok">Maret – Mei &amp; Sep – Nov</span></td>
+                  <td>Sepanjang Tahun (Stabil)</td>
+                  <td>Puncak Gelombang Monsun</td>
+                  <td>WPP 711, 712, 714, 718</td>
+                </tr>
+                <tr>
+                  <td><strong>Krustasea &amp; Moluska</strong></td>
+                  <td>Udang Windu, Cumi-cumi, Rajungan</td>
+                  <td><span class="badge ok">Agustus – Desember</span></td>
+                  <td>Januari – April</td>
+                  <td>Mei – Juli</td>
+                  <td>WPP 718 (Arafuru), 711 (Natuna)</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
 
@@ -1858,12 +1964,119 @@
           <div class="tabular-nums"><strong>Waktu Data (WIB):</strong> ${formatWibDateTime(pt.acquired_at_utc, 'Basis data lokal')}</div>
           <div><strong>Sumber:</strong> ${pt.attribution}</div>
         </div>
+
+        <div class="inspector-action-row" style="display:flex;gap:6px;margin-top:10px;padding-top:10px;border-top:var(--border-hairline);">
+          <button id="copy-point-btn" class="btn" style="flex:1;justify-content:center;gap:6px;font-size:11.5px;padding:6px 8px;" type="button" title="Salin laporan titik ke clipboard">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            <span id="copy-btn-text">Salin Info Titik</span>
+          </button>
+          <button id="download-point-btn" class="btn" style="flex:1;justify-content:center;gap:6px;font-size:11.5px;padding:6px 8px;" type="button" title="Unduh laporan telemetri TXT">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <span>Unduh TXT</span>
+          </button>
+        </div>
       `;
 
       document.getElementById('toggle-tech-btn').addEventListener('click', () => {
         state.techDetailsOpen = !state.techDetailsOpen;
         renderInspector(state.lastPoint);
       });
+
+      const copyBtn = document.getElementById('copy-point-btn');
+      if (copyBtn) {
+        copyBtn.addEventListener('click', () => {
+          const latStr = pt.lat.toFixed(4);
+          const lonStr = pt.lon.toFixed(4);
+          const wppName = pt.wpp_name || 'Perairan Indonesia';
+          const sstStr = pt.sst_c != null ? `${pt.sst_c.toFixed(1)} °C` : '-';
+          const chlStr = pt.chlorophyll_mg_m3 != null ? `${pt.chlorophyll_mg_m3.toFixed(2)} mg/m³` : '-';
+          const curStr = pt.current_speed_knots != null ? `${pt.current_speed_knots.toFixed(1)} knot (${pt.current_direction_compass || 'N/A'})` : '-';
+          const rainStr = pt.rain_rate_mm_h != null ? `${pt.rain_rate_mm_h.toFixed(1)} mm/jam` : '0.0 mm/jam';
+          const potStr = verdict ? `${verdict.label} (${verdict.pct}%)` : '-';
+          const shareUrl = `${window.location.origin}/?lat=${latStr}&lon=${lonStr}&z=${state.zoom || 6}`;
+
+          const report = `🌊 LAUT SCAN - Laporan Telemetri Oseanografi
+Koordinat: ${latStr}°, ${lonStr}°
+Wilayah: ${wppName} (${pt.wpp_waters_id || '-'})
+Suhu Permukaan (SST): ${sstStr}
+Klorofil-a (Plankton): ${chlStr}
+Arus Permukaan: ${curStr}
+Radar Hujan NASA GPM: ${rainStr}
+Indeks Potensi Tangkap: ${potStr}
+Tautan Langsung Peta: ${shareUrl}
+Sumber Data: NASA Earthdata, NOAA CoastWatch, OBIS & GFW
+Waktu Laporan: ${new Date().toLocaleString('id-ID')} WIB`;
+
+          navigator.clipboard.writeText(report).then(() => {
+            const copyTxt = document.getElementById('copy-btn-text');
+            if (copyTxt) {
+              copyTxt.textContent = '✓ Tersalin!';
+              setTimeout(() => { copyTxt.textContent = 'Salin Info Titik'; }, 2200);
+            }
+          }).catch(() => {
+            alert('Gagal menyalin. Silakan salin teks manual.');
+          });
+        });
+      }
+
+      const dlBtn = document.getElementById('download-point-btn');
+      if (dlBtn) {
+        dlBtn.addEventListener('click', () => {
+          const latStr = pt.lat.toFixed(4);
+          const lonStr = pt.lon.toFixed(4);
+          const wppName = pt.wpp_name || 'Perairan Indonesia';
+          const sstStr = pt.sst_c != null ? `${pt.sst_c.toFixed(1)} °C` : '-';
+          const chlStr = pt.chlorophyll_mg_m3 != null ? `${pt.chlorophyll_mg_m3.toFixed(2)} mg/m³` : '-';
+          const curStr = pt.current_speed_knots != null ? `${pt.current_speed_knots.toFixed(1)} knot (${pt.current_direction_compass || 'N/A'})` : '-';
+          const rainStr = pt.rain_rate_mm_h != null ? `${pt.rain_rate_mm_h.toFixed(1)} mm/jam` : '0.0 mm/jam';
+          const potStr = verdict ? `${verdict.label} (${verdict.pct}%)` : '-';
+          const shareUrl = `${window.location.origin}/?lat=${latStr}&lon=${lonStr}&z=${state.zoom || 6}`;
+
+          const fileContent = `================================================================================
+LAUT SCAN - LAPORAN KONDISI TITIK MARITIM
+Platform Oseanografi Terbuka & Intelijen Kelautan Nusantara
+Tautan Peta: ${shareUrl}
+================================================================================
+
+1. KOORDINAT & ZONA
+   - Lintang / Bujur   : ${latStr}° / ${lonStr}°
+   - Wilayah WPP-NRI   : ${wppName}
+   - Cakupan Perairan  : ${pt.wpp_waters_id || '-'}
+   - Kode Wilayah      : WPP ${pt.wpp_code || '-'}
+
+2. PARAMETER OSEANOGRAFI (SATELLITE TELEMETRY)
+   - Suhu Air (SST)    : ${sstStr}
+   - Klorofil-a        : ${chlStr}
+   - Kecepatan Arus    : ${curStr}
+   - Presipitasi Hujan : ${rainStr} (NASA GPM IMERG)
+
+3. EVALUASI HABITAT & POTENSI TANGKAPAN
+   - Prediksi Potensi  : ${potStr}
+   - Kesimpulan        : ${takeawaySentence || 'Kondisi perairan normal tropis.'}
+
+4. METADATA & INTEGRITAS DATA
+   - Tanggal Akuisisi  : ${formatWibDateTime(pt.acquired_at_utc, 'Waktu riil')}
+   - Resolusi Spasial  : ${pt.spatial_resolution_km ?? 5} km
+   - Metode Estimasi   : ${pt.interpolation_method || 'Interpolasi Geospasial Multivariat'}
+   - Sumber Satelit    : ${pt.attribution || 'NASA Earthdata / NOAA CoastWatch / OBIS / GFW'}
+   - Waktu Unduh       : ${new Date().toISOString()}
+
+Disclaimer Keselamatan:
+Informasi ini untuk referensi oseanografi dan penangkapan ikan.
+Untuk navigasi pelayaran resmi, rujuk selalu BMKG, Pushidrosal, dan Basarnas.
+================================================================================
+`;
+          const blob = new Blob([fileContent], { type: 'text/plain;charset=utf-8' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `lautscan-titik-${pt.lat >= 0 ? 'N' : 'S'}${Math.abs(pt.lat).toFixed(2)}_${pt.lon >= 0 ? 'E' : 'W'}${Math.abs(pt.lon).toFixed(2)}.txt`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        });
+      }
       body.querySelectorAll('[data-jump-fish]').forEach((btn) => {
         btn.addEventListener('click', () => {
           const targetFish = state.species.find((s) => s.id === btn.dataset.jumpFish);
@@ -2443,6 +2656,180 @@
           });
         });
 
+        // 12-Month Seasonal Oceanographic & Upwelling Profiles
+        const WPP_SEASONAL_PROFILES = {
+          '573': {
+            name: 'WPP 573: Samudra Hindia Selatan Jawa & Bali',
+            upwellingText: '<strong>Puncak Upwelling:</strong> Puncak upwelling di WPP 573 terjadi pada <em>Juli – Agustus</em> (Musim Timur). Angin tenggara kuat memicu naiknya massa air dingin kaya fosfat/nitrat ke permukaan, menurunkan suhu hingga 26.3°C, melipatgandakan klorofil (hingga 0.78 mg/m³), dan mengundang ruaya migrasi tuna sirip kuning, cakalang, serta lemuru di Selat Bali.',
+            sst: [29.2, 29.5, 29.8, 29.4, 28.5, 27.2, 26.3, 26.5, 27.4, 28.6, 29.1, 29.0],
+            chl: [0.22, 0.20, 0.24, 0.28, 0.42, 0.65, 0.78, 0.75, 0.58, 0.38, 0.26, 0.24],
+            potential: [62, 58, 65, 72, 85, 94, 98, 96, 92, 84, 70, 64]
+          },
+          '714': {
+            name: 'WPP 714: Laut Banda & Teluk Tolo',
+            upwellingText: '<strong>Puncak Upwelling:</strong> Basin dalam Laut Banda mengalami upwelling musiman intensif pada <em>Juni – Agustus</em>. Angin timur memicu divergensi massa air laut dalam, menurunkan suhu permukaan ke 26.8°C dan melipatgandakan nutrien, menjadikannya fishing ground cakalang dan tuna mata besar tersubur di kawasan Indonesia timur.',
+            sst: [29.6, 29.8, 30.1, 29.6, 28.8, 27.5, 26.8, 27.0, 27.9, 28.9, 29.4, 29.5],
+            chl: [0.18, 0.16, 0.20, 0.25, 0.38, 0.58, 0.70, 0.68, 0.52, 0.34, 0.22, 0.19],
+            potential: [60, 55, 62, 70, 82, 92, 96, 95, 88, 78, 68, 62]
+          },
+          '711': {
+            name: 'WPP 711: Laut Natuna & Selat Karimata',
+            upwellingText: '<strong>Puncak Produktivitas:</strong> Dipengaruhi kuat oleh Monsun Asia (Musim Barat, <em>Desember – Februari</em>). Angin timur laut kencang memicu gelombang dan pencampuran vertikal yang tinggi, diperkaya aliran nutrien sungai Kalimantan dan Semenanjung Malaya sehingga klorofil-a tetap tinggi (>0.50 mg/m³).',
+            sst: [27.8, 28.0, 28.9, 29.8, 30.2, 29.9, 29.6, 29.5, 29.7, 29.5, 28.8, 28.0],
+            chl: [0.55, 0.52, 0.42, 0.32, 0.28, 0.35, 0.40, 0.42, 0.38, 0.44, 0.50, 0.56],
+            potential: [74, 76, 78, 82, 75, 78, 80, 82, 80, 84, 82, 75]
+          },
+          '712': {
+            name: 'WPP 712: Laut Jawa (Paparan Sunda Subur)',
+            upwellingText: '<strong>Karakteristik Paparan:</strong> Perairan dangkal paparan benua Sunda dengan suhu stabil hangat (29.4–30.4°C). Pakan plankton melimpah sepanjang tahun (0.40–0.58 mg/m³). Musim tangkap pelagis kecil (kembung, layang, selar) mencapai puncaknya pada <em>Agustus – November</em>.',
+            sst: [29.2, 29.4, 29.9, 30.4, 30.2, 29.8, 29.5, 29.4, 29.6, 30.1, 29.8, 29.3],
+            chl: [0.48, 0.45, 0.42, 0.38, 0.40, 0.45, 0.52, 0.55, 0.58, 0.54, 0.50, 0.49],
+            potential: [70, 68, 72, 76, 80, 84, 90, 92, 94, 90, 82, 74]
+          },
+          '718': {
+            name: 'WPP 718: Laut Aru, Laut Arafuru & Timor Timur',
+            upwellingText: '<strong>Pusat Upwelling Paparan Arafura:</strong> Terjadi upwelling dangkal sangat produktif pada <em>Juli – September</em> akibat tarikan angin pasat timur di sepanjang landas kontinen Arafura. Wilayah ini menjadi lumbung udang windu, bawal putih, dan ikan demersal terbesar di Indonesia.',
+            sst: [28.8, 29.0, 29.4, 29.8, 28.9, 27.6, 26.5, 26.7, 27.5, 28.6, 29.2, 29.0],
+            chl: [0.38, 0.35, 0.32, 0.34, 0.48, 0.68, 0.82, 0.80, 0.65, 0.48, 0.40, 0.36],
+            potential: [68, 65, 70, 75, 84, 95, 99, 98, 94, 88, 78, 70]
+          },
+          'default': {
+            name: 'WPP Rata-Rata Kepulauan Nusantara',
+            upwellingText: '<strong>Siklus Musiman Nasional:</strong> Perairan Indonesia memiliki siklus dwimusim yang dipicu angin muson barat (musim hujan) dan angin muson timur (musim kemarau/upwelling). Puncak kesuburan fitoplankton dan penangkapan ikan pelagis secara umum terkonsentrasi pada periode <em>Juni – Oktober</em>.',
+            sst: [29.1, 29.3, 29.7, 30.0, 29.5, 28.6, 27.8, 28.0, 28.7, 29.4, 29.3, 29.0],
+            chl: [0.32, 0.30, 0.31, 0.33, 0.41, 0.52, 0.60, 0.58, 0.49, 0.40, 0.35, 0.33],
+            potential: [65, 62, 68, 74, 82, 90, 95, 93, 86, 78, 72, 66]
+          }
+        };
+
+        const renderSeasonalTrendChart = (wppCode) => {
+          const container = document.getElementById('trend-chart-container');
+          const upwellingTextEl = document.getElementById('trend-upwelling-text');
+          if (!container) return;
+
+          const prof = WPP_SEASONAL_PROFILES[wppCode] || WPP_SEASONAL_PROFILES['default'];
+          if (upwellingTextEl && prof.upwellingText) {
+            upwellingTextEl.innerHTML = prof.upwellingText;
+          }
+
+          const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+          const width = 800;
+          const height = 180;
+          const padL = 46;
+          const padR = 46;
+          const padT = 28;
+          const padB = 26;
+          const chartW = width - padL - padR;
+          const chartH = height - padT - padB;
+
+          // SST mapping: min 25°C, max 31°C
+          const sstMin = 25.0;
+          const sstMax = 31.0;
+          const getSstY = (v) => padT + chartH - ((v - sstMin) / (sstMax - sstMin)) * chartH;
+
+          // Chl mapping: min 0.0, max 1.0 mg/m³
+          const chlMin = 0.0;
+          const chlMax = 1.0;
+          const getChlY = (v) => padT + chartH - ((v - chlMin) / (chlMax - chlMin)) * chartH;
+
+          // Potential mapping: 0 to 100%
+          const getPotY = (v) => padT + chartH - (v / 100) * chartH;
+          const getX = (i) => padL + (i / 11) * chartW;
+
+          let sstPath = '';
+          let chlPath = `M ${getX(0)} ${padT + chartH}`;
+          let chlLinePath = '';
+          let potPath = '';
+
+          prof.sst.forEach((v, i) => {
+            const x = getX(i);
+            const y = getSstY(v);
+            sstPath += (i === 0 ? `M ${x} ${y}` : ` L ${x} ${y}`);
+          });
+
+          prof.chl.forEach((v, i) => {
+            const x = getX(i);
+            const y = getChlY(v);
+            chlPath += ` L ${x} ${y}`;
+            chlLinePath += (i === 0 ? `M ${x} ${y}` : ` L ${x} ${y}`);
+          });
+          chlPath += ` L ${getX(11)} ${padT + chartH} Z`;
+
+          prof.potential.forEach((v, i) => {
+            const x = getX(i);
+            const y = getPotY(v);
+            potPath += (i === 0 ? `M ${x} ${y}` : ` L ${x} ${y}`);
+          });
+
+          let dotsSvg = '';
+          prof.sst.forEach((v, i) => {
+            const x = getX(i);
+            const y = getSstY(v);
+            dotsSvg += `<circle cx="${x}" cy="${y}" r="3.5" fill="#38BDF8" stroke="#060913" stroke-width="1.5"><title>${months[i]}: ${v}°C</title></circle>`;
+          });
+
+          let monthsSvg = '';
+          months.forEach((m, i) => {
+            const x = getX(i);
+            monthsSvg += `<text x="${x}" y="${height - 6}" font-size="10.5" fill="var(--ink-muted)" text-anchor="middle" font-family="sans-serif">${m}</text>`;
+          });
+
+          let gridSvg = '';
+          [26, 28, 30].forEach((temp) => {
+            const y = getSstY(temp);
+            gridSvg += `
+              <line x1="${padL}" y1="${y}" x2="${width - padR}" y2="${y}" stroke="rgba(255,255,255,0.08)" stroke-dasharray="3,3" />
+              <text x="${padL - 6}" y="${y + 3}" font-size="9.5" fill="var(--ink-muted)" text-anchor="end" font-family="sans-serif">${temp}°C</text>
+            `;
+          });
+          [0.2, 0.5, 0.8].forEach((chl) => {
+            const y = getChlY(chl);
+            gridSvg += `
+              <text x="${width - padR + 6}" y="${y + 3}" font-size="9.5" fill="#22C55E" text-anchor="start" font-family="sans-serif">${chl}</text>
+            `;
+          });
+
+          container.innerHTML = `
+            <svg viewBox="0 0 ${width} ${height}" style="width:100%;height:auto;display:block;overflow:visible;" role="img" aria-label="Grafik Tren Siklus Oseanografi 12 Bulan">
+              <defs>
+                <linearGradient id="chlGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#22C55E" stop-opacity="0.32"/>
+                  <stop offset="100%" stop-color="#22C55E" stop-opacity="0.02"/>
+                </linearGradient>
+              </defs>
+              <g transform="translate(${padL}, 14)" font-size="10.5" font-family="sans-serif">
+                <circle cx="5" cy="-3" r="3.5" fill="#38BDF8" />
+                <text x="14" y="0" fill="#38BDF8" font-weight="600">Suhu Permukaan (SST °C)</text>
+
+                <rect x="180" y="-7" width="12" height="8" fill="#22C55E" opacity="0.6" rx="2" />
+                <text x="198" y="0" fill="#22C55E" font-weight="600">Klorofil-a (mg/m³)</text>
+
+                <line x1="330" y1="-3" x2="346" y2="-3" stroke="#F59E0B" stroke-width="2" stroke-dasharray="3,2" />
+                <text x="352" y="0" fill="#F59E0B" font-weight="600">Indeks Potensi Tangkap (%)</text>
+              </g>
+              ${gridSvg}
+              <path d="${chlPath}" fill="url(#chlGrad)" />
+              <path d="${chlLinePath}" fill="none" stroke="#22C55E" stroke-width="2" />
+              <path d="${potPath}" fill="none" stroke="#F59E0B" stroke-width="1.8" stroke-dasharray="4,3" opacity="0.9" />
+              <path d="${sstPath}" fill="none" stroke="#38BDF8" stroke-width="2.5" />
+              ${dotsSvg}
+              ${monthsSvg}
+            </svg>
+          `;
+        };
+
+        document.getElementById('trend-zone-select')?.addEventListener('change', (e) => {
+          renderSeasonalTrendChart(e.target.value);
+        });
+        renderSeasonalTrendChart('573');
+              wppTrendState.sortBy = wppTrendState.sortBy === 'name_asc' ? 'code_asc' : 'name_asc';
+            }
+            const sel = document.getElementById('wpp-sort-select');
+            if (sel) sel.value = wppTrendState.sortBy;
+            renderWppTrends();
+          });
+        });
+
         // --- Tab 4: Sumber Data Controller ---
         const sourcesState = {
           search: '',
@@ -2604,6 +2991,36 @@
       if (zone) inspectPoint(zone.centroid_lat, zone.centroid_lon);
       else inspectPoint(state.centerLat, state.centerLon);
     });
+
+    const fsBtn = document.getElementById('toggle-fullscreen-btn');
+    if (fsBtn) {
+      fsBtn.addEventListener('click', () => {
+        if (!document.fullscreenElement) {
+          const target = document.getElementById('map-stage') || document.documentElement;
+          if (target.requestFullscreen) {
+            target.requestFullscreen().catch(() => {});
+          } else if (target.webkitRequestFullscreen) {
+            target.webkitRequestFullscreen();
+          }
+        } else {
+          if (document.exitFullscreen) {
+            document.exitFullscreen().catch(() => {});
+          } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
+          }
+        }
+      });
+      document.addEventListener('fullscreenchange', () => {
+        const span = fsBtn.querySelector('span');
+        if (document.fullscreenElement) {
+          fsBtn.classList.add('active');
+          if (span) span.textContent = 'Kecilkan';
+        } else {
+          fsBtn.classList.remove('active');
+          if (span) span.textContent = 'Layar Penuh';
+        }
+      });
+    }
 
     document.getElementById('close-inspector-btn').addEventListener('click', () => {
       closeInspectorDrawer();
