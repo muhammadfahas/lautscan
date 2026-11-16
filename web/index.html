@@ -2822,13 +2822,6 @@ Untuk navigasi pelayaran resmi, rujuk selalu BMKG, Pushidrosal, dan Basarnas.
           renderSeasonalTrendChart(e.target.value);
         });
         renderSeasonalTrendChart('573');
-              wppTrendState.sortBy = wppTrendState.sortBy === 'name_asc' ? 'code_asc' : 'name_asc';
-            }
-            const sel = document.getElementById('wpp-sort-select');
-            if (sel) sel.value = wppTrendState.sortBy;
-            renderWppTrends();
-          });
-        });
 
         // --- Tab 4: Sumber Data Controller ---
         const sourcesState = {
