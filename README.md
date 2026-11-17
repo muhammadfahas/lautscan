@@ -10,7 +10,8 @@ LAUT SCAN is an open-source, web-based marine intelligence and oceanographic pla
 
 The latest version of LAUT SCAN is live and publicly accessible:
 
-👉 **[https://lautscan.pages.dev/](https://lautscan.pages.dev/)**
+👉 **[https://lautscan-dnf.pages.dev/](https://lautscan-dnf.pages.dev/)** *(Primary Live Edge Deployment)*  
+👉 **[https://lautscan.pages.dev/](https://lautscan.pages.dev/)** *(Production Domain Mirror)*
 
 - **Hosting Infrastructure**: Cloudflare Pages + Edge Worker runtime (`_worker.js`).
 - **Compatibility**: Modern desktop and mobile browsers (Chrome, Safari, Edge, Firefox).
@@ -40,6 +41,11 @@ Comprehensive pelagic biodiversity explorer with authentic underwater photograph
 
 ![Marine Species Catalog](docs/screenshots/species_explorer_cards.png)
 
+### 5. Interactive Nautical Distance & Compass Voyage Planner
+Measure true geodesic distances across oceans in Nautical Miles (NM) & km, compass true heading (°), and transit duration & diesel consumption estimates:
+
+![Nautical Ruler & Compass Voyage Planner](docs/screenshots/nautical_ruler_voyage_planner.png)
+
 ---
 
 ## Key Features
@@ -65,6 +71,12 @@ Comprehensive pelagic biodiversity explorer with authentic underwater photograph
   - Click any oceanic coordinate to compute interpolated multi-source telemetry: water temperature (°C/°F), chlorophyll-a, ocean current speed & 16-point compass direction, NASA IMERG precipitation rate, wave height, navigation safety tier, and NASA CYGNSS storm tracking.
   - **Quick Telemetry Sharing & Export**: One-click clipboard copy of formatted oceanic coordinates and downloadable `.txt` telemetry reports for research and voyage logging.
   - **Fullscreen Marine Navigation Mode**: Immersive full-window bridge mode toggle (`Layar Penuh`).
+- **Interactive Nautical Distance & Compass Bearing Voyage Planner ("Ukur Rute")**:
+  - Measure true geodesic nautical distance between Point A and Point B across the archipelago or open ocean in Nautical Miles (`NM`) and kilometers (`km`).
+  - Calculates true compass heading (`°`) and 8-point cardinal direction (`U`, `TL`, `T`, `TG`, `S`, `BD`, `B`, `BL`).
+  - Generates estimated voyage transit time and estimated diesel fuel consumption for artisanal fishing boats (8 knots) and fast motor vessels (14 knots).
+  - Displays high-contrast glowing geodesic route lines, interactive waypoint pins, and midpoint distance badges on the map canvas.
+  - Includes one-click voyage briefing clipboard export and quick re-measurement workflow.
 - **Species Biodiversity Explorer (`/species`)**:
   - Catalog of commercially and ecologically important marine species complete with real underwater photos, biological taxonomy, IUCN conservation status, depth distribution, market value, and OBIS occurrence points.
   - Grid card and tabular views with search, category filtering, column sorting, and pagination.

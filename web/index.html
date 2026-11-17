@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/app.css?v=20261116b">
+  <link rel="stylesheet" href="/app.css?v=20261117">
 </head>
 <body>
   <div class="app-shell">
@@ -138,11 +138,93 @@
               </svg>
               <span>Layar Penuh</span>
             </button>
+            <button id="toggle-ruler-btn" class="pill-btn" type="button" aria-pressed="false" aria-label="Ukur jarak & haluan kompas pelayaran (NM)" title="Ukur Jarak & Kompas (NM)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M2 12h20"/><path d="M6 8v8"/><path d="M12 9v6"/><path d="M18 8v8"/>
+              </svg>
+              <span>Ukur Rute</span>
+            </button>
           </div>
 
           <div id="area-insight-pill" class="area-insight-pill" role="status" aria-live="polite">
             <span id="insight-scale-tag" class="insight-scale-tag tabular-nums">Skala Nusantara · Z5</span>
             <span id="insight-summary-text" class="insight-summary-text">Memuat ringkasan perairan...</span>
+          </div>
+        </div>
+
+        <!-- Floating Nautical Ruler SVG Overlay Canvas -->
+        <svg id="ruler-svg-layer" class="ruler-svg-layer" aria-hidden="true" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:25;"></svg>
+
+        <!-- Ruler Instruction HUD Pill -->
+        <div id="ruler-hud-pill" class="ruler-hud-pill" style="display:none;" role="status">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#38BDF8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h20"/><path d="M6 8v8"/><path d="M12 9v6"/><path d="M18 8v8"/></svg>
+            <span id="ruler-instruction-text" style="font-weight:600;font-size:12px;">Mode Ukur Rute: Klik Titik Awal (Titik A) di peta perairan</span>
+          </div>
+          <button id="cancel-ruler-btn" class="btn" style="height:24px;padding:0 8px;font-size:11px;" type="button">Tutup</button>
+        </div>
+
+        <!-- Floating Ruler Voyage Result Card -->
+        <div id="ruler-result-card" class="card ruler-result-card" style="display:none;" role="dialog" aria-label="Hasil Pengukuran Jarak Pelayaran">
+          <div class="row-between" style="margin-bottom:8px;">
+            <div style="display:flex;align-items:center;gap:6px;">
+              <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#38BDF8;box-shadow:0 0 8px #38BDF8;"></span>
+              <strong style="font-size:13px;letter-spacing:0.02em;">Estimasi Rute &amp; Jarak Maritim</strong>
+            </div>
+            <button id="close-ruler-result-btn" class="drawer-close-btn" type="button" aria-label="Tutup hasil pengukuran">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+            <div class="metric-tile" style="padding:8px 10px;">
+              <span class="metric-label" style="font-size:10.5px;">Jarak Maritim (Geodesic)</span>
+              <div id="ruler-nm-value" class="tabular-nums" style="font-size:18px;font-weight:800;color:#38BDF8;">- NM</div>
+              <span id="ruler-km-value" class="tabular-nums" style="font-size:11px;color:var(--ink-muted);">- km</span>
+            </div>
+            <div class="metric-tile" style="padding:8px 10px;">
+              <span class="metric-label" style="font-size:10.5px;">Haluan Kompas (True Heading)</span>
+              <div id="ruler-bearing-value" class="tabular-nums" style="font-size:18px;font-weight:800;color:var(--status-healthy);">-°</div>
+              <span id="ruler-compass-text" style="font-size:11px;color:var(--ink-muted);">Arah -</span>
+            </div>
+          </div>
+
+          <div style="background:var(--surface-subtle);border-radius:6px;padding:8px 10px;font-size:11.5px;margin-bottom:8px;border:var(--border-hairline);display:flex;flex-direction:column;gap:4px;">
+            <div style="display:flex;justify-content:space-between;gap:6px;">
+              <span style="color:var(--ink-muted);flex-shrink:0;">Titik A (Awal):</span>
+              <span id="ruler-pt-a" class="tabular-nums font-mono" style="font-weight:600;text-align:right;">-</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;gap:6px;">
+              <span style="color:var(--ink-muted);flex-shrink:0;">Titik B (Tujuan):</span>
+              <span id="ruler-pt-b" class="tabular-nums font-mono" style="font-weight:600;text-align:right;">-</span>
+            </div>
+          </div>
+
+          <!-- Estimated Travel Times & Fuel -->
+          <div style="font-size:11px;margin-bottom:10px;">
+            <span style="font-weight:600;color:var(--ink-secondary);">Estimasi Durasi Tempuh &amp; Solar Kapal:</span>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px;">
+              <div style="background:var(--surface-subtle);padding:6px 8px;border-radius:6px;border:var(--border-hairline);">
+                <span style="color:var(--ink-muted);font-size:10px;">Perahu Nelayan (8 knot):</span>
+                <div id="ruler-time-8kt" class="tabular-nums" style="font-weight:700;color:var(--ink-primary);">- jam</div>
+                <div id="ruler-fuel-8kt" class="tabular-nums" style="font-size:10px;color:var(--ink-muted);">~ - Liter solar</div>
+              </div>
+              <div style="background:var(--surface-subtle);padding:6px 8px;border-radius:6px;border:var(--border-hairline);">
+                <span style="color:var(--ink-muted);font-size:10px;">Kapal Motor (14 knot):</span>
+                <div id="ruler-time-14kt" class="tabular-nums" style="font-weight:700;color:var(--ink-primary);">- jam</div>
+                <div id="ruler-fuel-14kt" class="tabular-nums" style="font-size:10px;color:var(--ink-muted);">~ - Liter solar</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:6px;">
+            <button id="copy-ruler-btn" class="btn" style="flex:1;justify-content:center;gap:6px;font-size:11.5px;padding:6px 10px;" type="button">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              <span id="copy-ruler-text">Salin Rute</span>
+            </button>
+            <button id="reset-ruler-btn" class="btn" style="flex:1;justify-content:center;gap:6px;font-size:11.5px;padding:6px 10px;" type="button">
+              <span>Ukur Ulang</span>
+            </button>
           </div>
         </div>
 
@@ -175,6 +257,7 @@
               <label for="date-select" style="font-size:11.5px;font-weight:600;color:var(--ink-muted);">Tanggal Data</label>
               <select id="date-select" class="select-box" style="max-width:180px;height:26px;min-height:26px;font-size:11px;">
                 <option value="latest">Terbaru (Hari Ini · WIB)</option>
+                <option value="2026-11-17">17 Nov 2026 (WIB)</option>
                 <option value="2026-11-16">16 Nov 2026 (WIB)</option>
                 <option value="2026-11-13">13 Nov 2026 (WIB)</option>
                 <option value="2026-11-10">10 Nov 2026 (WIB)</option>
@@ -2085,18 +2168,266 @@ Untuk navigasi pelayaran resmi, rujuk selalu BMKG, Pushidrosal, dan Basarnas.
       });
     }
 
+    // ==========================================
+    // NAUTICAL RULER & COMPASS VOYAGE PLANNER
+    // ==========================================
+    const rulerState = {
+      active: false,
+      ptA: null,
+      ptB: null,
+      distanceKm: 0,
+      distanceNm: 0,
+      bearingDeg: 0,
+      headingCardinal: ''
+    };
+
+    function haversineDistanceKm(lat1, lon1, lat2, lon2) {
+      const R = 6371;
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
+    }
+
+    function calculateBearing(lat1, lon1, lat2, lon2) {
+      const phi1 = lat1 * Math.PI / 180;
+      const phi2 = lat2 * Math.PI / 180;
+      const lambda1 = lon1 * Math.PI / 180;
+      const lambda2 = lon2 * Math.PI / 180;
+      const y = Math.sin(lambda2 - lambda1) * Math.cos(phi2);
+      const x = Math.cos(phi1) * Math.sin(phi2) - Math.sin(phi1) * Math.cos(phi2) * Math.cos(lambda2 - lambda1);
+      const theta = Math.atan2(y, x);
+      return (theta * 180 / Math.PI + 360) % 360;
+    }
+
+    function bearingToCompass(deg) {
+      const directions = [
+        { label: 'U (Utara)', min: 337.5, max: 360 },
+        { label: 'U (Utara)', min: 0, max: 22.5 },
+        { label: 'TL (Timur Laut)', min: 22.5, max: 67.5 },
+        { label: 'T (Timur)', min: 67.5, max: 112.5 },
+        { label: 'TG (Tenggara)', min: 112.5, max: 157.5 },
+        { label: 'S (Selatan)', min: 157.5, max: 202.5 },
+        { label: 'BD (Barat Daya)', min: 202.5, max: 247.5 },
+        { label: 'B (Barat)', min: 247.5, max: 292.5 },
+        { label: 'BL (Barat Laut)', min: 292.5, max: 337.5 },
+      ];
+      for (const d of directions) {
+        if (deg >= d.min && deg < d.max) return d.label;
+      }
+      return 'U (Utara)';
+    }
+
+    function projectPointToScreen(lat, lon, centerLat, centerLon, zoom, viewWidth, viewHeight) {
+      const z = Math.floor(zoom);
+      const k = Math.pow(2, zoom - z);
+      const TILE_SIZE = 256;
+      const n = Math.pow(2, z);
+      const scale = TILE_SIZE * n;
+      
+      const clampedCenterLat = Math.max(-85.05112878, Math.min(85.05112878, centerLat));
+      const sinCenterLat = Math.sin((clampedCenterLat * Math.PI) / 180);
+      const cx = ((centerLon + 180) / 360) * scale;
+      const cy = (0.5 - Math.log((1 + sinCenterLat) / (1 - sinCenterLat)) / (4 * Math.PI)) * scale;
+      
+      const left = cx - viewWidth / 2 / k;
+      const top = cy - viewHeight / 2 / k;
+      
+      const clampedLat = Math.max(-85.05112878, Math.min(85.05112878, lat));
+      const sinLat = Math.sin((clampedLat * Math.PI) / 180);
+      const wx = ((lon + 180) / 360) * scale;
+      const wy = (0.5 - Math.log((1 + sinLat) / (1 - sinLat)) / (4 * Math.PI)) * scale;
+      
+      const worldPx = scale;
+      const centerPx = left + viewWidth / (2 * k);
+      let adjustedX = wx;
+      if (adjustedX - centerPx > worldPx / 2) adjustedX -= worldPx;
+      else if (centerPx - adjustedX > worldPx / 2) adjustedX += worldPx;
+      
+      return [(adjustedX - left) * k, (wy - top) * k];
+    }
+
+    function renderRulerSvg() {
+      const svg = document.getElementById('ruler-svg-layer');
+      const stage = document.getElementById('map-stage');
+      if (!svg || !stage) return;
+      
+      const rect = stage.getBoundingClientRect();
+      const w = rect.width;
+      const h = rect.height;
+      svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+      
+      if (!rulerState.ptA) {
+        svg.innerHTML = '';
+        return;
+      }
+      
+      const [ax, ay] = projectPointToScreen(rulerState.ptA.lat, rulerState.ptA.lon, state.centerLat, state.centerLon, state.zoom, w, h);
+      
+      let nodes = `
+        <defs>
+          <filter id="ruler-glow" x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur stdDeviation="3" result="blur" />
+            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+          </filter>
+        </defs>
+        <circle cx="${ax}" cy="${ay}" r="7" fill="#38BDF8" stroke="#FFFFFF" stroke-width="2.5" filter="url(#ruler-glow)" />
+        <circle cx="${ax}" cy="${ay}" r="15" fill="none" stroke="#38BDF8" stroke-width="1.5" stroke-opacity="0.6" stroke-dasharray="3,3" />
+        <text x="${ax + 12}" y="${ay + 4}" fill="#38BDF8" font-size="12" font-family="'JetBrains Mono', monospace" font-weight="700" stroke="#0F172A" stroke-width="3" paint-order="stroke fill">Titik A</text>
+      `;
+      
+      if (rulerState.ptB) {
+        const [bx, by] = projectPointToScreen(rulerState.ptB.lat, rulerState.ptB.lon, state.centerLat, state.centerLon, state.zoom, w, h);
+        const midX = (ax + bx) / 2;
+        const midY = (ay + by) / 2;
+        
+        nodes += `
+          <!-- Geodesic connecting navigation line -->
+          <line x1="${ax}" y1="${ay}" x2="${bx}" y2="${by}" stroke="#0F172A" stroke-width="4.5" stroke-linecap="round" />
+          <line x1="${ax}" y1="${ay}" x2="${bx}" y2="${by}" stroke="#38BDF8" stroke-width="2.5" stroke-dasharray="6,4" stroke-linecap="round" filter="url(#ruler-glow)" />
+          
+          <!-- Waypoint B Pin -->
+          <circle cx="${bx}" cy="${by}" r="7" fill="#10B981" stroke="#FFFFFF" stroke-width="2.5" filter="url(#ruler-glow)" />
+          <circle cx="${bx}" cy="${by}" r="15" fill="none" stroke="#10B981" stroke-width="1.5" stroke-opacity="0.6" stroke-dasharray="3,3" />
+          <text x="${bx + 12}" y="${by + 4}" fill="#10B981" font-size="12" font-family="'JetBrains Mono', monospace" font-weight="700" stroke="#0F172A" stroke-width="3" paint-order="stroke fill">Titik B</text>
+          
+          <!-- Midpoint Distance Badge -->
+          <rect x="${midX - 42}" y="${midY - 14}" width="84" height="24" rx="12" fill="#0F172A" fill-opacity="0.92" stroke="#38BDF8" stroke-width="1.5" filter="url(#ruler-glow)" />
+          <text x="${midX}" y="${midY + 3}" fill="#38BDF8" font-size="11" font-family="'JetBrains Mono', monospace" font-weight="700" text-anchor="middle">${rulerState.distanceNm.toFixed(1)} NM</text>
+        `;
+      }
+      
+      svg.innerHTML = nodes;
+    }
+
+    function setRulerActive(isActive) {
+      rulerState.active = isActive;
+      const toggleBtn = document.getElementById('toggle-ruler-btn');
+      const hudPill = document.getElementById('ruler-hud-pill');
+      const resultCard = document.getElementById('ruler-result-card');
+      const stage = document.getElementById('map-stage');
+      
+      if (toggleBtn) {
+        toggleBtn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        if (isActive) toggleBtn.classList.add('active');
+        else toggleBtn.classList.remove('active');
+      }
+      
+      if (stage) {
+        if (isActive) stage.classList.add('ruler-active');
+        else stage.classList.remove('ruler-active');
+      }
+      
+      if (isActive) {
+        if (hudPill) hudPill.style.display = 'flex';
+        resetRulerPoints();
+      } else {
+        if (hudPill) hudPill.style.display = 'none';
+        if (resultCard) {
+          resultCard.classList.remove('open');
+          resultCard.style.display = 'none';
+        }
+        resetRulerPoints();
+      }
+    }
+
+    function resetRulerPoints() {
+      rulerState.ptA = null;
+      rulerState.ptB = null;
+      const instrText = document.getElementById('ruler-instruction-text');
+      if (instrText) instrText.textContent = 'Mode Ukur Rute: Klik Titik Awal (Titik A) di peta perairan';
+      const resultCard = document.getElementById('ruler-result-card');
+      if (resultCard) {
+        resultCard.classList.remove('open');
+        resultCard.style.display = 'none';
+      }
+      renderRulerSvg();
+    }
+
+    function handleRulerMapClick(lat, lon) {
+      if (!rulerState.ptA) {
+        rulerState.ptA = { lat, lon };
+        const instrText = document.getElementById('ruler-instruction-text');
+        if (instrText) instrText.textContent = `Titik A (${lat.toFixed(2)}°, ${lon.toFixed(2)}°) dipilih. Klik Titik Tujuan (Titik B)...`;
+        renderRulerSvg();
+      } else if (!rulerState.ptB) {
+        rulerState.ptB = { lat, lon };
+        const distKm = haversineDistanceKm(rulerState.ptA.lat, rulerState.ptA.lon, rulerState.ptB.lat, rulerState.ptB.lon);
+        const distNm = distKm / 1.852;
+        const bearing = calculateBearing(rulerState.ptA.lat, rulerState.ptA.lon, rulerState.ptB.lat, rulerState.ptB.lon);
+        const compass = bearingToCompass(bearing);
+        
+        rulerState.distanceKm = distKm;
+        rulerState.distanceNm = distNm;
+        rulerState.bearingDeg = bearing;
+        rulerState.headingCardinal = compass;
+        
+        const time8kt = distNm / 8;
+        const fuel8kt = Math.round(distNm * 1.8);
+        const time14kt = distNm / 14;
+        const fuel14kt = Math.round(distNm * 3.5);
+        
+        document.getElementById('ruler-nm-value').textContent = `${distNm.toFixed(1)} NM`;
+        document.getElementById('ruler-km-value').textContent = `${distKm.toFixed(1)} km`;
+        document.getElementById('ruler-bearing-value').textContent = `${Math.round(bearing)}°`;
+        document.getElementById('ruler-compass-text').textContent = `Arah ${compass}`;
+        
+        document.getElementById('ruler-pt-a').textContent = `${rulerState.ptA.lat.toFixed(3)}°, ${rulerState.ptA.lon.toFixed(3)}°`;
+        document.getElementById('ruler-pt-b').textContent = `${rulerState.ptB.lat.toFixed(3)}°, ${rulerState.ptB.lon.toFixed(3)}°`;
+        
+        document.getElementById('ruler-time-8kt').textContent = `${time8kt.toFixed(1)} jam`;
+        document.getElementById('ruler-fuel-8kt').textContent = `~ ${fuel8kt} Liter solar`;
+        document.getElementById('ruler-time-14kt').textContent = `${time14kt.toFixed(1)} jam`;
+        document.getElementById('ruler-fuel-14kt').textContent = `~ ${fuel14kt} Liter solar`;
+        
+        const instrText = document.getElementById('ruler-instruction-text');
+        if (instrText) instrText.textContent = `Rute terukur: ${distNm.toFixed(1)} NM (${compass}). Geser peta atau klik 'Ukur Ulang'.`;
+        
+        const resultCard = document.getElementById('ruler-result-card');
+        if (resultCard) {
+          resultCard.style.display = 'flex';
+          resultCard.classList.add('open');
+        }
+        
+        renderRulerSvg();
+      } else {
+        rulerState.ptA = { lat, lon };
+        rulerState.ptB = null;
+        const instrText = document.getElementById('ruler-instruction-text');
+        if (instrText) instrText.textContent = `Titik A baru (${lat.toFixed(2)}°, ${lon.toFixed(2)}°). Klik Titik B...`;
+        const resultCard = document.getElementById('ruler-result-card');
+        if (resultCard) {
+          resultCard.classList.remove('open');
+          resultCard.style.display = 'none';
+        }
+        renderRulerSvg();
+      }
+    }
+
     mapHandle = create('marine-map', host, buildProps(), (evType, payload) => {
       if (evType === 8 && payload) {
         try {
           const msg = JSON.parse(payload);
-          if (msg.type === 'pointclick') inspectPoint(msg.lat, msg.lon, msg.markerId || '');
-          else if (msg['exact:event'] === 'moveend' && msg.args?.[0]) {
+          if (msg.type === 'pointclick') {
+            if (rulerState.active) {
+              handleRulerMapClick(msg.lat, msg.lon);
+            } else {
+              inspectPoint(msg.lat, msg.lon, msg.markerId || '');
+            }
+          } else if (msg['exact:event'] === 'moveend' && msg.args?.[0]) {
             const cam = JSON.parse(msg.args[0]);
             if (Number.isFinite(cam.centerLat) && Number.isFinite(cam.centerLon) && Number.isFinite(cam.zoom)) {
               state.centerLat = cam.centerLat;
               state.centerLon = cam.centerLon;
               state.zoom = cam.zoom;
               renderInsightPill();
+              if (rulerState.active && rulerState.ptA) {
+                renderRulerSvg();
+              }
             }
           }
         } catch {}
@@ -3014,6 +3345,47 @@ Untuk navigasi pelayaran resmi, rujuk selalu BMKG, Pushidrosal, dan Basarnas.
         }
       });
     }
+
+    // Nautical Ruler & Voyage Planner Button Listeners
+    document.getElementById('toggle-ruler-btn')?.addEventListener('click', () => {
+      setRulerActive(!rulerState.active);
+    });
+
+    document.getElementById('cancel-ruler-btn')?.addEventListener('click', () => {
+      setRulerActive(false);
+    });
+
+    document.getElementById('close-ruler-result-btn')?.addEventListener('click', () => {
+      const resultCard = document.getElementById('ruler-result-card');
+      if (resultCard) {
+        resultCard.classList.remove('open');
+        resultCard.style.display = 'none';
+      }
+    });
+
+    document.getElementById('reset-ruler-btn')?.addEventListener('click', () => {
+      resetRulerPoints();
+    });
+
+    document.getElementById('copy-ruler-btn')?.addEventListener('click', () => {
+      if (!rulerState.ptA || !rulerState.ptB) return;
+      const text = `Rute Pelayaran Laut Scan:\n- Titik A: ${rulerState.ptA.lat.toFixed(4)}°, ${rulerState.ptA.lon.toFixed(4)}°\n- Titik B: ${rulerState.ptB.lat.toFixed(4)}°, ${rulerState.ptB.lon.toFixed(4)}°\n- Jarak Maritim: ${rulerState.distanceNm.toFixed(1)} NM (${rulerState.distanceKm.toFixed(1)} km)\n- Haluan Kompas: ${Math.round(rulerState.bearingDeg)}° (${rulerState.headingCardinal})\n- Estimasi Kapal Nelayan (8 kt): ${(rulerState.distanceNm / 8).toFixed(1)} jam (~${Math.round(rulerState.distanceNm * 1.8)} Liter solar)\n- Estimasi Kapal Motor (14 kt): ${(rulerState.distanceNm / 14).toFixed(1)} jam (~${Math.round(rulerState.distanceNm * 3.5)} Liter solar)`;
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(text).then(() => {
+          const copySpan = document.getElementById('copy-ruler-text');
+          if (copySpan) {
+            copySpan.textContent = 'Tersalin!';
+            setTimeout(() => { copySpan.textContent = 'Salin Rute'; }, 2000);
+          }
+        }).catch(() => {});
+      }
+    });
+
+    window.addEventListener('resize', () => {
+      if (rulerState.active && rulerState.ptA) {
+        renderRulerSvg();
+      }
+    });
 
     document.getElementById('close-inspector-btn').addEventListener('click', () => {
       closeInspectorDrawer();
