@@ -46,6 +46,11 @@ Measure true geodesic distances across oceans in Nautical Miles (NM) & km, compa
 
 ![Nautical Ruler & Compass Voyage Planner](docs/screenshots/nautical_ruler_voyage_planner.png)
 
+### 6. Tactical Maritime Command Deck (SEEN/0-Inspired Brutalist Aesthetics)
+High-contrast tactical surveillance UI featuring sharp geometry, cyan corner L-brackets, segmented tick meters, and telemetry status badges:
+
+![Tactical Maritime Command Deck](docs/screenshots/tactical_command_deck_seen0.png)
+
 ---
 
 ## Key Features
