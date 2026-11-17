@@ -351,7 +351,7 @@ html, body {
 /* Top-Left Quick Controls & Insight Bar */
 .top-left-hud {
   position: absolute; top: 10px; left: 10px; z-index: 50;
-  max-width: calc(100% - 20px);
+  max-width: calc(100% - 330px);
   display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
   pointer-events: none;
 }
@@ -1868,5 +1868,8 @@ th { font-weight: 600; color: var(--ink-muted); font-size: 11px; text-transform:
   .inspector-card {
     top: 6px; right: 6px; left: 6px; bottom: auto; width: auto; max-width: none;
     max-height: calc(100% - 130px); z-index: 35;
+  }
+  .top-right-telemetry-hud {
+    display: none;
   }
 }
