@@ -7,8 +7,9 @@
   --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   --signal-red: #E8221B;
-  --signal-cyan: #00E5FF;
   --signal-amber: #FFB000;
+  --signal-orange: #EA580C;
+  --signal-cyan: #FFB000; /* Replaced blue with yellow-orange radar amber */
   --tactical-ink: #070B0E;
   --tactical-paper: #E9E7E1;
   --tactical-plate: #0B0F14;
@@ -45,8 +46,9 @@
   --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   --signal-red: #E8221B;
-  --signal-cyan: #0284C7;
   --signal-amber: #D97706;
+  --signal-orange: #EA580C;
+  --signal-cyan: #D97706; /* Daylight yellow-orange amber */
   --tactical-ink: #070B0E;
   --tactical-paper: #E9E7E1;
   --tactical-plate: #FFFFFF;
@@ -433,7 +435,7 @@ html, body {
 }
 
 #wpp-dropdown-wrap .dropdown-trigger {
-  max-width: 420px;
+  max-width: 520px;
   min-width: 200px;
 }
 
@@ -629,9 +631,9 @@ html, body {
   border: 1px solid rgba(15, 23, 42, 0.20);
 }
 .pill-btn.active {
-  background: rgba(0, 229, 255, 0.15);
-  border-color: rgba(0, 229, 255, 0.5);
-  color: #00E5FF;
+  background: rgba(255, 176, 0, 0.16);
+  border-color: rgba(255, 176, 0, 0.6);
+  color: #FFB000;
 }
 #trend-chart-container {
   overflow-x: auto;
@@ -710,15 +712,15 @@ html, body {
 .insight-scale-tag {
   display: inline-flex; align-items: center; gap: 4px;
   padding: 2px 6px; border-radius: 2px;
-  background: var(--signal-cyan);
-  border: 1px solid var(--signal-cyan);
+  background: #FFB000;
+  border: 1px solid #FFB000;
   color: #070B0E; font-family: var(--font-mono); font-size: 10px; font-weight: 800; letter-spacing: 0.04em; white-space: nowrap;
   flex-shrink: 0;
   text-transform: uppercase;
 }
 [data-theme="daylight"] .insight-scale-tag {
-  background: #0284C7;
-  border-color: #0284C7;
+  background: #EA580C;
+  border-color: #EA580C;
   color: #FFFFFF;
 }
 .insight-summary-text {
@@ -827,7 +829,7 @@ html, body {
 .scale-potential { background: linear-gradient(90deg, rgba(20,184,166,0.2) 0%, #14B8A6 42%, #22C55E 72%, #F59E0B 100%); }
 .scale-sst { background: linear-gradient(90deg, #0d0887 0%, #6a00a8 25%, #b12a90 50%, #e16462 72%, #fca636 88%, #f0f921 100%); }
 .scale-chlorophyll { background: linear-gradient(90deg, #440154 0%, #3b528b 25%, #21918c 55%, #5ec962 80%, #fde725 100%); }
-.scale-weather { background: linear-gradient(90deg, rgba(14,116,144,0.35) 0%, #0284c7 35%, #38bdf8 70%, #e0f2fe 100%); }
+.scale-weather { background: linear-gradient(90deg, rgba(234,88,12,0.35) 0%, #EA580C 35%, #FFB000 70%, #FEF08A 100%); }
 .legend-tiers {
   display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; width: 100%;
 }
@@ -905,8 +907,8 @@ html, body {
   position: absolute;
   top: -1px; left: -1px;
   width: 8px; height: 8px;
-  border-top: 2px solid var(--signal-cyan);
-  border-left: 2px solid var(--signal-cyan);
+  border-top: 2px solid #FFB000;
+  border-left: 2px solid #FFB000;
   pointer-events: none;
   z-index: 5;
 }
@@ -915,8 +917,8 @@ html, body {
   position: absolute;
   bottom: -1px; right: -1px;
   width: 8px; height: 8px;
-  border-bottom: 2px solid var(--signal-cyan);
-  border-right: 2px solid var(--signal-cyan);
+  border-bottom: 2px solid #FFB000;
+  border-right: 2px solid #FFB000;
   pointer-events: none;
   z-index: 5;
 }
@@ -1041,10 +1043,10 @@ html, body {
   font-family: var(--font-mono); font-size: 10.5px; font-weight: 800;
   white-space: nowrap; text-transform: uppercase; letter-spacing: 0.05em;
 }
-.verdict-high { background: var(--signal-cyan); color: #070B0E; border: 1px solid var(--signal-cyan); }
-.verdict-mid { background: var(--signal-amber); color: #070B0E; border: 1px solid var(--signal-amber); }
+.verdict-high { background: #FFB000; color: #070B0E; border: 1px solid #FFB000; }
+.verdict-mid { background: #EA580C; color: #FFFFFF; border: 1px solid #EA580C; }
 .verdict-low { background: rgba(148, 163, 184, 0.15); color: #94A3B8; border: 1px solid rgba(148, 163, 184, 0.35); }
-[data-theme="daylight"] .verdict-high { background: #0284C7; border-color: #0284C7; color: #FFFFFF; }
+[data-theme="daylight"] .verdict-high { background: #EA580C; border-color: #EA580C; color: #FFFFFF; }
 [data-theme="daylight"] .verdict-mid { background: #D97706; border-color: #D97706; color: #FFFFFF; }
 .tiles-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .metric-tile {
@@ -1066,9 +1068,9 @@ html, body {
 }
 .metric-status {
   font-family: var(--font-mono); font-size: 10px; font-weight: 700;
-  letter-spacing: 0.03em; color: var(--signal-cyan);
+  letter-spacing: 0.03em; color: #FFB000;
 }
-[data-theme="daylight"] .metric-status { color: #0284C7; }
+[data-theme="daylight"] .metric-status { color: #EA580C; }
 
 /* Segmented Tactical Meters (SEEN/0 Concept) */
 .meter-track {
@@ -1083,12 +1085,12 @@ html, body {
 }
 .meter-fill {
   height: 100%; border-radius: 0;
-  background-color: var(--signal-cyan);
+  background-color: #FFB000;
   background-image: repeating-linear-gradient(90deg, transparent 0 4px, rgba(0, 0, 0, 0.65) 4px 5px);
   transition: width 240ms steps(12);
 }
 [data-theme="daylight"] .meter-fill {
-  background-color: #0284C7;
+  background-color: #EA580C;
   background-image: repeating-linear-gradient(90deg, transparent 0 4px, rgba(255, 255, 255, 0.65) 4px 5px);
 }
 .current-tile {
@@ -1565,7 +1567,7 @@ th { font-weight: 600; color: var(--ink-muted); font-size: 11px; text-transform:
 .mini-progress-fill {
   height: 100%;
   border-radius: 0;
-  background-color: var(--signal-cyan);
+  background-color: #FFB000;
   background-image: repeating-linear-gradient(90deg, transparent 0 4px, rgba(0, 0, 0, 0.65) 4px 5px);
   transition: width 240ms steps(10);
 }
@@ -1593,8 +1595,8 @@ th { font-weight: 600; color: var(--ink-muted); font-size: 11px; text-transform:
   padding: 6px 14px;
   border-radius: 2px;
   background: rgba(7, 11, 16, 0.96);
-  border: 1px solid var(--signal-cyan);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.65), 0 0 16px rgba(0, 229, 255, 0.25);
+  border: 1px solid #FFB000;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.65), 0 0 16px rgba(255, 176, 0, 0.3);
   color: #F8FAFC;
   font-family: var(--font-mono);
   font-size: 11px;

@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;700;800;900&family=JetBrains+Mono:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/app.css?v=20261117d">
+  <link rel="stylesheet" href="/app.css?v=20261117e">
 </head>
 <body>
   <div class="app-shell">
@@ -160,7 +160,7 @@
         <!-- Ruler Instruction HUD Pill -->
         <div id="ruler-hud-pill" class="ruler-hud-pill" style="display:none;" role="status">
           <div style="display:flex;align-items:center;gap:8px;">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#38BDF8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h20"/><path d="M6 8v8"/><path d="M12 9v6"/><path d="M18 8v8"/></svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#FFB000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h20"/><path d="M6 8v8"/><path d="M12 9v6"/><path d="M18 8v8"/></svg>
             <span id="ruler-instruction-text" style="font-weight:600;font-size:12px;">Mode Ukur Rute: Klik Titik Awal (Titik A) di peta perairan</span>
           </div>
           <button id="cancel-ruler-btn" class="btn" style="height:24px;padding:0 8px;font-size:11px;" type="button">Tutup</button>
@@ -170,7 +170,7 @@
         <div id="ruler-result-card" class="card ruler-result-card" style="display:none;" role="dialog" aria-label="Hasil Pengukuran Jarak Pelayaran">
           <div class="row-between" style="margin-bottom:8px;">
             <div style="display:flex;align-items:center;gap:6px;">
-              <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#38BDF8;box-shadow:0 0 8px #38BDF8;"></span>
+              <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#FFB000;box-shadow:0 0 8px #FFB000;"></span>
               <strong style="font-size:13px;letter-spacing:0.02em;">Estimasi Rute &amp; Jarak Maritim</strong>
             </div>
             <button id="close-ruler-result-btn" class="drawer-close-btn" type="button" aria-label="Tutup hasil pengukuran">
@@ -181,7 +181,7 @@
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
             <div class="metric-tile" style="padding:8px 10px;">
               <span class="metric-label" style="font-size:10.5px;">Jarak Maritim (Geodesic)</span>
-              <div id="ruler-nm-value" class="tabular-nums" style="font-size:18px;font-weight:800;color:#38BDF8;">- NM</div>
+              <div id="ruler-nm-value" class="tabular-nums" style="font-size:18px;font-weight:800;color:#FFB000;">- NM</div>
               <span id="ruler-km-value" class="tabular-nums" style="font-size:11px;color:var(--ink-muted);">- km</span>
             </div>
             <div class="metric-tile" style="padding:8px 10px;">
@@ -526,8 +526,8 @@
           <div id="trend-chart-container" style="width:100%;min-height:190px;background:var(--surface-subtle);border-radius:8px;padding:12px 14px;border:var(--border-hairline);margin-bottom:12px;overflow-x:auto;"></div>
 
           <!-- Upwelling Alert Pill -->
-          <div id="trend-upwelling-pill" style="padding:10px 12px;border-radius:6px;background:rgba(2,132,199,0.08);border:1px solid rgba(56,189,248,0.25);font-size:12px;color:var(--ink-secondary);display:flex;align-items:flex-start;gap:10px;">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#38BDF8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <div id="trend-upwelling-pill" style="padding:10px 12px;border-radius:6px;background:rgba(234,88,12,0.08);border:1px solid rgba(255,176,0,0.3);font-size:12px;color:var(--ink-secondary);display:flex;align-items:flex-start;gap:10px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFB000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
             <div id="trend-upwelling-text" style="flex:1;">
               <strong>Puncak Upwelling:</strong> Puncak upwelling di WPP 573 terjadi pada <em>Juli – Agustus</em> (Musim Timur). Angin tenggara kuat memicu kenaikan massa air dingin kaya nutrien dari kedalaman ke permukaan, melipatgandakan klorofil dan mengundang kawanan tuna sirip kuning &amp; cakalang.
             </div>
@@ -817,7 +817,7 @@
   </div>
 
   <script type="module">
-    import { create, setProps } from '/modules/marine-map/web/index.js?v=20261117d';
+    import { create, setProps } from '/modules/marine-map/web/index.js?v=20261117e';
 
     const urlParams = new URLSearchParams(window.location.search);
     const rawApiParam = (urlParams.get('api') || '').trim();
@@ -1469,15 +1469,15 @@
           </div>
           <div class="legend-tiers">
             <div class="tier-chip">
-              <span class="tier-swatch" style="background:#0284c7;"></span>
+              <span class="tier-swatch" style="background:#EA580C;"></span>
               <span class="tier-text"><span class="tier-name">Gerimis</span><span class="tier-range">0.5-3 mm/j</span></span>
             </div>
             <div class="tier-chip">
-              <span class="tier-swatch" style="background:#38bdf8;"></span>
+              <span class="tier-swatch" style="background:#FFB000;"></span>
               <span class="tier-text"><span class="tier-name">Hujan Sedang</span><span class="tier-range">3-10 mm/j</span></span>
             </div>
             <div class="tier-chip">
-              <span class="tier-swatch" style="background:#e0f2fe;"></span>
+              <span class="tier-swatch" style="background:#FEF08A;"></span>
               <span class="tier-text"><span class="tier-name">Inti Badai / Awan</span><span class="tier-range">&gt;10 mm/j</span></span>
             </div>
           </div>
@@ -1492,7 +1492,7 @@
           </div>
           <div class="legend-tiers">
             <div class="tier-chip">
-              <span class="tier-flow" style="background:#0284C7;"></span>
+              <span class="tier-flow" style="background:#EA580C;"></span>
               <span class="tier-text"><span class="tier-name">Tenang</span><span class="tier-range">${c1}</span></span>
             </div>
             <div class="tier-chip">
@@ -1831,10 +1831,10 @@
         const isFishing = vessel.status === 'Menangkap Ikan';
         const vDate = formatWibDateTime(vessel.last_timestamp_utc, 'Live GFW AIS');
         fishCardHtml = `
-          <div class="fish-banner" style="flex-direction:column;align-items:stretch;border-left:3px solid #38BDF8;background:rgba(2,132,199,0.06);">
+          <div class="fish-banner" style="flex-direction:column;align-items:stretch;border-left:3px solid #FFB000;background:rgba(234,88,12,0.08);">
             <div style="display:flex;align-items:flex-start;gap:12px;">
-              <div style="width:44px;height:44px;border-radius:8px;background:rgba(56,189,248,0.12);border:1px solid rgba(56,189,248,0.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#38BDF8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 21h20M19.38 20A11.6 11.6 0 0 0 21 14l-9-4-9 4c0 2.4.6 4.6 1.62 6M12 3v7"/></svg>
+              <div style="width:44px;height:44px;border-radius:8px;background:rgba(255,176,0,0.14);border:1px solid rgba(255,176,0,0.35);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFB000" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 21h20M19.38 20A11.6 11.6 0 0 0 21 14l-9-4-9 4c0 2.4.6 4.6 1.62 6M12 3v7"/></svg>
               </div>
               <div style="min-width:0;flex:1;">
                 <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:wrap;">
@@ -1924,7 +1924,7 @@
         `;
       }
 
-      const barColor = verdict.pct >= 72 ? '#16A34A' : (verdict.pct >= 46 ? '#0284C7' : '#64748B');
+      const barColor = verdict.pct >= 72 ? '#16A34A' : (verdict.pct >= 46 ? '#FFB000' : '#64748B');
       const countSummary = totalIndividuals > 0
         ? `${zoneSpecies.length} titik temuan OBIS (${totalIndividuals.toLocaleString('id-ID')} ekor terdata)`
         : `${zoneSpecies.length} titik catatan OBIS di wilayah ini`;
@@ -2007,7 +2007,7 @@
         <div class="weather-safety-box" style="margin-top:10px;padding:12px 14px;border-radius:10px;background:rgba(15,23,42,0.65);border:1px solid ${pt.marine_safety_status === 'BERBAHAYA' || pt.marine_safety_status === 'AWAS' ? 'rgba(239,68,68,0.5)' : (pt.marine_safety_status === 'WASPADA' ? 'rgba(245,158,11,0.4)' : 'rgba(34,197,94,0.3)')};display:flex;flex-direction:column;gap:10px;">
           <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
             <div style="display:flex;align-items:center;gap:7px;">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#38BDF8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFB000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M19 16.9A5 5 0 0 0 18 7h-1.26a8 8 0 1 0-11.62 9"/><polyline points="13 11 9 17 15 17 11 23"/>
               </svg>
               <strong style="font-size:13px;color:var(--ink-primary);">Cuaca &amp; Keselamatan Maritim</strong>
@@ -2019,7 +2019,7 @@
             <div style="background:rgba(255,255,255,0.03);padding:8px 10px;border-radius:6px;border:var(--border-hairline);">
               <span style="font-size:11px;color:var(--ink-muted);">Curah Hujan Radar:</span>
               <div class="tabular-nums font-mono" style="font-weight:700;font-size:13.5px;color:var(--ink-primary);">${(pt.rain_rate_mm_h ?? 0).toFixed(1)} mm/j</div>
-              <div style="font-size:11px;color:#38BDF8;">${pt.rain_category || (pt.rain_rate_mm_h >= 10 ? 'Hujan Lebat' : (pt.rain_rate_mm_h >= 1 ? 'Hujan Ringan' : 'Berawan / Kering'))}</div>
+              <div style="font-size:11px;color:#FFB000;">${pt.rain_category || (pt.rain_rate_mm_h >= 10 ? 'Hujan Lebat' : (pt.rain_rate_mm_h >= 1 ? 'Hujan Ringan' : 'Berawan / Kering'))}</div>
             </div>
             <div style="background:rgba(255,255,255,0.03);padding:8px 10px;border-radius:6px;border:var(--border-hairline);">
               <span style="font-size:11px;color:var(--ink-muted);">Angin &amp; Gelombang:</span>
@@ -2277,9 +2277,9 @@ Untuk navigasi pelayaran resmi, rujuk selalu BMKG, Pushidrosal, dan Basarnas.
             <feComposite in="SourceGraphic" in2="blur" operator="over" />
           </filter>
         </defs>
-        <circle cx="${ax}" cy="${ay}" r="7" fill="#38BDF8" stroke="#FFFFFF" stroke-width="2.5" filter="url(#ruler-glow)" />
-        <circle cx="${ax}" cy="${ay}" r="15" fill="none" stroke="#38BDF8" stroke-width="1.5" stroke-opacity="0.6" stroke-dasharray="3,3" />
-        <text x="${ax + 12}" y="${ay + 4}" fill="#38BDF8" font-size="12" font-family="'JetBrains Mono', monospace" font-weight="700" stroke="#0F172A" stroke-width="3" paint-order="stroke fill">Titik A</text>
+        <circle cx="${ax}" cy="${ay}" r="7" fill="#FFB000" stroke="#FFFFFF" stroke-width="2.5" filter="url(#ruler-glow)" />
+        <circle cx="${ax}" cy="${ay}" r="15" fill="none" stroke="#FFB000" stroke-width="1.5" stroke-opacity="0.6" stroke-dasharray="3,3" />
+        <text x="${ax + 12}" y="${ay + 4}" fill="#FFB000" font-size="12" font-family="'JetBrains Mono', monospace" font-weight="700" stroke="#0F172A" stroke-width="3" paint-order="stroke fill">Titik A</text>
       `;
       
       if (rulerState.ptB) {
@@ -2290,7 +2290,7 @@ Untuk navigasi pelayaran resmi, rujuk selalu BMKG, Pushidrosal, dan Basarnas.
         nodes += `
           <!-- Geodesic connecting navigation line -->
           <line x1="${ax}" y1="${ay}" x2="${bx}" y2="${by}" stroke="#0F172A" stroke-width="4.5" stroke-linecap="round" />
-          <line x1="${ax}" y1="${ay}" x2="${bx}" y2="${by}" stroke="#38BDF8" stroke-width="2.5" stroke-dasharray="6,4" stroke-linecap="round" filter="url(#ruler-glow)" />
+          <line x1="${ax}" y1="${ay}" x2="${bx}" y2="${by}" stroke="#FFB000" stroke-width="2.5" stroke-dasharray="6,4" stroke-linecap="round" filter="url(#ruler-glow)" />
           
           <!-- Waypoint B Pin -->
           <circle cx="${bx}" cy="${by}" r="7" fill="#10B981" stroke="#FFFFFF" stroke-width="2.5" filter="url(#ruler-glow)" />
@@ -2298,8 +2298,8 @@ Untuk navigasi pelayaran resmi, rujuk selalu BMKG, Pushidrosal, dan Basarnas.
           <text x="${bx + 12}" y="${by + 4}" fill="#10B981" font-size="12" font-family="'JetBrains Mono', monospace" font-weight="700" stroke="#0F172A" stroke-width="3" paint-order="stroke fill">Titik B</text>
           
           <!-- Midpoint Distance Badge -->
-          <rect x="${midX - 42}" y="${midY - 14}" width="84" height="24" rx="12" fill="#0F172A" fill-opacity="0.92" stroke="#38BDF8" stroke-width="1.5" filter="url(#ruler-glow)" />
-          <text x="${midX}" y="${midY + 3}" fill="#38BDF8" font-size="11" font-family="'JetBrains Mono', monospace" font-weight="700" text-anchor="middle">${rulerState.distanceNm.toFixed(1)} NM</text>
+          <rect x="${midX - 42}" y="${midY - 14}" width="84" height="24" rx="12" fill="#0F172A" fill-opacity="0.92" stroke="#FFB000" stroke-width="1.5" filter="url(#ruler-glow)" />
+          <text x="${midX}" y="${midY + 3}" fill="#FFB000" font-size="11" font-family="'JetBrains Mono', monospace" font-weight="700" text-anchor="middle">${rulerState.distanceNm.toFixed(1)} NM</text>
         `;
       }
       
@@ -3098,7 +3098,7 @@ Untuk navigasi pelayaran resmi, rujuk selalu BMKG, Pushidrosal, dan Basarnas.
           prof.sst.forEach((v, i) => {
             const x = getX(i);
             const y = getSstY(v);
-            dotsSvg += `<circle cx="${x}" cy="${y}" r="3.5" fill="#38BDF8" stroke="#060913" stroke-width="1.5"><title>${months[i]}: ${v}°C</title></circle>`;
+            dotsSvg += `<circle cx="${x}" cy="${y}" r="3.5" fill="#FFB000" stroke="#060913" stroke-width="1.5"><title>${months[i]}: ${v}°C</title></circle>`;
           });
 
           let monthsSvg = '';
@@ -3131,8 +3131,8 @@ Untuk navigasi pelayaran resmi, rujuk selalu BMKG, Pushidrosal, dan Basarnas.
                 </linearGradient>
               </defs>
               <g transform="translate(${padL}, 14)" font-size="10.5" font-family="sans-serif">
-                <circle cx="5" cy="-3" r="3.5" fill="#38BDF8" />
-                <text x="14" y="0" fill="#38BDF8" font-weight="600">Suhu Permukaan (SST °C)</text>
+                <circle cx="5" cy="-3" r="3.5" fill="#FFB000" />
+                <text x="14" y="0" fill="#FFB000" font-weight="600">Suhu Permukaan (SST °C)</text>
 
                 <rect x="180" y="-7" width="12" height="8" fill="#22C55E" opacity="0.6" rx="2" />
                 <text x="198" y="0" fill="#22C55E" font-weight="600">Klorofil-a (mg/m³)</text>
@@ -3144,7 +3144,7 @@ Untuk navigasi pelayaran resmi, rujuk selalu BMKG, Pushidrosal, dan Basarnas.
               <path d="${chlPath}" fill="url(#chlGrad)" />
               <path d="${chlLinePath}" fill="none" stroke="#22C55E" stroke-width="2" />
               <path d="${potPath}" fill="none" stroke="#F59E0B" stroke-width="1.8" stroke-dasharray="4,3" opacity="0.9" />
-              <path d="${sstPath}" fill="none" stroke="#38BDF8" stroke-width="2.5" />
+              <path d="${sstPath}" fill="none" stroke="#FFB000" stroke-width="2.5" />
               ${dotsSvg}
               ${monthsSvg}
             </svg>

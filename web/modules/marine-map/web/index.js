@@ -248,15 +248,15 @@ const STYLE = `
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.75);
 }
 .lautscan-marine-map.theme-night .wpp-chip:hover .wpp-chip-pill {
-  border-color: #00E5FF;
-  color: #00E5FF;
+  border-color: #FFB000;
+  color: #FFB000;
 }
 .lautscan-marine-map.theme-night .wpp-chip[aria-pressed="true"] .wpp-chip-pill {
-  background: #00E5FF;
-  border-color: #00E5FF;
+  background: #FFB000;
+  border-color: #FFB000;
   color: #070B0E;
   font-weight: 800;
-  box-shadow: 0 0 12px #00E5FF;
+  box-shadow: 0 0 12px #FFB000;
 }
 [data-theme="daylight"] .lautscan-marine-map .wpp-chip[aria-pressed="true"] .wpp-chip-pill {
   background: #070B0E;
@@ -305,14 +305,14 @@ const STYLE = `
 }
 .lautscan-marine-map.theme-night .species-marker-pill {
   background: rgba(7, 11, 16, 0.94);
-  border: 1px solid rgba(0, 229, 255, 0.45);
+  border: 1px solid rgba(255, 176, 0, 0.5);
   color: #F8FAFC;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.75), 0 0 8px rgba(0, 229, 255, 0.15);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.75), 0 0 8px rgba(255, 176, 0, 0.2);
 }
 .lautscan-marine-map.theme-night .species-marker:hover .species-marker-pill {
-  border-color: #00E5FF;
+  border-color: #FFB000;
   background: rgba(14, 22, 32, 0.98);
-  box-shadow: 0 0 12px rgba(0, 229, 255, 0.5);
+  box-shadow: 0 0 12px rgba(255, 176, 0, 0.5);
 }
 .lautscan-marine-map .species-marker-dot {
   width: 17px;
@@ -321,9 +321,9 @@ const STYLE = `
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: #00E5FF;
+  color: #FFB000;
   flex-shrink: 0;
-  border: 1px solid rgba(0, 229, 255, 0.5);
+  border: 1px solid rgba(255, 176, 0, 0.6);
   background: #070B0E;
 }
 .lautscan-marine-map .species-fish-icon {
@@ -335,19 +335,19 @@ const STYLE = `
 }
 .lautscan-marine-map .species-marker:hover .species-marker-pill {
   transform: scale(1.05);
-  border-color: #00E5FF;
+  border-color: #FFB000;
 }
 .lautscan-marine-map .species-marker[aria-pressed="true"] .species-marker-pill {
-  background: #00E5FF !important;
-  border-color: #00E5FF !important;
+  background: #FFB000 !important;
+  border-color: #FFB000 !important;
   color: #070B0E !important;
   transform: scale(1.08);
-  box-shadow: 0 0 16px #00E5FF !important;
+  box-shadow: 0 0 16px #FFB000 !important;
 }
 .lautscan-marine-map .species-marker[aria-pressed="true"] .species-marker-dot {
   background: #070B0E;
   border-color: #070B0E;
-  color: #00E5FF;
+  color: #FFB000;
 }
 /* Tactical Radar-style vessel marker */
 .lautscan-marine-map .vessel-flight-btn {
@@ -383,18 +383,18 @@ const STYLE = `
   justify-content: center;
   border-radius: 2px;
   background: rgba(7, 11, 16, 0.92);
-  border: 1.5px solid rgba(0, 229, 255, 0.5);
+  border: 1.5px solid rgba(255, 176, 0, 0.5);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.75);
   transition: all 120ms steps(2);
 }
 .lautscan-marine-map .vessel-flight-btn:hover .vessel-hull-wrap {
-  border-color: #00E5FF;
-  box-shadow: 0 0 12px rgba(0, 229, 255, 0.8);
+  border-color: #FFB000;
+  box-shadow: 0 0 12px rgba(255, 176, 0, 0.8);
 }
 .lautscan-marine-map .vessel-flight-btn[aria-pressed="true"] .vessel-hull-wrap {
-  background: #00E5FF;
+  background: #FFB000;
   border-color: #FFFFFF;
-  box-shadow: 0 0 16px rgba(0, 229, 255, 0.9);
+  box-shadow: 0 0 16px rgba(255, 176, 0, 0.9);
 }
 .lautscan-marine-map .vessel-hull-svg {
   display: block;
@@ -427,7 +427,7 @@ const STYLE = `
   transform: translateX(-50%);
   white-space: nowrap;
   background: rgba(7, 11, 16, 0.96);
-  border: 1px solid #00E5FF;
+  border: 1px solid #FFB000;
   border-radius: 2px !important;
   color: #F8FAFC;
   font-family: "JetBrains Mono", ui-monospace, monospace;
@@ -436,13 +436,8 @@ const STYLE = `
   text-transform: uppercase;
   letter-spacing: 0.05em;
   padding: 2px 7px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.85), 0 0 10px rgba(0, 229, 255, 0.35);
-}
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.85), 0 0 10px rgba(255, 176, 0, 0.35);
   line-height: 1.2;
-  padding: 3px 8px;
-  border-radius: 5px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.85), 0 0 10px rgba(56, 189, 248, 0.4);
-  backdrop-filter: blur(8px);
   pointer-events: none;
   animation: vesselTagPop 160ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
@@ -460,13 +455,13 @@ const STYLE = `
   left: 50%;
   transform: translateX(-50%);
   border: 4px solid transparent;
-  border-top-color: #38BDF8;
+  border-top-color: #FFB000;
 }
 .lautscan-marine-map .vessel-flight-btn[aria-pressed="true"] .vessel-tag-label::after {
   border-top-color: #FFFFFF !important;
 }
 .lautscan-marine-map .vessel-flight-btn[aria-pressed="true"] .vessel-hull-wrap {
-  filter: drop-shadow(0 0 10px #38BDF8);
+  filter: drop-shadow(0 0 10px #FFB000);
 }
 @keyframes vesselTagPop {
   from {
@@ -615,8 +610,8 @@ const STYLE = `
   color: #E2E8F0;
 }
 .lautscan-marine-map.theme-night .zoom-btn:hover:not(:disabled) {
-  background: rgba(56, 189, 248, 0.18);
-  color: #38BDF8;
+  background: rgba(255, 176, 0, 0.18);
+  color: #FFB000;
 }
 .lautscan-marine-map .zoom-btn {
   min-width: 44px;
@@ -768,14 +763,14 @@ function buildZoomOutSvg() {
 
 function buildSpeciesSvg() {
   return `<svg width="15" height="15" viewBox="0 0 16 16" fill="none" style="display:block;">
-    <polygon points="8,1 15,8 8,15 1,8" fill="#00E5FF" fill-opacity="0.35" stroke="#00E5FF" stroke-width="1.3"/>
+    <polygon points="8,1 15,8 8,15 1,8" fill="#FFB000" fill-opacity="0.4" stroke="#FFB000" stroke-width="1.3"/>
     <circle cx="8" cy="8" r="2.2" fill="#FFFFFF"/>
   </svg>`;
 }
 
 function buildCycloneSvg(warningLevel = 'WASPADA', selected = false, isSouthern = true) {
-  const coreColor = selected ? '#FFFFFF' : '#E0F2FE';
-  const arcColor = selected ? '#FFFFFF' : '#38BDF8';
+  const coreColor = selected ? '#FFFFFF' : '#FEF08A';
+  const arcColor = selected ? '#FFFFFF' : '#FFB000';
   const dirCls = isSouthern ? '' : ' ccw';
   return `<svg class="cyclone-icon-svg" width="28" height="28" viewBox="0 0 28 28" fill="none">
     <circle cx="14" cy="14" r="12" stroke="${arcColor}" stroke-width="0.9" stroke-opacity="0.35" class="cyclone-radar-pulse"/>
@@ -793,9 +788,9 @@ function buildCycloneSvg(warningLevel = 'WASPADA', selected = false, isSouthern 
 }
 
 function buildVesselHullSvg(isFishing = true, selected = false) {
-  const hullFill = selected ? '#FFFFFF' : (isFishing ? '#00E5FF' : '#E8221B');
-  const deckFill = selected ? '#070B0E' : (isFishing ? '#006680' : '#8A110D');
-  const strokeColor = selected ? '#00E5FF' : '#070B0E';
+  const hullFill = selected ? '#FFFFFF' : (isFishing ? '#FFB000' : '#E8221B');
+  const deckFill = selected ? '#070B0E' : (isFishing ? '#B45309' : '#8A110D');
+  const strokeColor = selected ? '#FFB000' : '#070B0E';
 
   return `<svg class="vessel-hull-svg" width="22" height="22" viewBox="0 0 24 24" fill="none">
     <circle cx="12" cy="12" r="11" stroke="${hullFill}" stroke-width="0.8" stroke-dasharray="2,2" stroke-opacity="0.6"/>
@@ -861,16 +856,16 @@ function shortFishLabel(commonName, sciName) {
 }
 
 function buildInspectPinSvg() {
-  return `<svg viewBox="0 0 32 32" width="32" height="32" aria-hidden="true" style="overflow:visible;filter:drop-shadow(0 0 8px #00E5FF);">
-    <path d="M4 11V4H11" stroke="#00E5FF" stroke-width="2" stroke-linecap="square" fill="none"/>
-    <path d="M21 4H28V11" stroke="#00E5FF" stroke-width="2" stroke-linecap="square" fill="none"/>
-    <path d="M4 21V28H11" stroke="#00E5FF" stroke-width="2" stroke-linecap="square" fill="none"/>
-    <path d="M21 28H28V21" stroke="#00E5FF" stroke-width="2" stroke-linecap="square" fill="none"/>
-    <line x1="16" y1="6" x2="16" y2="26" stroke="#00E5FF" stroke-width="1.2" stroke-dasharray="2,3"/>
-    <line x1="6" y1="16" x2="26" y2="16" stroke="#00E5FF" stroke-width="1.2" stroke-dasharray="2,3"/>
+  return `<svg viewBox="0 0 32 32" width="32" height="32" aria-hidden="true" style="overflow:visible;filter:drop-shadow(0 0 8px #FFB000);">
+    <path d="M4 11V4H11" stroke="#FFB000" stroke-width="2" stroke-linecap="square" fill="none"/>
+    <path d="M21 4H28V11" stroke="#FFB000" stroke-width="2" stroke-linecap="square" fill="none"/>
+    <path d="M4 21V28H11" stroke="#FFB000" stroke-width="2" stroke-linecap="square" fill="none"/>
+    <path d="M21 28H28V21" stroke="#FFB000" stroke-width="2" stroke-linecap="square" fill="none"/>
+    <line x1="16" y1="6" x2="16" y2="26" stroke="#FFB000" stroke-width="1.2" stroke-dasharray="2,3"/>
+    <line x1="6" y1="16" x2="26" y2="16" stroke="#FFB000" stroke-width="1.2" stroke-dasharray="2,3"/>
     <circle cx="16" cy="16" r="3" fill="#E8221B" stroke="#FFFFFF" stroke-width="1.2"/>
-    <rect x="5" y="-8" width="22" height="9" fill="#070B0E" stroke="#00E5FF" stroke-width="1" rx="1"/>
-    <text x="16" y="-1.5" fill="#00E5FF" font-family="'JetBrains Mono', monospace" font-size="6.5" font-weight="800" text-anchor="middle">TARGET</text>
+    <rect x="5" y="-8" width="22" height="9" fill="#070B0E" stroke="#FFB000" stroke-width="1" rx="1"/>
+    <text x="16" y="-1.5" fill="#FFB000" font-family="'JetBrains Mono', monospace" font-size="6.5" font-weight="800" text-anchor="middle">TARGET</text>
   </svg>`;
 }
 
@@ -3537,7 +3532,7 @@ export class MarineMap {
 
           const tagEl = this.doc.createElement('span');
           tagEl.className = 'storm-tag-label';
-          tagEl.innerHTML = `<span style="color:#38BDF8;">◎</span><span>${marker.shortName}</span><span style="font-size:9px;padding:1px 5px;border-radius:3px;background:#38BDF8;color:#060B19;font-weight:800;">${marker.warningLevel}</span>`;
+          tagEl.innerHTML = `<span style="color:#FFB000;">◎</span><span>${marker.shortName}</span><span style="font-size:9px;padding:1px 5px;border-radius:3px;background:#FFB000;color:#070B0E;font-weight:800;">${marker.warningLevel}</span>`;
 
           btn.replaceChildren(stormWrap, tagEl);
         } else if (marker.isVessel) {
