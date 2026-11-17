@@ -51,6 +51,11 @@ High-contrast tactical surveillance UI featuring sharp geometry, cyan corner L-b
 
 ![Tactical Maritime Command Deck](docs/screenshots/tactical_command_deck_seen0.png)
 
+### 7. Tactical Marine Map & Telemetry Points (Sonar Reticles & Diamond Beacons)
+Deep dark abyssal bathymetry with sharp 2px monospace species pins, tactical radar vessel hulls, and SEEN/0 surveillance target reticles:
+
+![Tactical Marine Map & Telemetry Points](docs/screenshots/tactical_map_markers_seen0.png)
+
 ---
 
 ## Key Features

@@ -92,7 +92,7 @@ const STYLE = `
   z-index: 1;
 }
 .lautscan-marine-map.theme-night .base-layer img.tile {
-  filter: invert(100%) hue-rotate(180deg) brightness(82%) contrast(115%) saturate(60%);
+  filter: invert(100%) hue-rotate(190deg) brightness(72%) contrast(140%) saturate(20%);
 }
 .lautscan-marine-map .overlay-layer {
   z-index: 2;
@@ -225,39 +225,42 @@ const STYLE = `
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 3px 7px;
-  border-radius: 999px;
+  padding: 2px 7px;
+  border-radius: 2px !important;
   border: 1px solid var(--mm-border);
   background: rgba(255, 255, 255, 0.88);
   color: var(--mm-ink);
   font-family: "JetBrains Mono", ui-monospace, monospace;
   font-variant-numeric: tabular-nums;
-  font-size: 11px;
-  font-weight: 600;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   line-height: 1.2;
   white-space: nowrap;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.18);
-  transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease;
+  transition: all 120ms steps(2);
 }
 .lautscan-marine-map.theme-night .wpp-chip-pill {
-  background: rgba(13, 17, 23, 0.92);
-  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(7, 11, 16, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.22);
   color: #F8FAFC;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.65);
-  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.75);
 }
-.lautscan-marine-map .wpp-chip:hover .wpp-chip-pill {
-  border-color: var(--mm-focus);
+.lautscan-marine-map.theme-night .wpp-chip:hover .wpp-chip-pill {
+  border-color: #00E5FF;
+  color: #00E5FF;
 }
-.lautscan-marine-map .wpp-chip[aria-pressed="true"] .wpp-chip-pill {
-  background: #FFFFFF;
-  border-color: #FFFFFF;
-  color: #060913;
-  font-weight: 700;
+.lautscan-marine-map.theme-night .wpp-chip[aria-pressed="true"] .wpp-chip-pill {
+  background: #00E5FF;
+  border-color: #00E5FF;
+  color: #070B0E;
+  font-weight: 800;
+  box-shadow: 0 0 12px #00E5FF;
 }
 [data-theme="daylight"] .lautscan-marine-map .wpp-chip[aria-pressed="true"] .wpp-chip-pill {
-  background: #0F172A;
-  border-color: #0F172A;
+  background: #070B0E;
+  border-color: #070B0E;
   color: #FFFFFF;
 }
 .lautscan-marine-map .markers-layer {
@@ -285,67 +288,68 @@ const STYLE = `
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 3px 8px 3px 4px;
-  border-radius: 999px;
+  padding: 2px 7px 2px 3px;
+  border-radius: 2px !important;
   border: 1px solid var(--mm-border);
   background: rgba(255, 255, 255, 0.94);
   color: var(--mm-ink);
-  font-family: "Plus Jakarta Sans", system-ui, sans-serif;
-  font-size: 11px;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 10px;
   font-weight: 700;
   line-height: 1.2;
   white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
   box-shadow: 0 2px 6px rgba(15, 23, 42, 0.18);
-  transition: transform 160ms ease, background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+  transition: all 120ms steps(2);
 }
 .lautscan-marine-map.theme-night .species-marker-pill {
-  background: rgba(13, 17, 23, 0.94);
-  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(7, 11, 16, 0.94);
+  border: 1px solid rgba(0, 229, 255, 0.45);
   color: #F8FAFC;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.65);
-  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.75), 0 0 8px rgba(0, 229, 255, 0.15);
 }
 .lautscan-marine-map.theme-night .species-marker:hover .species-marker-pill {
-  border-color: #FFFFFF;
-  background: rgba(24, 30, 42, 0.98);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.75);
+  border-color: #00E5FF;
+  background: rgba(14, 22, 32, 0.98);
+  box-shadow: 0 0 12px rgba(0, 229, 255, 0.5);
 }
 .lautscan-marine-map .species-marker-dot {
-  width: 19px;
-  height: 19px;
-  border-radius: 999px;
+  width: 17px;
+  height: 17px;
+  border-radius: 2px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: #FFFFFF;
+  color: #00E5FF;
   flex-shrink: 0;
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  background: #000000;
+  border: 1px solid rgba(0, 229, 255, 0.5);
+  background: #070B0E;
 }
 .lautscan-marine-map .species-fish-icon {
   display: block;
-  width: 13px;
-  height: 13px;
+  width: 12px;
+  height: 12px;
   object-fit: contain;
   pointer-events: none;
 }
 .lautscan-marine-map .species-marker:hover .species-marker-pill {
-  transform: scale(1.06);
-  border-color: var(--mm-focus);
+  transform: scale(1.05);
+  border-color: #00E5FF;
 }
 .lautscan-marine-map .species-marker[aria-pressed="true"] .species-marker-pill {
-  background: #FFFFFF !important;
-  border-color: #FFFFFF !important;
-  color: #060913 !important;
+  background: #00E5FF !important;
+  border-color: #00E5FF !important;
+  color: #070B0E !important;
   transform: scale(1.08);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.8), 0 0 12px rgba(255, 255, 255, 0.45);
+  box-shadow: 0 0 16px #00E5FF !important;
 }
 .lautscan-marine-map .species-marker[aria-pressed="true"] .species-marker-dot {
-  background: #060913;
-  border-color: #060913;
-  color: #FFFFFF;
+  background: #070B0E;
+  border-color: #070B0E;
+  color: #00E5FF;
 }
-/* Flight-tracker style vessel marker */
+/* Tactical Radar-style vessel marker */
 .lautscan-marine-map .vessel-flight-btn {
   position: absolute;
   transform: translate(-50%, -50%);
@@ -361,7 +365,7 @@ const STYLE = `
   pointer-events: auto;
   cursor: pointer;
   z-index: 8;
-  transition: transform 160ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 120ms steps(2);
 }
 .lautscan-marine-map .vessel-flight-btn:hover {
   transform: translate(-50%, -50%) scale(1.18);
@@ -377,29 +381,29 @@ const STYLE = `
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 999px;
-  background: rgba(15, 23, 42, 0.85);
-  border: 1.5px solid rgba(56, 189, 248, 0.45);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
-  transition: transform 180ms ease, filter 180ms ease, border-color 180ms ease, background 180ms ease;
+  border-radius: 2px;
+  background: rgba(7, 11, 16, 0.92);
+  border: 1.5px solid rgba(0, 229, 255, 0.5);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.75);
+  transition: all 120ms steps(2);
 }
 .lautscan-marine-map .vessel-flight-btn:hover .vessel-hull-wrap {
-  border-color: #38BDF8;
-  box-shadow: 0 0 12px rgba(56, 189, 248, 0.7);
+  border-color: #00E5FF;
+  box-shadow: 0 0 12px rgba(0, 229, 255, 0.8);
 }
 .lautscan-marine-map .vessel-flight-btn[aria-pressed="true"] .vessel-hull-wrap {
-  background: #0284C7;
+  background: #00E5FF;
   border-color: #FFFFFF;
-  box-shadow: 0 0 16px rgba(56, 189, 248, 0.9);
+  box-shadow: 0 0 16px rgba(0, 229, 255, 0.9);
 }
 .lautscan-marine-map .vessel-hull-svg {
   display: block;
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.8));
 }
 .lautscan-marine-map .vessel-radar-pulse {
-  animation: radarPulse 2s cubic-bezier(0.24, 0, 0.38, 1) infinite;
+  animation: radarPulse 2s steps(6) infinite;
   transform-origin: 12px 12px;
 }
 @keyframes radarPulse {
@@ -422,12 +426,18 @@ const STYLE = `
   left: 50%;
   transform: translateX(-50%);
   white-space: nowrap;
-  background: rgba(13, 21, 36, 0.95);
-  border: 1px solid #38BDF8;
+  background: rgba(7, 11, 16, 0.96);
+  border: 1px solid #00E5FF;
+  border-radius: 2px !important;
   color: #F8FAFC;
-  font-family: "Plus Jakarta Sans", system-ui, sans-serif;
-  font-size: 11px;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 10px;
   font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 7px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.85), 0 0 10px rgba(0, 229, 255, 0.35);
+}
   line-height: 1.2;
   padding: 3px 8px;
   border-radius: 5px;
@@ -757,7 +767,10 @@ function buildZoomOutSvg() {
 }
 
 function buildSpeciesSvg() {
-  return '<img class="species-fish-icon" src="/assets/icons/fish_2d.png" alt="" width="13" height="13" decoding="async" />';
+  return `<svg width="15" height="15" viewBox="0 0 16 16" fill="none" style="display:block;">
+    <polygon points="8,1 15,8 8,15 1,8" fill="#00E5FF" fill-opacity="0.35" stroke="#00E5FF" stroke-width="1.3"/>
+    <circle cx="8" cy="8" r="2.2" fill="#FFFFFF"/>
+  </svg>`;
 }
 
 function buildCycloneSvg(warningLevel = 'WASPADA', selected = false, isSouthern = true) {
@@ -780,11 +793,12 @@ function buildCycloneSvg(warningLevel = 'WASPADA', selected = false, isSouthern 
 }
 
 function buildVesselHullSvg(isFishing = true, selected = false) {
-  const hullFill = selected ? '#FFFFFF' : (isFishing ? '#38BDF8' : '#94A3B8');
-  const deckFill = selected ? '#0284C7' : (isFishing ? '#0284C7' : '#475569');
-  const strokeColor = selected ? '#0284C7' : '#04101E';
+  const hullFill = selected ? '#FFFFFF' : (isFishing ? '#00E5FF' : '#E8221B');
+  const deckFill = selected ? '#070B0E' : (isFishing ? '#006680' : '#8A110D');
+  const strokeColor = selected ? '#00E5FF' : '#070B0E';
 
-  return `<svg class="vessel-hull-svg" width="20" height="20" viewBox="0 0 24 24" fill="none">
+  return `<svg class="vessel-hull-svg" width="22" height="22" viewBox="0 0 24 24" fill="none">
+    <circle cx="12" cy="12" r="11" stroke="${hullFill}" stroke-width="0.8" stroke-dasharray="2,2" stroke-opacity="0.6"/>
     <!-- Waterline ripple -->
     <path d="M2.5 19.5C4.5 19.5 5.5 18.5 7.5 18.5C9.5 18.5 10.5 19.5 12.5 19.5C14.5 19.5 15.5 18.5 17.5 18.5C19.5 18.5 20.5 19.5 22 19.5" stroke="${hullFill}" stroke-width="1.2" stroke-linecap="round" stroke-opacity="0.8"/>
     <!-- Ship Hull -->
@@ -847,7 +861,17 @@ function shortFishLabel(commonName, sciName) {
 }
 
 function buildInspectPinSvg() {
-  return '<svg viewBox="0 0 28 28" aria-hidden="true"><circle cx="14" cy="14" r="10" fill="rgba(255,255,255,0.18)" stroke="#FFFFFF" stroke-width="2"/><circle cx="14" cy="14" r="3.5" fill="#FFFFFF" stroke="#060913" stroke-width="1.5"/><path d="M14 2v4M14 22v4M2 14h4M22 14h4" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round"/></svg>';
+  return `<svg viewBox="0 0 32 32" width="32" height="32" aria-hidden="true" style="overflow:visible;filter:drop-shadow(0 0 8px #00E5FF);">
+    <path d="M4 11V4H11" stroke="#00E5FF" stroke-width="2" stroke-linecap="square" fill="none"/>
+    <path d="M21 4H28V11" stroke="#00E5FF" stroke-width="2" stroke-linecap="square" fill="none"/>
+    <path d="M4 21V28H11" stroke="#00E5FF" stroke-width="2" stroke-linecap="square" fill="none"/>
+    <path d="M21 28H28V21" stroke="#00E5FF" stroke-width="2" stroke-linecap="square" fill="none"/>
+    <line x1="16" y1="6" x2="16" y2="26" stroke="#00E5FF" stroke-width="1.2" stroke-dasharray="2,3"/>
+    <line x1="6" y1="16" x2="26" y2="16" stroke="#00E5FF" stroke-width="1.2" stroke-dasharray="2,3"/>
+    <circle cx="16" cy="16" r="3" fill="#E8221B" stroke="#FFFFFF" stroke-width="1.2"/>
+    <rect x="5" y="-8" width="22" height="9" fill="#070B0E" stroke="#00E5FF" stroke-width="1" rx="1"/>
+    <text x="16" y="-1.5" fill="#00E5FF" font-family="'JetBrains Mono', monospace" font-size="6.5" font-weight="800" text-anchor="middle">TARGET</text>
+  </svg>`;
 }
 
 function bboxPolygon(minLon, minLat, maxLon, maxLat) {
