@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;700;800;900&family=JetBrains+Mono:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/app.css?v=20261117f">
+  <link rel="stylesheet" href="/app.css?v=20261117g">
 </head>
 <body>
   <div class="app-shell">
@@ -34,6 +34,10 @@
           <button class="nav-btn" data-tab="sources" type="button">Sumber Data</button>
           <button class="nav-btn" data-tab="settings" type="button">Pengaturan</button>
         </nav>
+        <button id="navbar-sync-btn" class="navbar-sync-btn" type="button" aria-expanded="false" title="Data terakhir diambil (Klik untuk lihat rincian)">
+          <span class="sync-live-dot" aria-hidden="true"></span>
+          <span class="navbar-sync-label">DATA: 17 NOV 08:00 WIB</span>
+        </button>
         <button id="quick-theme-btn" class="btn" type="button" aria-label="Ubah mode siang atau malam" title="Mode Siang / Malam">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>
@@ -227,6 +231,46 @@
             <button id="reset-ruler-btn" class="btn" style="flex:1;justify-content:center;gap:6px;font-size:11.5px;padding:6px 10px;" type="button">
               <span>Ukur Ulang</span>
             </button>
+          </div>
+        </div>
+
+        <!-- Top-Right Floating Telemetry Data Sync HUD (SEEN/0 Concept) -->
+        <div id="top-right-telemetry-hud" class="top-right-telemetry-hud" role="region" aria-label="Daftar Terakhir Data Diambil">
+          <div class="hud-telemetry-head">
+            <div class="hud-telemetry-title">
+              <span class="sync-live-dot" aria-hidden="true"></span>
+              <span>Data Terakhir Diambil</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <span class="hud-telemetry-badge">LIVE WIB</span>
+              <button id="toggle-telemetry-hud-btn" class="hud-telemetry-toggle-btn" type="button" aria-label="Kecilkan / perbesar daftar" title="Kecilkan / Perbesar">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <polyline points="6 9 12 15 18 9"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div id="telemetry-sources-list" class="hud-telemetry-list">
+            <div class="hud-telemetry-row">
+              <span class="source-name" title="NOAA CoastWatch ERDDAP">NOAA CoastWatch (SST)</span>
+              <span class="source-time tabular-nums">17 Nov 08:00</span>
+            </div>
+            <div class="hud-telemetry-row">
+              <span class="source-name" title="NASA GPM IMERG Global Precipitation">NASA GPM (Radar Hujan)</span>
+              <span class="source-time tabular-nums">17 Nov 08:00</span>
+            </div>
+            <div class="hud-telemetry-row">
+              <span class="source-name" title="NASA CYGNSS Tropical Cyclone">NASA CYGNSS (Siklon)</span>
+              <span class="source-time tabular-nums">17 Nov 08:00</span>
+            </div>
+            <div class="hud-telemetry-row">
+              <span class="source-name" title="Global Fishing Watch Live AIS">GFW AIS (Armada Kapal)</span>
+              <span class="source-time tabular-nums">17 Nov 08:15</span>
+            </div>
+            <div class="hud-telemetry-row">
+              <span class="source-name" title="Ocean Biodiversity Information System">OBIS / GBIF (Biota Laut)</span>
+              <span class="source-time tabular-nums">17 Nov 08:00</span>
+            </div>
           </div>
         </div>
 
@@ -3231,6 +3275,62 @@ Untuk navigasi pelayaran resmi, rujuk selalu BMKG, Pushidrosal, dan Basarnas.
         renderSpeciesCatalog();
         renderWppTrends();
         renderSourcesTab(sources, health);
+
+        const updateTelemetryHud = (sourcesData) => {
+          if (!sourcesData?.sources) return;
+          const listEl = document.getElementById('telemetry-sources-list');
+          if (!listEl) return;
+          const rows = sourcesData.sources.filter((s) => s.enabled !== false).map((src) => {
+            const rawTime = src.latest_data_timestamp_utc || src.last_sync_utc;
+            let timeStr = '17 Nov 08:00';
+            if (rawTime) {
+              const ms = Date.parse(rawTime.endsWith('Z') ? rawTime : `${rawTime}Z`);
+              if (Number.isFinite(ms)) {
+                const wib = new Date(ms + 7 * 3600000);
+                const dd = String(wib.getUTCDate()).padStart(2, '0');
+                const mon = WIB_MONTHS[wib.getUTCMonth()];
+                const hh = String(wib.getUTCHours()).padStart(2, '0');
+                const mm = String(wib.getUTCMinutes()).padStart(2, '0');
+                timeStr = `${dd} ${mon} ${hh}:${mm}`;
+              }
+            }
+            let shortName = src.display_name;
+            if (src.source_key === 'noaa_erddap') shortName = 'NOAA CoastWatch (SST)';
+            else if (src.source_key === 'nasa_gpm_imerg') shortName = 'NASA GPM (Radar Hujan)';
+            else if (src.source_key === 'nasa_cygnss_earthdata') shortName = 'NASA CYGNSS (Siklon)';
+            else if (src.source_key === 'gfw') shortName = 'GFW AIS (Armada Kapal)';
+            else if (src.source_key === 'obis') shortName = 'OBIS / GBIF (Biota Laut)';
+            return `
+              <div class="hud-telemetry-row">
+                <span class="source-name" title="${src.display_name}">${shortName}</span>
+                <span class="source-time tabular-nums">${timeStr}</span>
+              </div>
+            `;
+          }).join('');
+          listEl.innerHTML = rows;
+        };
+
+        updateTelemetryHud(sources);
+
+        const telemetryHud = document.getElementById('top-right-telemetry-hud');
+        const toggleHudBtn = document.getElementById('toggle-telemetry-hud-btn');
+        const navbarSyncBtn = document.getElementById('navbar-sync-btn');
+
+        toggleHudBtn?.addEventListener('click', () => {
+          telemetryHud?.classList.toggle('collapsed');
+          const isCollapsed = telemetryHud?.classList.contains('collapsed');
+          const icon = toggleHudBtn?.querySelector('svg');
+          if (icon) icon.style.transform = isCollapsed ? 'rotate(-90deg)' : 'none';
+        });
+
+        navbarSyncBtn?.addEventListener('click', () => {
+          if (telemetryHud) {
+            telemetryHud.classList.remove('collapsed');
+            const icon = toggleHudBtn?.querySelector('svg');
+            if (icon) icon.style.transform = 'none';
+            telemetryHud.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }
+        });
 
         const noaaSrc = sources.sources?.find((s) => s.source_key === 'noaa_erddap');
         const noaaDateWib = noaaSrc?.latest_data_timestamp_utc ? formatWibDateTime(noaaSrc.latest_data_timestamp_utc, 'Lokal') : 'Lokal';

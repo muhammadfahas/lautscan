@@ -921,6 +921,204 @@ html, body {
   z-index: 5;
 }
 
+/* Top Right Telemetry Data Sync HUD (SEEN/0 Radar Style) */
+.top-right-telemetry-hud {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 29;
+  width: min(310px, calc(100% - 16px));
+  background: rgba(7, 11, 16, 0.94);
+  border: 1px solid rgba(255, 176, 0, 0.35);
+  border-radius: 2px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.70), 0 0 16px rgba(255, 176, 0, 0.12);
+  backdrop-filter: blur(12px);
+  padding: 8px 10px;
+  font-family: var(--font-mono);
+  user-select: none;
+  transition: right 240ms cubic-bezier(0.16, 1, 0.3, 1), transform 200ms ease;
+}
+[data-theme="daylight"] .top-right-telemetry-hud {
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(234, 88, 12, 0.35);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+}
+
+.top-right-telemetry-hud::before {
+  content: '';
+  position: absolute;
+  top: -1px; left: -1px;
+  width: 7px; height: 7px;
+  border-top: 2px solid #FFB000;
+  border-left: 2px solid #FFB000;
+  pointer-events: none;
+}
+.top-right-telemetry-hud::after {
+  content: '';
+  position: absolute;
+  bottom: -1px; right: -1px;
+  width: 7px; height: 7px;
+  border-bottom: 2px solid #FFB000;
+  border-right: 2px solid #FFB000;
+  pointer-events: none;
+}
+
+@media (min-width: 900px) {
+  .map-stage.inspector-open .top-right-telemetry-hud {
+    right: 376px;
+  }
+}
+
+.hud-telemetry-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  margin-bottom: 6px;
+}
+[data-theme="daylight"] .hud-telemetry-head {
+  border-bottom: 1px solid rgba(15, 23, 42, 0.12);
+}
+
+.hud-telemetry-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #FFB000;
+}
+[data-theme="daylight"] .hud-telemetry-title {
+  color: #EA580C;
+}
+
+.sync-live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #FFB000;
+  box-shadow: 0 0 6px #FFB000;
+  animation: blinkStep 1.2s steps(1) infinite;
+  flex-shrink: 0;
+}
+[data-theme="daylight"] .sync-live-dot {
+  background: #EA580C;
+  box-shadow: 0 0 6px #EA580C;
+}
+
+.hud-telemetry-badge {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  padding: 1px 5px;
+  border-radius: 2px;
+  background: rgba(255, 176, 0, 0.16);
+  border: 1px solid rgba(255, 176, 0, 0.45);
+  color: #FFB000;
+}
+[data-theme="daylight"] .hud-telemetry-badge {
+  background: rgba(234, 88, 12, 0.12);
+  border-color: rgba(234, 88, 12, 0.5);
+  color: #EA580C;
+}
+
+.hud-telemetry-toggle-btn {
+  background: transparent;
+  border: 0;
+  color: var(--ink-muted);
+  cursor: pointer;
+  padding: 0 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 120ms steps(2);
+}
+.hud-telemetry-toggle-btn:hover {
+  color: var(--ink-primary);
+}
+
+.hud-telemetry-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hud-telemetry-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 3px 6px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 10px;
+}
+[data-theme="daylight"] .hud-telemetry-row {
+  background: rgba(15, 23, 42, 0.03);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.hud-telemetry-row .source-name {
+  font-weight: 700;
+  color: var(--ink-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 170px;
+}
+.hud-telemetry-row .source-time {
+  font-weight: 700;
+  color: #FFB000;
+  white-space: nowrap;
+}
+[data-theme="daylight"] .hud-telemetry-row .source-time {
+  color: #EA580C;
+}
+
+.top-right-telemetry-hud.collapsed {
+  width: auto;
+  padding: 5px 10px;
+}
+.top-right-telemetry-hud.collapsed .hud-telemetry-list {
+  display: none;
+}
+.top-right-telemetry-hud.collapsed .hud-telemetry-head {
+  padding-bottom: 0;
+  border-bottom: 0;
+  margin-bottom: 0;
+}
+
+/* Navbar top-right sync pill button */
+.navbar-sync-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 8px;
+  border-radius: 2px;
+  background: rgba(255, 176, 0, 0.10);
+  border: 1px solid rgba(255, 176, 0, 0.40);
+  color: #FFB000;
+  font: 700 10.5px var(--font-mono);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 120ms steps(2);
+}
+[data-theme="daylight"] .navbar-sync-btn {
+  background: rgba(234, 88, 12, 0.08);
+  border: 1px solid rgba(234, 88, 12, 0.40);
+  color: #EA580C;
+}
+.navbar-sync-btn:hover {
+  background: rgba(255, 176, 0, 0.20);
+  border-color: #FFB000;
+}
+
 .drawer-header {
   flex-shrink: 0;
   background: transparent;
