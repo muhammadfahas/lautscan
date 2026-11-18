@@ -1450,14 +1450,16 @@ html, body {
 
 /* Shared UI primitives for other tabs */
 .btn {
-  height: 28px; min-height: 28px; padding: 0 10px; border-radius: 5px;
+  height: 28px; min-height: 28px; padding: 0 11px; border-radius: 2px;
   border: var(--border-hairline); background: var(--surface-subtle);
-  color: var(--ink-primary); font: 500 12px var(--font-sans); cursor: pointer;
+  color: var(--ink-primary); font: 600 11.5px var(--font-mono); cursor: pointer;
   display: inline-flex; align-items: center; justify-content: center; gap: 5px;
-  transition: all 140ms ease;
+  white-space: nowrap; flex-shrink: 0;
+  transition: all 120ms steps(2);
 }
-.btn:hover { background: var(--surface-hover); border-color: var(--border-hover); }
-.btn.cta { background: var(--accent-cta); color: #FFFFFF; border-color: var(--accent-cta); font-weight: 600; }
+.btn:hover { background: rgba(255, 176, 0, 0.14); border-color: #FFB000; color: #FFB000; }
+[data-theme="daylight"] .btn:hover { background: rgba(234, 88, 12, 0.10); border-color: #EA580C; color: #EA580C; }
+.btn.cta { background: #FFB000; color: #070B0E; border-color: #FFB000; font-weight: 700; }
 .select-box, .input-box {
   width: 100%; height: 32px; min-height: 32px; line-height: 30px;
   padding: 0 10px; border-radius: 2px;
@@ -1533,7 +1535,7 @@ th { font-weight: 600; color: var(--ink-muted); font-size: 11px; text-transform:
 }
 .cluster-pill {
   padding: 4px 9px;
-  border-radius: 6px;
+  border-radius: 2px;
   background: var(--surface-subtle);
   border: var(--border-hairline);
   font-size: 11.5px;
@@ -1542,6 +1544,7 @@ th { font-weight: 600; color: var(--ink-muted); font-size: 11px; text-transform:
   display: inline-flex;
   align-items: center;
   gap: 5px;
+  white-space: nowrap;
 }
 .cluster-pill strong {
   color: var(--ink-primary);

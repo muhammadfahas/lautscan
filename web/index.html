@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;700;800;900&family=JetBrains+Mono:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/app.css?v=20261118d">
+  <link rel="stylesheet" href="/app.css?v=20261118e">
 </head>
 <body>
   <div class="app-shell">
@@ -3090,16 +3090,16 @@ Untuk navigasi pelayaran resmi, rujuk selalu BMKG, Pushidrosal, dan Basarnas.
             const sstInfo = z.wpp_code === '712' ? '30.3°C · Subur Plankton' : '28.9° - 30.5°C · Tropis';
             return `
               <tr>
-                <td><strong class="cluster-pill" style="font-family:var(--font-mono);">WPP ${z.wpp_code}</strong></td>
+                <td style="white-space:nowrap;"><strong class="cluster-pill" style="font-family:var(--font-mono);">WPP ${z.wpp_code}</strong></td>
                 <td><strong>${z.name}</strong></td>
                 <td><span style="color:var(--ink-secondary);">${z.waters_id}</span></td>
-                <td>
+                <td style="white-space:nowrap;">
                   <div class="tabular-nums" style="font-weight:600;">${areaStr} km²</div>
                   <div class="mini-progress-track"><div class="mini-progress-fill" style="width:${areaPercent}%;"></div></div>
                 </td>
-                <td class="tabular-nums" style="color:var(--ink-muted);">${z.centroid_lat.toFixed(2)}°, ${z.centroid_lon.toFixed(2)}°</td>
-                <td><span class="badge ok">${sstInfo}</span></td>
-                <td style="text-align:right;">
+                <td class="tabular-nums" style="color:var(--ink-muted);white-space:nowrap;">${z.centroid_lat.toFixed(2)}°, ${z.centroid_lon.toFixed(2)}°</td>
+                <td style="white-space:nowrap;"><span class="badge ok">${sstInfo}</span></td>
+                <td style="text-align:right;white-space:nowrap;">
                   <button class="btn" type="button" onclick="navigateToMapPoint(${z.centroid_lat}, ${z.centroid_lon}, 6, '', '${z.wpp_code}')">
                     <span>Jelajahi Peta</span>
                   </button>
