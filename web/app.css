@@ -729,7 +729,7 @@ html, body {
 /* Bottom-Center Floating 4 Lensa Laut Dock */
 .lens-dock-wrap {
   position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
-  z-index: 22; width: min(600px, calc(100% - 24px));
+  z-index: 22; width: fit-content; max-width: calc(100% - 24px);
   display: flex; flex-direction: column; align-items: center; gap: 6px;
   pointer-events: none;
 }
@@ -748,10 +748,10 @@ html, body {
   display: flex; align-items: center; gap: 4px; width: 100%;
 }
 .lens-btn {
-  flex: 1 1 auto; height: 28px; min-height: 28px; padding: 0 8px;
+  flex: 1 1 auto; height: 28px; min-height: 28px; padding: 0 9px;
   border-radius: 2px; border: 1px solid rgba(255, 255, 255, 0.16);
   background: var(--surface-subtle); color: var(--ink-secondary);
-  font: 700 11px var(--font-mono); cursor: pointer;
+  font: 700 10.5px var(--font-mono); cursor: pointer;
   display: inline-flex; align-items: center; justify-content: center; gap: 5px;
   transition: all 120ms steps(2); white-space: nowrap;
   text-transform: uppercase; letter-spacing: 0.04em;
@@ -776,12 +776,6 @@ html, body {
   border-color: #070B0E !important;
   color: #FFFFFF !important;
 }
-}
-[data-theme="daylight"] .lens-btn.active {
-  background: #0F172A !important;
-  border-color: #0F172A !important;
-  color: #FFFFFF !important;
-}
 .lens-btn img.icon-3d,
 .lens-btn .icon-3d-lens {
   width: 18px;
@@ -798,19 +792,32 @@ html, body {
   mask: url('/assets/icons/fish_2d.png') center / contain no-repeat;
 }
 .tune-btn {
-  height: 30px; min-height: 30px; padding: 0 8px;
-  border-radius: 6px; border: var(--border-hairline);
-  background: var(--surface-subtle); color: var(--ink-primary);
-  font: 600 11px var(--font-sans); cursor: pointer;
-  display: inline-flex; align-items: center; gap: 4px;
-  transition: all 140ms ease;
+  flex-shrink: 0;
+  height: 28px; min-height: 28px; padding: 0 10px;
+  border-radius: 2px; border: 1px solid rgba(255, 255, 255, 0.16);
+  background: var(--surface-subtle); color: var(--ink-secondary);
+  font: 700 10.5px var(--font-mono); cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+  text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap;
+  transition: all 120ms steps(2);
+}
+[data-theme="daylight"] .tune-btn {
+  border: 1px solid rgba(15, 23, 42, 0.20);
 }
 .tune-btn:hover {
   background: var(--surface-hover);
   border-color: var(--border-hover);
+  color: var(--ink-primary);
 }
 .tune-btn[aria-expanded="true"] {
-  background: var(--accent-primary-dim); border-color: var(--accent-primary); color: var(--accent-primary);
+  background: rgba(255, 176, 0, 0.16);
+  border-color: #FFB000;
+  color: #FFB000;
+}
+[data-theme="daylight"] .tune-btn[aria-expanded="true"] {
+  background: rgba(234, 88, 12, 0.12);
+  border-color: #EA580C;
+  color: #EA580C;
 }
 
 /* Qualitative + Numeric Tiered Legend */

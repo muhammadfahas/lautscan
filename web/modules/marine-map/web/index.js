@@ -593,7 +593,7 @@ const STYLE = `
   z-index: 10;
   display: flex;
   flex-direction: column;
-  border-radius: 10px;
+  border-radius: 2px;
   overflow: hidden;
   border: 1px solid var(--mm-border);
   background: var(--mm-surface);
@@ -633,7 +633,7 @@ const STYLE = `
   border-top: 1px solid var(--mm-border);
 }
 .lautscan-marine-map .zoom-btn:hover:not(:disabled) {
-  background: rgba(59, 130, 246, 0.10);
+  background: rgba(234, 88, 12, 0.12);
 }
 .lautscan-marine-map .zoom-btn:disabled {
   opacity: 0.45;
@@ -646,16 +646,17 @@ const STYLE = `
   z-index: 10;
   display: flex;
   align-items: center;
-  gap: 8px;
-  max-width: calc(100% - 80px);
-  padding: 4px 8px;
-  border-radius: 6px;
+  gap: 6px;
+  max-width: 190px;
+  padding: 3px 7px;
+  border-radius: 2px;
   border: 1px solid var(--mm-border);
   background: rgba(255, 255, 255, 0.88);
   color: var(--mm-muted);
-  font-size: 11px;
+  font-size: 9.5px;
   line-height: 1.3;
   pointer-events: none;
+  opacity: 0.85;
 }
 .lautscan-marine-map.theme-night .map-hud {
   background: rgba(13, 17, 23, 0.92);
@@ -664,10 +665,7 @@ const STYLE = `
   backdrop-filter: blur(10px);
 }
 .lautscan-marine-map .hud-coords {
-  font-family: "JetBrains Mono", ui-monospace, monospace;
-  font-variant-numeric: tabular-nums;
-  color: var(--mm-ink);
-  white-space: nowrap;
+  display: none;
 }
 .lautscan-marine-map .hud-credit {
   white-space: nowrap;
