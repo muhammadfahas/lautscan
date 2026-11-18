@@ -1617,6 +1617,11 @@ th { font-weight: 600; color: var(--ink-muted); font-size: 11px; text-transform:
   align-items: center;
   gap: 6px;
 }
+.catalog-toolbar .btn {
+  height: 32px;
+  min-height: 32px;
+  padding: 0 12px;
+}
 .view-toggle-group {
   display: inline-flex;
   align-items: center;
