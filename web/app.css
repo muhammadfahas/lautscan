@@ -1459,11 +1459,31 @@ html, body {
 .btn:hover { background: var(--surface-hover); border-color: var(--border-hover); }
 .btn.cta { background: var(--accent-cta); color: #FFFFFF; border-color: var(--accent-cta); font-weight: 600; }
 .select-box, .input-box {
-  width: 100%; height: 28px; min-height: 28px; padding: 0 8px; border-radius: 5px;
-  border: var(--border-hairline); background: var(--surface-subtle);
-  color: var(--ink-primary); font: 500 12px var(--font-sans); outline: none;
+  width: 100%; height: 32px; min-height: 32px; line-height: 30px;
+  padding: 0 10px; border-radius: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.16); background-color: var(--surface-subtle);
+  color: var(--ink-primary); font-family: var(--font-mono); font-size: 11.5px; font-weight: 600;
+  outline: none; vertical-align: middle; box-sizing: border-box;
+  transition: border-color 140ms ease, background-color 140ms ease;
 }
-.select-box:focus, .input-box:focus { border-color: var(--accent-primary); }
+[data-theme="daylight"] .select-box, [data-theme="daylight"] .input-box {
+  border-color: rgba(15, 23, 42, 0.22);
+}
+.select-box {
+  appearance: none;
+  -webkit-appearance: none;
+  padding: 0 28px 0 10px;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23FFB000' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 12px 12px;
+}
+[data-theme="daylight"] .select-box {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23EA580C' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+}
+.select-box:focus, .input-box:focus { border-color: #FFB000; }
+[data-theme="daylight"] .select-box:focus, [data-theme="daylight"] .input-box:focus { border-color: #EA580C; }
 select, option {
   background: var(--surface-elevated);
   color: var(--ink-primary);
@@ -1535,11 +1555,14 @@ th { font-weight: 600; color: var(--ink-muted); font-size: 11px; text-transform:
   flex-wrap: wrap;
   gap: 8px;
   padding: 8px 10px;
-  border-radius: 8px;
+  border-radius: 2px;
   background: var(--surface-glass-panel);
-  border: var(--border-hairline);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
+}
+[data-theme="daylight"] .catalog-toolbar {
+  border-color: rgba(15, 23, 42, 0.22);
 }
 .toolbar-filters {
   display: flex;
@@ -1553,15 +1576,38 @@ th { font-weight: 600; color: var(--ink-muted); font-size: 11px; text-transform:
   flex: 1 1 240px;
 }
 .toolbar-select {
-  height: 30px;
-  min-height: 30px;
-  padding: 0 8px;
-  border-radius: 6px;
-  border: var(--border-hairline);
-  background: var(--surface-subtle);
+  height: 32px;
+  min-height: 32px;
+  line-height: 30px;
+  padding: 0 28px 0 10px;
+  border-radius: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background-color: var(--surface-subtle);
   color: var(--ink-primary);
-  font: 500 12px var(--font-sans);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 600;
   cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  outline: none;
+  vertical-align: middle;
+  box-sizing: border-box;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23FFB000' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 12px 12px;
+  transition: border-color 140ms ease, background-color 140ms ease;
+}
+[data-theme="daylight"] .toolbar-select {
+  border-color: rgba(15, 23, 42, 0.22);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23EA580C' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+}
+.toolbar-select:hover, .toolbar-select:focus {
+  border-color: #FFB000;
+}
+[data-theme="daylight"] .toolbar-select:hover, [data-theme="daylight"] .toolbar-select:focus {
+  border-color: #EA580C;
 }
 .toolbar-actions {
   display: flex;
@@ -1570,33 +1616,49 @@ th { font-weight: 600; color: var(--ink-muted); font-size: 11px; text-transform:
 }
 .view-toggle-group {
   display: inline-flex;
-  border-radius: 6px;
-  border: var(--border-hairline);
+  align-items: center;
+  height: 32px;
+  min-height: 32px;
+  border-radius: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
   background: var(--surface-subtle);
   padding: 2px;
   gap: 2px;
+  box-sizing: border-box;
+}
+[data-theme="daylight"] .view-toggle-group {
+  border-color: rgba(15, 23, 42, 0.22);
 }
 .view-btn {
   height: 26px;
-  padding: 0 8px;
-  border-radius: 4px;
+  padding: 0 10px;
+  border-radius: 2px;
   border: none;
   background: transparent;
   color: var(--ink-muted);
-  font: 600 11.5px var(--font-sans);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  transition: all 140ms ease;
+  transition: all 120ms steps(2);
 }
 .view-btn:hover {
   color: var(--ink-primary);
 }
 .view-btn.active {
-  background: var(--surface-elevated);
-  color: var(--ink-primary);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+  background: #FFB000;
+  color: #070B0E;
+  font-weight: 800;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+[data-theme="daylight"] .view-btn.active {
+  background: #EA580C;
+  color: #FFFFFF;
 }
 
 /* Card Grid for Species (Kotak-kotak) */
