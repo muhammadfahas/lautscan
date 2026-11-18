@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;700;800;900&family=JetBrains+Mono:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/app.css?v=20261117h">
+  <link rel="stylesheet" href="/app.css?v=20261118a">
 </head>
 <body>
   <div class="app-shell">
@@ -36,7 +36,7 @@
         </nav>
         <button id="navbar-sync-btn" class="navbar-sync-btn" type="button" aria-expanded="false" title="Data terakhir diambil (Klik untuk lihat rincian)">
           <span class="sync-live-dot" aria-hidden="true"></span>
-          <span class="navbar-sync-label">DATA: 17 NOV 08:00 WIB</span>
+          <span class="navbar-sync-label">DATA: 18 NOV 11:00 WIB</span>
         </button>
         <button id="quick-theme-btn" class="btn" type="button" aria-label="Ubah mode siang atau malam" title="Mode Siang / Malam">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -150,6 +150,71 @@
               </svg>
               <span>Ukur Rute</span>
             </button>
+            <button id="quick-jump-btn" class="pill-btn" type="button" aria-expanded="false" aria-label="Lompat ke koordinat atau selat maritim" title="Lompat ke Koordinat / Pelabuhan">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="10"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><circle cx="12" cy="12" r="3"/>
+              </svg>
+              <span>Lompat Titik</span>
+            </button>
+          </div>
+
+          <!-- Tactical Waypoint Quick Jump Popover -->
+          <div id="quick-jump-popover" class="quick-jump-popover" role="dialog" aria-label="Lompat ke Titik Maritim">
+            <div class="row-between" style="border-bottom:1px solid rgba(255,255,255,0.14);padding-bottom:5px;margin-bottom:4px;">
+              <div style="display:flex;align-items:center;gap:6px;font-size:10.5px;font-weight:800;color:#FFB000;text-transform:uppercase;">
+                <span>⌖ Lompat Titik Maritim</span>
+              </div>
+              <button id="close-quick-jump-btn" class="drawer-close-btn" type="button" aria-label="Tutup lompat titik">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+            <div style="font-size:10px;color:var(--ink-muted);margin-bottom:2px;">Pilih lokasi maritim atau masukkan koordinat (Lat, Lon):</div>
+            <div class="waypoint-chips-grid">
+              <button class="waypoint-chip" type="button" data-lat="-5.95" data-lon="105.80" data-name="Selat Sunda">
+                <span class="wp-name">Selat Sunda</span>
+                <span class="wp-coord">-5.95°S, 105.80°E</span>
+              </button>
+              <button class="waypoint-chip" type="button" data-lat="-8.25" data-lon="114.45" data-name="Selat Bali">
+                <span class="wp-name">Selat Bali</span>
+                <span class="wp-coord">-8.25°S, 114.45°E</span>
+              </button>
+              <button class="waypoint-chip" type="button" data-lat="2.50" data-lon="101.50" data-name="Selat Malaka">
+                <span class="wp-name">Selat Malaka</span>
+                <span class="wp-coord">2.50°N, 101.50°E</span>
+              </button>
+              <button class="waypoint-chip" type="button" data-lat="-1.20" data-lon="118.50" data-name="Selat Makassar">
+                <span class="wp-name">Selat Makassar</span>
+                <span class="wp-coord">-1.20°S, 118.50°E</span>
+              </button>
+              <button class="waypoint-chip" type="button" data-lat="-5.50" data-lon="108.00" data-name="Laut Jawa">
+                <span class="wp-name">Laut Jawa (Pusat)</span>
+                <span class="wp-coord">-5.50°S, 108.00°E</span>
+              </button>
+              <button class="waypoint-chip" type="button" data-lat="-4.80" data-lon="129.50" data-name="Laut Banda">
+                <span class="wp-name">Laut Banda</span>
+                <span class="wp-coord">-4.80°S, 129.50°E</span>
+              </button>
+              <button class="waypoint-chip" type="button" data-lat="-7.50" data-lon="136.00" data-name="Laut Arafuru">
+                <span class="wp-name">Laut Arafuru</span>
+                <span class="wp-coord">-7.50°S, 136.00°E</span>
+              </button>
+              <button class="waypoint-chip" type="button" data-lat="1.45" data-lon="125.20" data-name="Pelabuhan Bitung">
+                <span class="wp-name">Bitung (Sulut)</span>
+                <span class="wp-coord">1.45°N, 125.20°E</span>
+              </button>
+              <button class="waypoint-chip" type="button" data-lat="-8.75" data-lon="115.22" data-name="Pelabuhan Benoa">
+                <span class="wp-name">Benoa (Bali)</span>
+                <span class="wp-coord">-8.75°S, 115.22°E</span>
+              </button>
+              <button class="waypoint-chip" type="button" data-lat="3.90" data-lon="108.20" data-name="Laut Natuna">
+                <span class="wp-name">Laut Natuna</span>
+                <span class="wp-coord">3.90°N, 108.20°E</span>
+              </button>
+            </div>
+            <div style="display:flex;gap:4px;align-items:center;margin-top:2px;">
+              <input id="coord-input" class="pill-select" style="flex:1;height:26px;font-size:10.5px;padding:0 8px;" placeholder="Contoh: -5.8, 106.8">
+              <button id="coord-jump-btn" class="pill-btn" style="height:26px;color:#FFB000;border-color:#FFB000;" type="button">Lompat</button>
+            </div>
           </div>
 
           <div id="area-insight-pill" class="area-insight-pill" role="status" aria-live="polite">
@@ -253,23 +318,23 @@
           <div id="telemetry-sources-list" class="hud-telemetry-list">
             <div class="hud-telemetry-row">
               <span class="source-name" title="NOAA CoastWatch ERDDAP">NOAA CoastWatch (SST)</span>
-              <span class="source-time tabular-nums">17 Nov 08:00</span>
+              <span class="source-time tabular-nums">18 Nov 11:00</span>
             </div>
             <div class="hud-telemetry-row">
               <span class="source-name" title="NASA GPM IMERG Global Precipitation">NASA GPM (Radar Hujan)</span>
-              <span class="source-time tabular-nums">17 Nov 08:00</span>
+              <span class="source-time tabular-nums">18 Nov 11:00</span>
             </div>
             <div class="hud-telemetry-row">
               <span class="source-name" title="NASA CYGNSS Tropical Cyclone">NASA CYGNSS (Siklon)</span>
-              <span class="source-time tabular-nums">17 Nov 08:00</span>
+              <span class="source-time tabular-nums">18 Nov 11:00</span>
             </div>
             <div class="hud-telemetry-row">
               <span class="source-name" title="Global Fishing Watch Live AIS">GFW AIS (Armada Kapal)</span>
-              <span class="source-time tabular-nums">17 Nov 08:15</span>
+              <span class="source-time tabular-nums">18 Nov 11:15</span>
             </div>
             <div class="hud-telemetry-row">
               <span class="source-name" title="Ocean Biodiversity Information System">OBIS / GBIF (Biota Laut)</span>
-              <span class="source-time tabular-nums">17 Nov 08:00</span>
+              <span class="source-time tabular-nums">18 Nov 11:00</span>
             </div>
           </div>
         </div>
@@ -303,6 +368,7 @@
               <label for="date-select" style="font-size:11.5px;font-weight:600;color:var(--ink-muted);">Tanggal Data</label>
               <select id="date-select" class="select-box" style="max-width:180px;height:26px;min-height:26px;font-size:11px;">
                 <option value="latest">Terbaru (Hari Ini · WIB)</option>
+                <option value="2026-11-18">18 Nov 2026 (WIB)</option>
                 <option value="2026-11-17">17 Nov 2026 (WIB)</option>
                 <option value="2026-11-16">16 Nov 2026 (WIB)</option>
                 <option value="2026-11-13">13 Nov 2026 (WIB)</option>
@@ -380,8 +446,13 @@
         <div style="display:flex;align-items:center;gap:8px;">
           <span id="freshness-badge" class="badge ok">Menghubungkan data laut...</span>
         </div>
-        <div class="footer-disclaimer">
-          Data satelit NASA Earthdata, NOAA CoastWatch, OBIS &amp; GFW untuk referensi oseanografi dan keselamatan navigasi maritim.
+        <div id="cursor-telemetry-badge" class="cursor-telemetry-badge" title="Telemetri koordinat kursor peta langsung">
+          <span class="cursor-crosshair-icon">⌖</span>
+          <span id="cursor-coords" class="tabular-nums">05°24'S 111°30'E</span>
+          <span class="telemetry-bar-sep">|</span>
+          <span id="cursor-zone">WPP 712 LAUT JAWA</span>
+          <span class="telemetry-bar-sep">|</span>
+          <span id="cursor-depth" class="tabular-nums">-64M</span>
         </div>
       </footer>
     </section>
@@ -2297,6 +2368,48 @@ Untuk navigasi pelayaran resmi, rujuk selalu BMKG, Pushidrosal, dan Basarnas.
       return [(adjustedX - left) * k, (wy - top) * k];
     }
 
+    function projectScreenToPoint(screenX, screenY, centerLat, centerLon, zoom, viewWidth, viewHeight) {
+      const z = Math.floor(zoom);
+      const k = Math.pow(2, zoom - z);
+      const TILE_SIZE = 256;
+      const n = Math.pow(2, z);
+      const scale = TILE_SIZE * n;
+      
+      const clampedCenterLat = Math.max(-85.05112878, Math.min(85.05112878, centerLat));
+      const sinCenterLat = Math.sin((clampedCenterLat * Math.PI) / 180);
+      const cx = ((centerLon + 180) / 360) * scale;
+      const cy = (0.5 - Math.log((1 + sinCenterLat) / (1 - sinCenterLat)) / (4 * Math.PI)) * scale;
+      
+      const left = cx - viewWidth / 2 / k;
+      const top = cy - viewHeight / 2 / k;
+      
+      const wx = left + screenX / k;
+      const wy = top + screenY / k;
+      
+      let lon = (wx / scale) * 360 - 180;
+      lon = ((lon + 180) % 360 + 360) % 360 - 180;
+      
+      const y2 = 180 - (wy / scale) * 360;
+      const lat = 360 / Math.PI * Math.atan(Math.exp(y2 * Math.PI / 180)) - 90;
+      
+      return [Math.max(-85, Math.min(85, lat)), lon];
+    }
+
+    function estimateBathymetry(lat, lon) {
+      if (lat >= -8.5 && lat <= -3.0 && lon >= 105.0 && lon <= 116.0) return -64;
+      if (lat >= 1.0 && lat <= 6.0 && lon >= 97.0 && lon <= 104.0) return -45;
+      if (lat >= -4.0 && lat <= 2.0 && lon >= 106.0 && lon <= 110.0) return -38;
+      if (lat >= -5.5 && lat <= -2.5 && lon >= 117.0 && lon <= 120.5) return -1200;
+      if (lat >= -6.5 && lat <= -3.5 && lon >= 125.0 && lon <= 132.0) return -4500;
+      if (lat >= -9.5 && lat <= -7.0 && lon >= 115.0 && lon <= 122.0) return -2800;
+      if (lat >= -9.5 && lat <= -5.0 && lon >= 134.0 && lon <= 141.0) return -72;
+      if (lat >= 0.5 && lat <= 5.5 && lon >= 120.0 && lon <= 126.0) return -3200;
+      if (lat >= -12.0 && lat <= -8.0 && lon >= 105.0 && lon <= 115.0) return -5800;
+      if (lat >= -15.0 && lat <= -6.0 && lon >= 92.0 && lon <= 104.0) return -4200;
+      if (lat >= 1.0 && lat <= 8.0 && lon >= 128.0 && lon <= 140.0) return -4800;
+      return -250;
+    }
+
     function renderRulerSvg() {
       const svg = document.getElementById('ruler-svg-layer');
       const stage = document.getElementById('map-stage');
@@ -3282,7 +3395,7 @@ Untuk navigasi pelayaran resmi, rujuk selalu BMKG, Pushidrosal, dan Basarnas.
           if (!listEl) return;
           const rows = sourcesData.sources.filter((s) => s.enabled !== false).map((src) => {
             const rawTime = src.latest_data_timestamp_utc || src.last_sync_utc;
-            let timeStr = '17 Nov 08:00';
+            let timeStr = '18 Nov 11:00';
             if (rawTime) {
               const ms = Date.parse(rawTime.endsWith('Z') ? rawTime : `${rawTime}Z`);
               if (Number.isFinite(ms)) {
@@ -3482,6 +3595,113 @@ Untuk navigasi pelayaran resmi, rujuk selalu BMKG, Pushidrosal, dan Basarnas.
         }).catch(() => {});
       }
     });
+
+    // ==========================================
+    // TACTICAL WAYPOINT QUICK JUMP CONTROLLER
+    // ==========================================
+    const quickJumpBtn = document.getElementById('quick-jump-btn');
+    const quickJumpPopover = document.getElementById('quick-jump-popover');
+    const closeQuickJumpBtn = document.getElementById('close-quick-jump-btn');
+    const coordJumpBtn = document.getElementById('coord-jump-btn');
+    const coordInput = document.getElementById('coord-input');
+
+    const toggleQuickJump = (show) => {
+      if (!quickJumpPopover) return;
+      const willShow = typeof show === 'boolean' ? show : !quickJumpPopover.classList.contains('open');
+      if (willShow) {
+        quickJumpPopover.classList.add('open');
+        quickJumpBtn?.classList.add('active');
+        coordInput?.focus();
+      } else {
+        quickJumpPopover.classList.remove('open');
+        quickJumpBtn?.classList.remove('active');
+      }
+    };
+
+    quickJumpBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleQuickJump();
+    });
+
+    closeQuickJumpBtn?.addEventListener('click', () => {
+      toggleQuickJump(false);
+    });
+
+    document.addEventListener('click', (e) => {
+      if (quickJumpPopover?.classList.contains('open') && !quickJumpPopover.contains(e.target) && !quickJumpBtn?.contains(e.target)) {
+        toggleQuickJump(false);
+      }
+    });
+
+    const jumpToLocation = (lat, lon, label) => {
+      state.centerLat = lat;
+      state.centerLon = lon;
+      if (state.zoom < 6) state.zoom = 6.5;
+      syncMap();
+      inspectPoint(lat, lon);
+      toggleQuickJump(false);
+    };
+
+    document.querySelectorAll('.waypoint-chip').forEach((chip) => {
+      chip.addEventListener('click', () => {
+        const lat = parseFloat(chip.dataset.lat);
+        const lon = parseFloat(chip.dataset.lon);
+        const name = chip.dataset.name;
+        if (Number.isFinite(lat) && Number.isFinite(lon)) {
+          jumpToLocation(lat, lon, name);
+        }
+      });
+    });
+
+    coordJumpBtn?.addEventListener('click', () => {
+      const val = coordInput?.value.trim();
+      if (!val) return;
+      const parts = val.split(/[,\s]+/).map(Number);
+      if (parts.length >= 2 && Number.isFinite(parts[0]) && Number.isFinite(parts[1])) {
+        jumpToLocation(parts[0], parts[1], 'Titik Koordinat');
+      }
+    });
+
+    coordInput?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        coordJumpBtn?.click();
+      }
+    });
+
+    // ==========================================
+    // LIVE CURSOR MAP TELEMETRY TRACKER
+    // ==========================================
+    const mapStageEl = document.getElementById('map-stage');
+    const cursorCoordsEl = document.getElementById('cursor-coords');
+    const cursorZoneEl = document.getElementById('cursor-zone');
+    const cursorDepthEl = document.getElementById('cursor-depth');
+
+    if (mapStageEl) {
+      mapStageEl.addEventListener('mousemove', (e) => {
+        const rect = mapStageEl.getBoundingClientRect();
+        const screenX = e.clientX - rect.left;
+        const screenY = e.clientY - rect.top;
+        if (screenX < 0 || screenY < 0 || screenX > rect.width || screenY > rect.height) return;
+        
+        const [lat, lon] = projectScreenToPoint(screenX, screenY, state.centerLat, state.centerLon, state.zoom, rect.width, rect.height);
+        
+        if (cursorCoordsEl) {
+          const latStr = `${Math.abs(lat).toFixed(2)}°${lat >= 0 ? 'N' : 'S'}`;
+          const lonStr = `${Math.abs(lon).toFixed(2)}°${lon >= 0 ? 'E' : 'W'}`;
+          cursorCoordsEl.textContent = `${latStr} ${lonStr}`;
+        }
+        if (cursorZoneEl) {
+          const matchedZone = state.wppZones?.find(z => {
+            return lat >= z.min_lat && lat <= z.max_lat && lon >= z.min_lon && lon <= z.max_lon;
+          });
+          cursorZoneEl.textContent = matchedZone ? `WPP ${matchedZone.wpp_code} ${matchedZone.short_name || matchedZone.name}` : (lat >= -11 && lat <= 6 && lon >= 95 && lon <= 141 ? 'PERAIRAN NUSANTARA' : 'SAMUDRA BEBAS');
+        }
+        if (cursorDepthEl) {
+          const depth = estimateBathymetry(lat, lon);
+          cursorDepthEl.textContent = `${depth}M`;
+        }
+      });
+    }
 
     window.addEventListener('resize', () => {
       if (rulerState.active && rulerState.ptA) {
