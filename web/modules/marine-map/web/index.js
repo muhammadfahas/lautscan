@@ -1368,6 +1368,10 @@ export class MarineMap {
       this.markers = normalizeMarkers(safeProps.speciesMarkers);
     }
 
+    if (changed('rulerActive')) {
+      this.rulerActive = parseBool(safeProps.rulerActive, false);
+    }
+
     this.lastProps = { ...safeProps };
     this.syncLayerStyles();
     this.draw();
@@ -1643,9 +1647,11 @@ export class MarineMap {
   emitPointClick(lat, lon, markerId = '') {
     const roundedLat = round(clamp(lat, -85, 85), 5);
     const roundedLon = round(lon, 5);
-    this.inspectedPoint = { lat: roundedLat, lon: roundedLon };
-    this.drawPin();
-    this.reportState();
+    if (!this.rulerActive) {
+      this.inspectedPoint = { lat: roundedLat, lon: roundedLon };
+      this.drawPin();
+      this.reportState();
+    }
     const payload = {
       type: 'pointclick',
       lat: roundedLat,
@@ -1730,6 +1736,12 @@ export class MarineMap {
     this.drawWppGeoJson(w, h, z, k, left, top, n);
     this.drawMarkers(w, h, z, k, left, top, n);
     this.drawPin(z, k, left, top);
+    this.events?.message?.(JSON.stringify({
+      type: 'camera',
+      centerLat: this.center[0],
+      centerLon: this.center[1],
+      zoom: this.zoom,
+    }));
   }
 
   drawGraticule(w, h, z, k, left, top) {

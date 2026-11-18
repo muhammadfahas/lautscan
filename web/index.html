@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;700;800;900&family=JetBrains+Mono:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/app.css?v=20261118f">
+  <link rel="stylesheet" href="/app.css?v=20261118g">
 </head>
 <body>
   <div class="app-shell">
@@ -932,7 +932,7 @@
   </div>
 
   <script type="module">
-    import { create, setProps } from '/modules/marine-map/web/index.js?v=20261118c';
+    import { create, setProps } from '/modules/marine-map/web/index.js?v=20261118g';
 
     const urlParams = new URLSearchParams(window.location.search);
     const rawApiParam = (urlParams.get('api') || '').trim();
@@ -1433,6 +1433,7 @@
         wppGeoJsonCollection: state.wppGeoJson,
         selectedWppCode: state.selectedWpp,
         speciesMarkers: JSON.stringify(combinedMarkers()),
+        rulerActive: rulerState.active,
       };
     }
 
@@ -2340,58 +2341,38 @@ Untuk navigasi pelayaran resmi, rujuk selalu BMKG, Pushidrosal, dan Basarnas.
     }
 
     function projectPointToScreen(lat, lon, centerLat, centerLon, zoom, viewWidth, viewHeight) {
-      const z = Math.floor(zoom);
-      const k = Math.pow(2, zoom - z);
-      const TILE_SIZE = 256;
-      const n = Math.pow(2, z);
-      const scale = TILE_SIZE * n;
-      
+      const scale = 256 * Math.pow(2, zoom);
       const clampedCenterLat = Math.max(-85.05112878, Math.min(85.05112878, centerLat));
       const sinCenterLat = Math.sin((clampedCenterLat * Math.PI) / 180);
       const cx = ((centerLon + 180) / 360) * scale;
       const cy = (0.5 - Math.log((1 + sinCenterLat) / (1 - sinCenterLat)) / (4 * Math.PI)) * scale;
-      
-      const left = cx - viewWidth / 2 / k;
-      const top = cy - viewHeight / 2 / k;
-      
+
       const clampedLat = Math.max(-85.05112878, Math.min(85.05112878, lat));
       const sinLat = Math.sin((clampedLat * Math.PI) / 180);
       const wx = ((lon + 180) / 360) * scale;
       const wy = (0.5 - Math.log((1 + sinLat) / (1 - sinLat)) / (4 * Math.PI)) * scale;
-      
-      const worldPx = scale;
-      const centerPx = left + viewWidth / (2 * k);
-      let adjustedX = wx;
-      if (adjustedX - centerPx > worldPx / 2) adjustedX -= worldPx;
-      else if (centerPx - adjustedX > worldPx / 2) adjustedX += worldPx;
-      
-      return [(adjustedX - left) * k, (wy - top) * k];
+
+      let dx = wx - cx;
+      if (dx > scale / 2) dx -= scale;
+      else if (dx < -scale / 2) dx += scale;
+
+      return [viewWidth / 2 + dx, viewHeight / 2 + (wy - cy)];
     }
 
     function projectScreenToPoint(screenX, screenY, centerLat, centerLon, zoom, viewWidth, viewHeight) {
-      const z = Math.floor(zoom);
-      const k = Math.pow(2, zoom - z);
-      const TILE_SIZE = 256;
-      const n = Math.pow(2, z);
-      const scale = TILE_SIZE * n;
-      
+      const scale = 256 * Math.pow(2, zoom);
       const clampedCenterLat = Math.max(-85.05112878, Math.min(85.05112878, centerLat));
       const sinCenterLat = Math.sin((clampedCenterLat * Math.PI) / 180);
       const cx = ((centerLon + 180) / 360) * scale;
       const cy = (0.5 - Math.log((1 + sinCenterLat) / (1 - sinCenterLat)) / (4 * Math.PI)) * scale;
-      
-      const left = cx - viewWidth / 2 / k;
-      const top = cy - viewHeight / 2 / k;
-      
-      const wx = left + screenX / k;
-      const wy = top + screenY / k;
-      
-      let lon = (wx / scale) * 360 - 180;
-      lon = ((lon + 180) % 360 + 360) % 360 - 180;
-      
-      const y2 = 180 - (wy / scale) * 360;
-      const lat = 360 / Math.PI * Math.atan(Math.exp(y2 * Math.PI / 180)) - 90;
-      
+
+      const wx = cx + (screenX - viewWidth / 2);
+      const wy = cy + (screenY - viewHeight / 2);
+
+      const n = Math.PI - (2 * Math.PI * wy) / scale;
+      const lat = (180 / Math.PI) * Math.atan(Math.sinh(n));
+      const lon = ((((wx / scale) * 360) % 360) + 360) % 360 - 180;
+
       return [Math.max(-85, Math.min(85, lat)), lon];
     }
 
@@ -2482,6 +2463,7 @@ Untuk navigasi pelayaran resmi, rujuk selalu BMKG, Pushidrosal, dan Basarnas.
       }
       
       if (isActive) {
+        closeInspectorDrawer();
         if (hudPill) hudPill.style.display = 'flex';
         resetRulerPoints();
       } else {
@@ -2491,6 +2473,9 @@ Untuk navigasi pelayaran resmi, rujuk selalu BMKG, Pushidrosal, dan Basarnas.
           resultCard.style.display = 'none';
         }
         resetRulerPoints();
+      }
+      if (mapHandle) {
+        setProps(mapHandle, JSON.stringify({ rulerActive: Boolean(isActive) }));
       }
     }
 
@@ -2577,14 +2562,16 @@ Untuk navigasi pelayaran resmi, rujuk selalu BMKG, Pushidrosal, dan Basarnas.
             } else {
               inspectPoint(msg.lat, msg.lon, msg.markerId || '');
             }
-          } else if (msg['exact:event'] === 'moveend' && msg.args?.[0]) {
-            const cam = JSON.parse(msg.args[0]);
-            if (Number.isFinite(cam.centerLat) && Number.isFinite(cam.centerLon) && Number.isFinite(cam.zoom)) {
+          } else {
+            const cam = msg.type === 'camera'
+              ? msg
+              : (msg['exact:event'] === 'moveend' && msg.args?.[0] ? JSON.parse(msg.args[0]) : msg);
+            if (cam && Number.isFinite(cam.centerLat) && Number.isFinite(cam.centerLon) && Number.isFinite(cam.zoom)) {
               state.centerLat = cam.centerLat;
               state.centerLon = cam.centerLon;
               state.zoom = cam.zoom;
               renderInsightPill();
-              if (rulerState.active && rulerState.ptA) {
+              if (rulerState.ptA) {
                 renderRulerSvg();
               }
             }
