@@ -1495,14 +1495,15 @@ select, option {
 .card {
   background: var(--surface-glass-panel); border: var(--border-hairline);
   backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
-  border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 6px;
-  transition: border-color 140ms ease;
+  border-radius: 2px; padding: 12px; display: flex; flex-direction: column; gap: 6px;
+  transition: border-color 140ms ease, box-shadow 140ms ease;
 }
-.card:hover { border-color: var(--border-hover); }
+.card:hover { border-color: rgba(255, 176, 0, 0.35); }
+[data-theme="daylight"] .card:hover { border-color: rgba(234, 88, 12, 0.35); }
 table { width: 100%; border-collapse: collapse; font-size: 12px; }
-th, td { text-align: left; padding: 7px 8px; border-bottom: var(--border-hairline); }
-th { font-weight: 600; color: var(--ink-muted); font-size: 11px; text-transform: uppercase; }
-.table-scroll { overflow-x: auto; background: var(--surface-glass-panel); border: var(--border-hairline); border-radius: 8px; padding: 6px; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: var(--border-hairline); }
+th { font-family: var(--font-mono); font-weight: 700; color: var(--ink-muted); font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.04em; }
+.table-scroll { overflow-x: auto; background: var(--surface-glass-panel); border: var(--border-hairline); border-radius: 2px; padding: 6px; }
 .tabular-nums { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 
 /* Enhanced Wireframe & Components for Species, Trends, and Sources */
@@ -1676,7 +1677,7 @@ th { font-weight: 600; color: var(--ink-muted); font-size: 11px; text-transform:
   gap: 14px;
 }
 .species-card {
-  border-radius: 10px;
+  border-radius: 2px;
   border: var(--border-hairline);
   background: var(--surface-glass-panel);
   backdrop-filter: var(--glass-blur);
@@ -1687,9 +1688,13 @@ th { font-weight: 600; color: var(--ink-muted); font-size: 11px; text-transform:
   transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
 }
 .species-card:hover {
-  transform: translateY(-3px);
-  border-color: var(--border-hover);
-  box-shadow: 0 10px 25px rgba(0,0,0,0.40);
+  transform: translateY(-2px);
+  border-color: rgba(255, 176, 0, 0.55);
+  box-shadow: 0 10px 28px rgba(0,0,0,0.45), 0 0 14px rgba(255, 176, 0, 0.14);
+}
+[data-theme="daylight"] .species-card:hover {
+  border-color: rgba(234, 88, 12, 0.55);
+  box-shadow: 0 10px 24px rgba(15,23,42,0.12);
 }
 .species-card-media {
   position: relative;
@@ -1749,11 +1754,11 @@ th { font-weight: 600; color: var(--ink-muted); font-size: 11px; text-transform:
 }
 .species-meta-table {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
   gap: 6px;
-  font-size: 11px;
+  font-size: 10.5px;
   padding: 8px;
-  border-radius: 6px;
+  border-radius: 2px;
   background: var(--surface-subtle);
   border: var(--border-hairline);
 }
@@ -1761,6 +1766,7 @@ th { font-weight: 600; color: var(--ink-muted); font-size: 11px; text-transform:
   display: flex;
   flex-direction: column;
   gap: 1px;
+  min-width: 0;
 }
 .meta-label {
   color: var(--ink-muted);
@@ -1787,28 +1793,36 @@ th { font-weight: 600; color: var(--ink-muted); font-size: 11px; text-transform:
 .species-map-btn {
   width: 100%;
   height: 30px;
-  border-radius: 6px;
+  border-radius: 2px;
   border: var(--border-hairline);
   background: var(--surface-subtle);
   color: var(--ink-primary);
-  font: 600 11.5px var(--font-sans);
+  font: 700 11px var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  transition: all 140ms ease;
+  transition: all 120ms steps(2);
 }
 .species-map-btn:hover {
-  background: var(--surface-hover);
-  border-color: var(--accent-primary);
+  background: rgba(255, 176, 0, 0.14);
+  border-color: #FFB000;
+  color: #FFB000;
+}
+[data-theme="daylight"] .species-map-btn:hover {
+  background: rgba(234, 88, 12, 0.10);
+  border-color: #EA580C;
+  color: #EA580C;
 }
 
 /* Table View Thumbnail */
 .table-thumb {
   width: 44px;
   height: 28px;
-  border-radius: 4px;
+  border-radius: 2px;
   object-fit: cover;
   background: #08111e;
   border: var(--border-hairline);
@@ -1823,7 +1837,7 @@ th { font-weight: 600; color: var(--ink-muted); font-size: 11px; text-transform:
   flex-wrap: wrap;
   gap: 10px;
   padding: 8px 12px;
-  border-radius: 8px;
+  border-radius: 2px;
   background: var(--surface-glass-panel);
   border: var(--border-hairline);
   backdrop-filter: var(--glass-blur);
@@ -1842,7 +1856,7 @@ th { font-weight: 600; color: var(--ink-muted); font-size: 11px; text-transform:
   height: 28px;
   min-width: 28px;
   padding: 0 8px;
-  border-radius: 5px;
+  border-radius: 2px;
   border: var(--border-hairline);
   background: var(--surface-subtle);
   color: var(--ink-primary);
@@ -1851,16 +1865,18 @@ th { font-weight: 600; color: var(--ink-muted); font-size: 11px; text-transform:
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: all 120ms ease;
+  transition: all 120ms steps(2);
 }
 .page-btn:hover:not(:disabled) {
-  background: var(--surface-hover);
-  border-color: var(--border-hover);
+  background: rgba(255, 176, 0, 0.14);
+  border-color: #FFB000;
+  color: #FFB000;
 }
 .page-btn.active {
-  background: #FFFFFF !important;
-  color: #060913 !important;
-  border-color: #FFFFFF !important;
+  background: #FFB000 !important;
+  color: #070B0E !important;
+  border-color: #FFB000 !important;
+  font-weight: 800;
 }
 [data-theme="daylight"] .page-btn.active {
   background: #0F172A !important;
@@ -1934,12 +1950,12 @@ th { font-weight: 600; color: var(--ink-muted); font-size: 11px; text-transform:
 .sortable-th.sort-asc::after {
   content: ' ↑';
   opacity: 1;
-  color: var(--accent-primary);
+  color: #FFB000;
 }
 .sortable-th.sort-desc::after {
   content: ' ↓';
   opacity: 1;
-  color: var(--accent-primary);
+  color: #FFB000;
 }
 
 /* Relative Progress Bar in Trend Table */
@@ -1997,10 +2013,10 @@ th { font-weight: 600; color: var(--ink-muted); font-size: 11px; text-transform:
 
 .ruler-result-card {
   position: absolute;
-  bottom: 84px;
+  bottom: 102px;
   left: 12px;
   z-index: 55;
-  width: min(340px, calc(100% - 24px));
+  width: min(350px, calc(100% - 24px));
   background: var(--surface-glass-panel);
   border: 1px solid rgba(255, 255, 255, 0.20) !important;
   border-radius: 2px !important;
@@ -2011,13 +2027,6 @@ th { font-weight: 600; color: var(--ink-muted); font-size: 11px; text-transform:
 }
 [data-theme="daylight"] .ruler-result-card {
   border: 1px solid rgba(15, 23, 42, 0.24) !important;
-}
-.ruler-result-card.open {
-  display: flex;
-}
-
-.ruler-active canvas, .ruler-active {
-  cursor: crosshair !important;
 }
 .ruler-result-card.open {
   display: flex;

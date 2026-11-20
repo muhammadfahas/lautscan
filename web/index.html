@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;700;800;900&family=JetBrains+Mono:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/app.css?v=20261118g">
+  <link rel="stylesheet" href="/app.css?v=20261120b">
 </head>
 <body>
   <div class="app-shell">
@@ -36,7 +36,7 @@
         </nav>
         <button id="navbar-sync-btn" class="navbar-sync-btn" type="button" aria-expanded="false" title="Data terakhir diambil (Klik untuk lihat rincian)">
           <span class="sync-live-dot" aria-hidden="true"></span>
-          <span class="navbar-sync-label">DATA: 18 NOV 11:00 WIB</span>
+          <span class="navbar-sync-label">DATA: 20 NOV 12:00 WIB</span>
         </button>
         <button id="quick-theme-btn" class="btn" type="button" aria-label="Ubah mode siang atau malam" title="Mode Siang / Malam">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -260,7 +260,7 @@
             </div>
           </div>
 
-          <div style="background:var(--surface-subtle);border-radius:6px;padding:8px 10px;font-size:11.5px;margin-bottom:8px;border:var(--border-hairline);display:flex;flex-direction:column;gap:4px;">
+          <div style="background:var(--surface-subtle);border-radius:2px;padding:8px 10px;font-size:11.5px;margin-bottom:8px;border:var(--border-hairline);display:flex;flex-direction:column;gap:4px;">
             <div style="display:flex;justify-content:space-between;gap:6px;">
               <span style="color:var(--ink-muted);flex-shrink:0;">Titik A (Awal):</span>
               <span id="ruler-pt-a" class="tabular-nums font-mono" style="font-weight:600;text-align:right;">-</span>
@@ -269,21 +269,27 @@
               <span style="color:var(--ink-muted);flex-shrink:0;">Titik B (Tujuan):</span>
               <span id="ruler-pt-b" class="tabular-nums font-mono" style="font-weight:600;text-align:right;">-</span>
             </div>
+            <div style="display:flex;justify-content:space-between;gap:6px;border-top:1px dashed rgba(255,255,255,0.12);padding-top:4px;margin-top:2px;">
+              <span style="color:var(--ink-muted);flex-shrink:0;">Jarak Pulang-Pergi (PP):</span>
+              <span id="ruler-pp-value" class="tabular-nums font-mono" style="font-weight:700;color:#FFB000;text-align:right;">- NM</span>
+            </div>
           </div>
 
-          <!-- Estimated Travel Times & Fuel -->
+          <!-- Estimated Travel Times, Fuel Cost & ETA -->
           <div style="font-size:11px;margin-bottom:10px;">
-            <span style="font-weight:600;color:var(--ink-secondary);">Estimasi Durasi Tempuh &amp; Solar Kapal:</span>
+            <span style="font-weight:600;color:var(--ink-secondary);">Estimasi Tempuh, ETA &amp; Biaya Solar (Rp 6.800/L):</span>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px;">
-              <div style="background:var(--surface-subtle);padding:6px 8px;border-radius:6px;border:var(--border-hairline);">
-                <span style="color:var(--ink-muted);font-size:10px;">Perahu Nelayan (8 knot):</span>
+              <div style="background:var(--surface-subtle);padding:6px 8px;border-radius:2px;border:var(--border-hairline);">
+                <span style="color:var(--ink-muted);font-size:10px;">Perahu Nelayan (8 kt):</span>
                 <div id="ruler-time-8kt" class="tabular-nums" style="font-weight:700;color:var(--ink-primary);">- jam</div>
-                <div id="ruler-fuel-8kt" class="tabular-nums" style="font-size:10px;color:var(--ink-muted);">~ - Liter solar</div>
+                <div id="ruler-fuel-8kt" class="tabular-nums" style="font-size:10px;color:#FFB000;">~ - L</div>
+                <div id="ruler-eta-8kt" class="tabular-nums" style="font-size:9.5px;color:var(--ink-muted);">ETA: -</div>
               </div>
-              <div style="background:var(--surface-subtle);padding:6px 8px;border-radius:6px;border:var(--border-hairline);">
-                <span style="color:var(--ink-muted);font-size:10px;">Kapal Motor (14 knot):</span>
+              <div style="background:var(--surface-subtle);padding:6px 8px;border-radius:2px;border:var(--border-hairline);">
+                <span style="color:var(--ink-muted);font-size:10px;">Kapal Motor (14 kt):</span>
                 <div id="ruler-time-14kt" class="tabular-nums" style="font-weight:700;color:var(--ink-primary);">- jam</div>
-                <div id="ruler-fuel-14kt" class="tabular-nums" style="font-size:10px;color:var(--ink-muted);">~ - Liter solar</div>
+                <div id="ruler-fuel-14kt" class="tabular-nums" style="font-size:10px;color:#FFB000;">~ - L</div>
+                <div id="ruler-eta-14kt" class="tabular-nums" style="font-size:9.5px;color:var(--ink-muted);">ETA: -</div>
               </div>
             </div>
           </div>
@@ -318,23 +324,23 @@
           <div id="telemetry-sources-list" class="hud-telemetry-list">
             <div class="hud-telemetry-row">
               <span class="source-name" title="NOAA CoastWatch ERDDAP">NOAA CoastWatch (SST)</span>
-              <span class="source-time tabular-nums">18 Nov 11:00</span>
+              <span class="source-time tabular-nums">20 Nov 12:00</span>
             </div>
             <div class="hud-telemetry-row">
               <span class="source-name" title="NASA GPM IMERG Global Precipitation">NASA GPM (Radar Hujan)</span>
-              <span class="source-time tabular-nums">18 Nov 11:00</span>
+              <span class="source-time tabular-nums">20 Nov 12:00</span>
             </div>
             <div class="hud-telemetry-row">
               <span class="source-name" title="NASA CYGNSS Tropical Cyclone">NASA CYGNSS (Siklon)</span>
-              <span class="source-time tabular-nums">18 Nov 11:00</span>
+              <span class="source-time tabular-nums">20 Nov 12:00</span>
             </div>
             <div class="hud-telemetry-row">
               <span class="source-name" title="Global Fishing Watch Live AIS">GFW AIS (Armada Kapal)</span>
-              <span class="source-time tabular-nums">18 Nov 11:15</span>
+              <span class="source-time tabular-nums">20 Nov 12:15</span>
             </div>
             <div class="hud-telemetry-row">
               <span class="source-name" title="Ocean Biodiversity Information System">OBIS / GBIF (Biota Laut)</span>
-              <span class="source-time tabular-nums">18 Nov 11:00</span>
+              <span class="source-time tabular-nums">20 Nov 12:00</span>
             </div>
           </div>
         </div>
@@ -368,6 +374,7 @@
               <label for="date-select" style="font-size:11.5px;font-weight:600;color:var(--ink-muted);">Tanggal Data</label>
               <select id="date-select" class="select-box" style="max-width:180px;height:26px;min-height:26px;font-size:11px;">
                 <option value="latest">Terbaru (Hari Ini · WIB)</option>
+                <option value="2026-11-20">20 Nov 2026 (WIB)</option>
                 <option value="2026-11-18">18 Nov 2026 (WIB)</option>
                 <option value="2026-11-17">17 Nov 2026 (WIB)</option>
                 <option value="2026-11-16">16 Nov 2026 (WIB)</option>
@@ -2074,6 +2081,13 @@
             <span class="score-pill">Arus ${verdict.curPct ?? '-'}%</span>
           </div>
           <div style="font-size:11px;color:var(--ink-muted);">${countSummary}</div>
+          <div style="font-size:10.5px;font-family:var(--font-mono);color:#FFB000;border-top:1px dashed rgba(255,255,255,0.12);padding-top:5px;margin-top:2px;">
+            ${(() => {
+              const d = estimateBathymetry(pt.lat, pt.lon);
+              const gear = d > -100 ? 'Purse Seine / Jaring Insang' : (d > -1000 ? 'Pancing Tonda / Rawai Dasar' : 'Rawai Tuna / Pole &amp; Line');
+              return `Batimetri ~${d}m · Rekomendasi: ${gear}`;
+            })()}
+          </div>
         </div>
 
         <div class="tiles-2col">
@@ -2512,8 +2526,25 @@ Untuk navigasi pelayaran resmi, rujuk selalu BMKG, Pushidrosal, dan Basarnas.
         
         const time8kt = distNm / 8;
         const fuel8kt = Math.round(distNm * 1.8);
+        const cost8kt = fuel8kt * 6800;
         const time14kt = distNm / 14;
         const fuel14kt = Math.round(distNm * 3.5);
+        const cost14kt = fuel14kt * 6800;
+
+        const fmtRp = (val) => {
+          if (val >= 1000000) return `Rp ${(val / 1000000).toFixed(1).replace('.', ',')} jt`;
+          if (val >= 1000) return `Rp ${Math.round(val / 1000)} rb`;
+          return `Rp ${val}`;
+        };
+        const fmtEta = (hrs) => {
+          const wibMs = Date.now() + hrs * 3600000 + 7 * 3600000;
+          const d = new Date(wibMs);
+          const dd = String(d.getUTCDate()).padStart(2, '0');
+          const mon = WIB_MONTHS[d.getUTCMonth()];
+          const hh = String(d.getUTCHours()).padStart(2, '0');
+          const mm = String(d.getUTCMinutes()).padStart(2, '0');
+          return `ETA: ${dd} ${mon} ${hh}:${mm} WIB`;
+        };
         
         document.getElementById('ruler-nm-value').textContent = `${distNm.toFixed(1)} NM`;
         document.getElementById('ruler-km-value').textContent = `${distKm.toFixed(1)} km`;
@@ -2522,11 +2553,18 @@ Untuk navigasi pelayaran resmi, rujuk selalu BMKG, Pushidrosal, dan Basarnas.
         
         document.getElementById('ruler-pt-a').textContent = `${rulerState.ptA.lat.toFixed(3)}°, ${rulerState.ptA.lon.toFixed(3)}°`;
         document.getElementById('ruler-pt-b').textContent = `${rulerState.ptB.lat.toFixed(3)}°, ${rulerState.ptB.lon.toFixed(3)}°`;
+        const ppEl = document.getElementById('ruler-pp-value');
+        if (ppEl) ppEl.textContent = `${(distNm * 2).toFixed(1)} NM (${(distKm * 2).toFixed(1)} km)`;
         
         document.getElementById('ruler-time-8kt').textContent = `${time8kt.toFixed(1)} jam`;
-        document.getElementById('ruler-fuel-8kt').textContent = `~ ${fuel8kt} Liter solar`;
+        document.getElementById('ruler-fuel-8kt').textContent = `~ ${fuel8kt} L (${fmtRp(cost8kt)})`;
+        const eta8El = document.getElementById('ruler-eta-8kt');
+        if (eta8El) eta8El.textContent = fmtEta(time8kt);
+
         document.getElementById('ruler-time-14kt').textContent = `${time14kt.toFixed(1)} jam`;
-        document.getElementById('ruler-fuel-14kt').textContent = `~ ${fuel14kt} Liter solar`;
+        document.getElementById('ruler-fuel-14kt').textContent = `~ ${fuel14kt} L (${fmtRp(cost14kt)})`;
+        const eta14El = document.getElementById('ruler-eta-14kt');
+        if (eta14El) eta14El.textContent = fmtEta(time14kt);
         
         const instrText = document.getElementById('ruler-instruction-text');
         if (instrText) instrText.textContent = `Rute terukur: ${distNm.toFixed(1)} NM (${compass}). Geser peta atau klik 'Ukur Ulang'.`;
@@ -3382,7 +3420,7 @@ Untuk navigasi pelayaran resmi, rujuk selalu BMKG, Pushidrosal, dan Basarnas.
           if (!listEl) return;
           const rows = sourcesData.sources.filter((s) => s.enabled !== false).map((src) => {
             const rawTime = src.latest_data_timestamp_utc || src.last_sync_utc;
-            let timeStr = '18 Nov 11:00';
+            let timeStr = '20 Nov 12:00';
             if (rawTime) {
               const ms = Date.parse(rawTime.endsWith('Z') ? rawTime : `${rawTime}Z`);
               if (Number.isFinite(ms)) {
